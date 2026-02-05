@@ -142,6 +142,7 @@ develop an experimental system
         - However, could be extended to standalone spatial programming tool or as part of teach-pendant extension
             - The "teach pose in world" has been verified as a really good solution
         - Built a middleware that can be used/extended for other work - we can replace any part of the system to improve it without breaking compatibility with the rest of the system as long as the interfaces are maintained. And since the interfaces are module-module, they truly and cleanly separate the modules from each other.
+            - "Beyond the interaction concept, the thesis delivers a modular runtime…”
     - Known weaknesses - or move this to the analysis?
         - Where it breaks down - scene accuracy, UI polish, “one-shotness”
         - Qualitative “what we learned”: where it struggles (scene detection precision; complex program logic; UI overhead)
