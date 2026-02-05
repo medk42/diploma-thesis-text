@@ -12,3 +12,6 @@ aux/
 *.toc
 *.xmpdata
 *.xmpi
+
+out
+tmp
