@@ -1,0 +1,30 @@
+\chapter*{Introduction}
+\addcontentsline{toc}{chapter}{Introduction}
+
+Collaborative robots are attractive for automating tasks that are repetitive but frequently changing, such as small batch production or tasks requiring frequent changeovers. In such cases, the bottleneck is not only the execution time, but also the time and effort required to re-create the robot programs to suit the new task.
+
+Robot programming is both time-consuming and skill-intensive. This creates friction whenever tasks need to be re-taught. This thesis investigates whether spatial in-workspace authoring can reduce this friction for selected task families.
+
+
+
+\section*{Motivation}
+\addcontentsline{toc}{section}{Motivation}
+
+Collaborative robots are usually programmed by using one of the following methods \citep{IndustrialRobotProgramming}:
+\begin{itemize}
+  \item \emph{Teach pendant programming}: The user enters the desired robot motions and commands step-by-step using a handheld device (the teach pendant). This approach can be quite intuitive, but it can be time consuming to enter precise poses and trajectories through the pendant interface. 
+
+  \item \emph{Offline programming}: The user creates the robot program in a simulated environment, often based on a CAD model of the workspace. This mainly allows for preparing complex programs without stopping the robot and interrupting production. However, it requires accurate models and complex setup.
+
+  \item \emph{Lead-through programming}: This approach often extends the teach pendant method by allowing the user to physically guide the robot through the desired motions. This can be more intuitive for specifying motions, but it still requires using the teach pendant for programming logic and tool actions and may not be suitable for high-precision tasks or large robots.
+\end{itemize}
+
+While all of these methods are widely used and capable of producing effective robot programs, they can become friction-heavy when tasks change frequently. Robot programs usually consist of a sequence of move commands interleaved with tool actions and logic. This brings two main sources of friction: 
+\begin{itemize}
+    \item \emph{Pose definition is tedious}: Specifying precise poses and trajectories through a teach pendant or offline programming can be time-consuming and unintuitive, especially for users without extensive programming experience. This can lead to long iteration loops of editing the program, testing it on the robot, and adjusting it until the desired behavior is achieved.
+    \item \emph{Expertise and setup overhead}: Both teach pendant and offline programming require a certain level of expertise in robot programming concepts, and offline programming also requires accurate models and complex setup. This can be a significant barrier for users who are not familiar with programming concepts, and it can lead to reliance on trained personnel or system integrators for programming and deployment.
+\end{itemize}
+
+Collaborative robots often mitigate the pose definition friction with lead-through programming or by allowing the user to back-drive the arm \citep{KassowRobotsManuals}. However, hand-guiding may not be suitable for all tasks and it does not solve the expertise and setup overhead.
+
+This motivates an alternative approach: instead of programming motions and tool actions directly, let the user specify spatial intent (e.g., a pose or a coarse trajectory) in the real workspace and let task-specific use cases transform this intent into executable robot motion and tool commands using scene context. This approach, which we call \emph{in-workspace spatial authoring}, allows users to focus on the task logic and spatial intent rather than the low-level details of robot programming, making it more accessible to a wider range of users, while also potentially speeding up the programming process for experienced users.
