@@ -78,6 +78,17 @@ Motivation → high-level approach → contributions → thesis structure
 
 The goal is not an exhaustive survey, but to justify why the proposed approach matters and to frame the design space.
 
+Work:
+    https://www.semanticscholar.org/paper/PRogramAR%3A-Augmented-Reality-End-User-Robot-Ikeda-Szafir/fb46cc7e1c079f970ff7d997ecf3e52b13bdfb73  -  similar to my work, with more trackers and full AR
+    https://arxiv.org/pdf/1309.2093  -  similar to me, programming with a Wii controller, just 3dof + some voice commands; simple, can be referenced
+    TracePen
+    digital twin?
+    2024_12_Corsetti_Tesi_01 pdf
+    https://calinon.ch/papers/Thoo-arXiv2021.pdf
+    https://pmc.ncbi.nlm.nih.gov/articles/PMC9583918/
+
+
+
 ### 2.1 How robots are programmed today
 - Teach pendant  
 - Lead-through / hand-guiding (kinesthetic teaching)  
@@ -190,6 +201,7 @@ For each task, specify required elements:
     - Subsection: 2D vs 3D requirements
         - welding seam might be geometrically constrained, but you still need 3D for tool orientation / approach / validation / mapping to robot base frame.
         - pick&place demands 3D pose and orientation.
+    - Input requirements - why do we need buttons / intent
     - Parts
         - Evaluation criteria: 6D accuracy, jitter, occlusion robustness, setup/calibration burden, cost, integration risk
         - Compare candidate modalities (hand / tool / VR controller)
@@ -210,6 +222,7 @@ For each task, specify required elements:
     - merging camera views
     - calibration issues for all of theses and synchronization
     - In all of these -> our system should allow to use single camera, but it should not be hard to switch to multiple cameras or stereo camera etc. This nicely introduces the requirement for the module / middleware infrastructure. 
+    - FOV, resolution, refresh rate...
 
 Discussion:
 - When 2D hand tracking may be sufficient (known 3D seam geometry)  
@@ -361,6 +374,7 @@ Factual description of what was built.
 
 ### 5.5 Robot module implementation
 - Kassow robot integration (CBun / CBunX)  
+    - Kassow cobot useful, since 7axes are more likely to avoid singularities
 - Supported motion and limited tool control  
     - state your current interface (motion + limited IO) and what you didn’t implement
 - Missing features and reasons  
@@ -387,6 +401,13 @@ Factual description of what was built.
          - mapping itself could be static, but activation couldnt. calibration couldnt. 
 
 ### 5.7 Usecase implementation
+
+- Describe how the main usecases are implemented - what they actually do
+
+### 5.8 AI Usage
+
+- Describe how i have used AI / which parts are written by me, which parts by chatgpt, which parts by cursor. 
+- AI usually used as a first draft later refined by me, but some parts were left mostly intact (seam detection for example).
 
 ---
 
@@ -421,6 +442,8 @@ Concrete, narrative-driven chapter replacing user documentation.
 Minimal but credible validation.
 
 [test conditions + safety constraints; threats to validity: not an integrator; qualitative workflow timing]
+
+See chapter 2 (like https://pmc.ncbi.nlm.nih.gov/articles/PMC9583918/ for example of experiments)
 
 ### 7.1 E1: Tracking stability and repeatability
 - Pen pose jitter when stationary (position std-dev, orientation std-dev)
@@ -532,6 +555,7 @@ Future work
 - Input and intent
     - Hand tracking drop-in replacement
     - Using VR controllers instead (connected with the UI Quest 3 integration)
+        - UI = Quest 3 overlay; AR automatically; scene tracking somehow from the cameras; pen input = one of the controllers; scene alignment = second controller is robot mounted (issue with quest 3 due to its mixed hand/controller tracking algorithms).
     - Voice + deictic gestrure interpretation (the "holy grail" system) - it could be built on top of the module infrastrure, but doesn't fit as neatly as the current solution
 - Sensing and accuracy
     - Industrial scene sensing, better fiducials, better calibration strategy
