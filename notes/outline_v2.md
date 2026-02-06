@@ -86,6 +86,7 @@ Work:
     2024_12_Corsetti_Tesi_01 pdf
     https://calinon.ch/papers/Thoo-arXiv2021.pdf
     https://pmc.ncbi.nlm.nih.gov/articles/PMC9583918/
+    https://www.mdpi.com/2075-1702/12/7/480 - VR/AR robot programming tool? good robot programming approaches description
 
 
 
