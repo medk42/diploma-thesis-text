@@ -8,10 +8,10 @@ Robot programming is both time-consuming and skill-intensive. This creates frict
 \section*{Motivation}
 \addcontentsline{toc}{section}{Motivation}
 
-Industrial robots are usually programmed by using one of the following methods \citep{DevicVidakovicZivkovic24}:
+Industrial robots are commonly programmed using combinations of the following approaches \citep{DevicVidakovicZivkovic24}:
 \begin{itemize}
     \item \emph{Offline programming}: The user creates the robot program in a simulated environment, often based on a CAD model of the workspace. This approach allows programming without the physical presence of the robot, therefore avoiding downtime and allowing testing in a simulated environment. However, it requires accurate models of the robot and the environment, and it can be complex to set up and use effectively.
-    \item \emph{Teach pendant programming}: The user enters robot motions and commands step-by-step using a handheld device (the teach pendant). For collaborative robots, this is often complemented by \emph{hand-guiding} \footnote{Terminology varies across sources. In this thesis, \emph{hand-guiding} refers to physically back-driving the robot to teach poses, while \emph{lead-through} is reserved for continuous path recording.}, where the user can physically back-drive the robot to teach poses. While this can make pose specification more intuitive, it remains time-consuming to enter precise poses and trajectories and requires the user to be physically present at the robot, which can lead to downtime during programming.
+    \item \emph{Teach pendant programming}: The user enters robot motions and commands step-by-step using a handheld device (the teach pendant). This can make teaching poses more intuitive, since you can see the robot's movements in the real world, but programming still involves iterating on trajectories, tool actions, and program structure, which can be time-consuming and typically requires physical presence at the robot.
 \end{itemize}
 
 Both of these methods are widely used and capable of producing effective robot programs, but they can become friction-heavy when tasks change frequently. Robot programs usually consist of a sequence of move commands interleaved with tool actions and logic. This brings two main sources of friction:
@@ -20,6 +20,48 @@ Both of these methods are widely used and capable of producing effective robot p
     \item \emph{Expertise and setup overhead}: Both teach pendant and offline programming require a certain level of expertise in robot programming concepts, and offline programming also requires accurate models and complex setup. This can be a significant barrier for users who are not familiar with programming concepts, and it can lead to reliance on trained personnel or system integrators for programming and deployment.
 \end{itemize}
 
-Collaborative robots often partially mitigate the pose definition friction with hand-guiding the robot \citep{KassowRobotsManuals}. However, hand-guiding may not be suitable for all tasks and it does not solve the expertise and setup overhead.
+Collaborative robots often partially mitigate the pose definition friction with \emph{hand-guiding} \footnote{Terminology varies. Here, \emph{hand-guiding} means compliant back-driving to teach poses; \emph{lead-through} refers to recording a continuous path for playback.}, where the user can physically back-drive the robot to teach poses \citep{KassowRobotsManuals}. However, hand-guiding may not be suitable for all tasks and it does not solve the expertise and setup overhead.
 
-This motivates an alternative approach: instead of programming motions and tool actions directly, let the user specify spatial intent (e.g., a pose or a coarse trajectory) in the real workspace and let task-specific use cases transform this intent into executable robot motions and tool commands using scene context. This approach, which we call \emph{in-workspace spatial authoring}, allows users to focus on the task logic and spatial intent rather than the low-level details of robot programming, making it more accessible to a wider range of users, while also potentially speeding up the programming process for experienced users.
+These limitations motivate the research question of this thesis: can robot programs for frequently changing tasks be authored more efficiently by specifying spatial intent directly in the real workspace, rather than by editing motion commands and tool actions on a pendant or in a simulated environment? We call this approach \emph{in-workspace spatial authoring}, and the next section introduces it at a high level.
+
+
+\section*{High-level approach}
+\addcontentsline{toc}{section}{High-level approach}
+
+We propose \emph{spatial authoring} of cooperative robot motions and tool actions directly in the real workspace using AR-inspired inputs, supported by external sensing. While general-purpose robot programming is expressive, it also exposes many low-level details (motion primitives, tool coordination, error handling) that dominate effort in small programs for frequently changing tasks. Therefore, this thesis focuses on task-oriented use cases for common task families, where the user specifies intent at a higher level of abstraction for a specific task and the system expands it into the required motion and tool commands.
+
+This approach has four conceptual stages: 
+\begin{enumerate*}[label=(\roman*)]
+    \item \emph{workspace sensing} to estimate the relevant workspace context (e.g., reference frames and task-relevant objects);
+    \item \emph{authoring}, where the user specifies spatial intent in the workspace;
+    \item \emph{interpretation}, where the task-oriented logic combines intent with scene context to generate motion and tool actions; and
+    \item \emph{execution}, where the resulting steps are validated and run on the robot via a reusable acquisition/execution pipeline.
+\end{enumerate*}
+
+We target task-oriented use cases rather than a full robot programming language; our approach does not cover complex branching, loops, exception recovery, or rich sensor-driven logic. This allows us to focus on the core question of whether spatial intent input can reduce friction for frequently changing tasks and simplify the programming process for non-expert users.
+
+To support this, we develop a system that provides workspace sensing and authoring capabilities, together with an execution pipeline. Task-specific use cases can then be developed that use these capabilities to implement the interpretation logic for specific tasks. This allows us to evaluate the approach on representative task families while keeping the core system reusable and extensible for other tasks in the future.
+
+We evaluate the approach on two representative task families that stress different requirements on spatial input and program structure. They correspond to the two largest application categories reported in industrial robot installation statistics (handling and welding) \citep{IFRWorldRobotics2023Extended}:
+\begin{itemize}
+    \item \emph{pick-and-place} as a representative material handling task. It combines scene understanding (object detection and pose estimation) with discrete pose specification (target pose for the object) and tool actions (gripper open/close).
+    
+    \item \emph{seam welding}: a trajectory-centric task that can require frequent re-teaching due to changing workpieces or fixtures. This allows us to explore how spatial authoring can speed up low volume production and process tasks that require frequent changeovers, which are a relevant application area for collaborative robots.
+\end{itemize}
+
+
+\section*{Goals}
+\addcontentsline{toc}{section}{Goals}
+
+Based on the last section, we define the following three high-level goals for this thesis:
+\begin{goals}
+  \item \label{goal:1} Explore and validate programming of cooperative robots directly in the real workspace by defining robot motions and tool actions using spatial, AR-inspired inputs, as an alternative to traditional teach pendant, offline programming, and hand-guiding workflows.
+  \item \label{goal:2} Provide an extensible system where task-oriented use cases can be implemented as plugins that reuse the same acquisition/execution infrastructure.
+  \item \label{goal:3} Demonstrate the approach on a real robot with representative use cases for a material-handling task (pick-and-place) and a trajectory-centric task (seam welding), and evaluate the benefits and limitations of spatial authoring for these tasks.
+\end{goals}
+
+
+\section*{Thesis structure}
+\addcontentsline{toc}{section}{Thesis structure}
+
+In chapter 1 we review the background and related work on robot programming methods, spatial authoring approaches, and relevant technologies for sensing and execution. Chapter 2 derives requirements and decomposes the problem into core components and design trade-offs. Chapter 3 describes the system architecture and design decisions. Chapter 4 presents the hardware setup and implementation details of each component. Chapter 5 focuses on user usage of the system with system setup and two user stories for the two use cases. Chapter 6 evaluates the system with experiments on tracking stability, end-to-end workflow trials and real robot validation. Chapter 7 discusses the results, limitations, and future work. Finally, chapter 8 concludes the thesis with a summary of contributions and final remarks.

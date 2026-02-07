@@ -83,10 +83,11 @@ Work:
     https://arxiv.org/pdf/1309.2093  -  similar to me, programming with a Wii controller, just 3dof + some voice commands; simple, can be referenced
     TracePen
     digital twin?
-    2024_12_Corsetti_Tesi_01 pdf
+    2024_12_Corsetti_Tesi_01 pdf  -  this is some welding auto-shape detection; similar vibe as my thesis. Pretty cool work. Also GOOD experimental design.
     https://calinon.ch/papers/Thoo-arXiv2021.pdf
     https://pmc.ncbi.nlm.nih.gov/articles/PMC9583918/
     https://www.mdpi.com/2075-1702/12/7/480 - VR/AR robot programming tool? good robot programming approaches description
+    https://openreview.net/pdf?id=BnKSO5x2BC&utm_source=chatgpt.com - essentially offline version of the teach pendant programming / hand-guiding in mixed reality; they move an AR (hololens) version of the robot around and program it that way; no intent
 
 
 
