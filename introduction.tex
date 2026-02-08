@@ -35,7 +35,7 @@ This approach has four conceptual stages, illustrated in \autoref{fig:intro__img
     \item \emph{workspace sensing} to estimate the relevant workspace context (e.g., reference frames and task-relevant objects);
     \item \emph{authoring}, where the user specifies spatial intent in the workspace;
     \item \emph{interpretation}, where the task-oriented logic combines intent with scene context to generate motion and tool actions; and
-    \item \emph{execution}, where the resulting steps are validated and run on the robot via a reusable acquisition/execution pipeline.
+    \item \emph{execution}, where the resulting steps are run on the robot via a common robot execution interface.
 \end{enumerate*}
 
 \begin{figure}
@@ -47,7 +47,7 @@ This approach has four conceptual stages, illustrated in \autoref{fig:intro__img
 
 We target task-oriented use cases rather than a full robot programming language; our approach does not cover complex branching, loops, exception recovery, or rich sensor-driven logic. This allows us to focus on the core question of whether spatial intent input can reduce friction for frequently changing tasks and simplify the programming process for non-expert users.
 
-To support this, we develop a system that provides workspace sensing and authoring capabilities, together with an execution pipeline. Task-specific use cases can then be developed that use these capabilities to implement the interpretation logic for specific tasks. This allows us to evaluate the approach on representative task families while keeping the core system reusable and extensible for other tasks in the future.
+To support this, we develop a system that provides workspace sensing and authoring capabilities, together with a shared robot/tool execution layer. Task-specific use cases can then be developed that use these capabilities to implement the interpretation logic for specific tasks. This allows us to evaluate the approach on representative task families while keeping the core system reusable and extensible for other tasks in the future.
 
 We evaluate the approach on two representative task families that stress different requirements on spatial input and program structure. They correspond to the two largest application categories reported in industrial robot installation statistics (handling and welding) \cite{IFRWorldRobotics2023Extended}:
 \begin{itemize}
