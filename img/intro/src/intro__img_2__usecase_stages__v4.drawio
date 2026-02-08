@@ -217,7 +217,7 @@
             <mxPoint as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="OgmurIN7WwstYsde2RWY-253" parent="OgmurIN7WwstYsde2RWY-250" style="text;whiteSpace=wrap;strokeColor=default;fillColor=default;align=left;verticalAlign=middle;rounded=1;fontSize=10;fontColor=#000000;" value="1. start&#xa;2. open gripper" vertex="1">
+        <mxCell id="OgmurIN7WwstYsde2RWY-253" parent="OgmurIN7WwstYsde2RWY-250" style="text;whiteSpace=wrap;strokeColor=default;fillColor=default;align=left;verticalAlign=middle;rounded=1;fontSize=10;fontColor=#000000;" value="1. Start&#xa;2. Open gripper" vertex="1">
           <mxGeometry height="30" width="78" x="7" y="-7" as="geometry" />
         </mxCell>
         <mxCell id="OgmurIN7WwstYsde2RWY-254" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=#999999;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=10;fontColor=#999999;" value="" vertex="1">
@@ -315,7 +315,7 @@
         <mxCell id="OgmurIN7WwstYsde2RWY-283" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=default;align=center;verticalAlign=middle;rounded=1;autosize=1;resizable=0;fontColor=#000000;spacing=1;" value="&lt;div style=&quot;line-height: 90%;&quot;&gt;&lt;span style=&quot;font-size: 10px;&quot;&gt;Use-case&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;line-height: 90%;&quot;&gt;&lt;span style=&quot;font-size: 10px;&quot;&gt;executes&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;font-size: 10px; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(237, 237, 237));&quot;&gt;task&lt;/span&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="40" width="80" x="213.5" y="-163.5" as="geometry" />
         </mxCell>
-        <mxCell id="OgmurIN7WwstYsde2RWY-269" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=default;align=center;verticalAlign=middle;rounded=1;fontSize=10;fontColor=#999999;rotation=0;glass=0;" value="&lt;font style=&quot;color: rgb(0, 0, 0);&quot;&gt;3. approach pick&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot;&gt;4. close gripper&lt;/font&gt;&lt;/div&gt;" vertex="1">
+        <mxCell id="OgmurIN7WwstYsde2RWY-269" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=default;align=left;verticalAlign=middle;rounded=1;fontSize=10;fontColor=#999999;rotation=0;glass=0;" value="&lt;font style=&quot;color: rgb(0, 0, 0);&quot;&gt;3. Approach pick&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;color: rgb(0, 0, 0);&quot;&gt;4. Close gripper&lt;/font&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="29" width="79" x="213.5" y="-198" as="geometry" />
         </mxCell>
         <mxCell id="OgmurIN7WwstYsde2RWY-287" connectable="0" parent="1" style="group;fontSize=10;fontColor=#999999;strokeColor=none;rotation=-45;" value="" vertex="1">
@@ -333,7 +333,7 @@
             <mxPoint x="-4" y="11" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="OgmurIN7WwstYsde2RWY-270" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=default;align=center;verticalAlign=middle;rounded=1;fontSize=10;fontColor=#999999;rotation=0;glass=0;" value="&lt;font color=&quot;#000000&quot;&gt;5. approach place&lt;/font&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;6. open gripper&lt;/font&gt;&lt;/div&gt;" vertex="1">
+        <mxCell id="OgmurIN7WwstYsde2RWY-270" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=default;align=left;verticalAlign=middle;rounded=1;fontSize=10;fontColor=#999999;rotation=0;glass=0;" value="&lt;font color=&quot;#000000&quot;&gt;5. A&lt;/font&gt;&lt;span style=&quot;color: light-dark(rgb(0, 0, 0), rgb(237, 237, 237)); background-color: transparent;&quot;&gt;pproach place&lt;/span&gt;&lt;div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;6. Open gripper&lt;/font&gt;&lt;/div&gt;&lt;/div&gt;" vertex="1">
           <mxGeometry height="29" width="99" x="364.5" y="-245" as="geometry" />
         </mxCell>
       </root>
