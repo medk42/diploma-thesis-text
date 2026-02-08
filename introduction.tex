@@ -8,7 +8,7 @@ Robot programming is both time-consuming and skill-intensive. This creates frict
 \section*{Motivation}
 \addcontentsline{toc}{section}{Motivation}
 
-Industrial robots are commonly programmed using combinations of the following approaches \citep{DevicVidakovicZivkovic24}:
+Industrial robots are commonly programmed using combinations of the following approaches \cite{DevicVidakovicZivkovic24}:
 \begin{itemize}
     \item \emph{Offline programming}: The user creates the robot program in a simulated environment, often based on a CAD model of the workspace. This approach allows programming without the physical presence of the robot, therefore avoiding downtime and allowing testing in a simulated environment. However, it requires accurate models of the robot and the environment, and it can be complex to set up and use effectively.
     \item \emph{Teach pendant programming}: The user enters robot motions and commands step-by-step using a handheld device (the teach pendant). This can make teaching poses more intuitive, since you can see the robot's movements in the real world, but programming still involves iterating on trajectories, tool actions, and program structure, which can be time-consuming and typically requires physical presence at the robot.
@@ -20,7 +20,7 @@ Both of these methods are widely used and capable of producing effective robot p
     \item \emph{Expertise and setup overhead}: Both teach pendant and offline programming require a certain level of expertise in robot programming concepts, and offline programming also requires accurate models and complex setup. This can be a significant barrier for users who are not familiar with programming concepts, and it can lead to reliance on trained personnel or system integrators for programming and deployment.
 \end{itemize}
 
-Collaborative robots often partially mitigate the pose definition friction with \emph{hand-guiding} \footnote{Terminology varies. Here, \emph{hand-guiding} means compliant back-driving to teach poses; \emph{lead-through} refers to recording a continuous path for playback.}, where the user can physically back-drive the robot to teach poses \citep{KassowRobotsManuals}. However, hand-guiding may not be suitable for all tasks and it does not solve the expertise and setup overhead.
+Collaborative robots often partially mitigate the pose definition friction with \emph{hand-guiding} \footnote{Terminology varies. Here, \emph{hand-guiding} means compliant back-driving to teach poses; \emph{lead-through} refers to recording a continuous path for playback.}, where the user can physically back-drive the robot to teach poses \cite{KassowRobotsManuals}. However, hand-guiding may not be suitable for all tasks and it does not solve the expertise and setup overhead.
 
 These limitations motivate the research question of this thesis: can robot programs for frequently changing tasks be authored more efficiently by specifying spatial intent directly in the real workspace, rather than by editing motion commands and tool actions on a pendant or in a simulated environment? We call this approach \emph{in-workspace spatial authoring}, and the next section introduces it at a high level.
 
@@ -30,7 +30,7 @@ These limitations motivate the research question of this thesis: can robot progr
 
 We propose \emph{spatial authoring} of cooperative robot motions and tool actions directly in the real workspace using AR-inspired inputs, supported by external sensing. While general-purpose robot programming is expressive, it also exposes many low-level details (motion primitives, tool coordination, error handling) that dominate effort in small programs for frequently changing tasks. Therefore, this thesis focuses on task-oriented use cases for common task families, where the user specifies intent at a higher level of abstraction for a specific task and the system expands it into the required motion and tool commands.
 
-This approach has four conceptual stages: 
+This approach has four conceptual stages, illustrated in \autoref{fig:intro__img_2__usecase_stages}: 
 \begin{enumerate*}[label=(\roman*)]
     \item \emph{workspace sensing} to estimate the relevant workspace context (e.g., reference frames and task-relevant objects);
     \item \emph{authoring}, where the user specifies spatial intent in the workspace;
@@ -38,11 +38,18 @@ This approach has four conceptual stages:
     \item \emph{execution}, where the resulting steps are validated and run on the robot via a reusable acquisition/execution pipeline.
 \end{enumerate*}
 
+\begin{figure}
+  \centering
+  \includegraphics{img/intro/intro__img_2__usecase_stages__v2__valid.pdf}
+  \caption{Conceptual pipeline of in-workspace spatial authoring on a pick-and-place example}
+  \label{fig:intro__img_2__usecase_stages}
+\end{figure}
+
 We target task-oriented use cases rather than a full robot programming language; our approach does not cover complex branching, loops, exception recovery, or rich sensor-driven logic. This allows us to focus on the core question of whether spatial intent input can reduce friction for frequently changing tasks and simplify the programming process for non-expert users.
 
 To support this, we develop a system that provides workspace sensing and authoring capabilities, together with an execution pipeline. Task-specific use cases can then be developed that use these capabilities to implement the interpretation logic for specific tasks. This allows us to evaluate the approach on representative task families while keeping the core system reusable and extensible for other tasks in the future.
 
-We evaluate the approach on two representative task families that stress different requirements on spatial input and program structure. They correspond to the two largest application categories reported in industrial robot installation statistics (handling and welding) \citep{IFRWorldRobotics2023Extended}:
+We evaluate the approach on two representative task families that stress different requirements on spatial input and program structure. They correspond to the two largest application categories reported in industrial robot installation statistics (handling and welding) \cite{IFRWorldRobotics2023Extended}:
 \begin{itemize}
     \item \emph{pick-and-place} as a representative material handling task. It combines scene understanding (object detection and pose estimation) with discrete pose specification (target pose for the object) and tool actions (gripper open/close).
     
