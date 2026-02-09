@@ -1,7 +1,53 @@
-\chapter{Background and Related Work}
+\chapter{Related Work} \label{chapter:ch1_related_work}
 
-An~example citation: \cite{Andel07}
+This thesis explores the concept of \emph{in-workspace spatial authoring}, where the user specifies spatial intent directly in the real workspace using AR-inspired input, supported by external sensing. The system then expands this intent into the required motion and tool commands for the robot. The goal of this chapter is not an exhaustive survey, but rather a compact overview of 
+\begin{enumerate*}[label=(\roman*)]
+    \item what directions have been explored in the literature for reducing friction in robot programming, and
+    \item where our approach fits in the landscape of related work.
+\end{enumerate*}
 
-\section{Title of the first subchapter of the first chapter}
+\section{XR and human-facing interfaces for robot programming: context from surveys}
 
-\section{Title of the second subchapter of the first chapter}
+A common theme in the robot programming literature is that robot deployment effort is often dominated by programming, integrations and changeovers, rather than the execution time of the robot. This becomes a problem especially in high-mix low-volume scenarios \cite{IFR2023TraditionalVsNew}. Surveys on human-robot collaboration mention that alternative programming approaches can increase productivity and safety \cite{VILLANI201866}. AR/VR have become a common interface direction to attempt to achieve this in both offline and online programming \cite{Makhataeva2020, DIANATFAR2021407}. They help visualize the robot (and optionally the workspace) while programming and preview the robot's runtime behavior and constraints before executing on a real robot. They can also allow users to specify robot poses and trajectories directly in the workspace.
+
+Across these works, a distinction emerges between \emph{visualization}-focused (showing robot state, planned motion, or safety zones in context) and \emph{authoring}-focused (letting the user create or edit robot behavior directly in the workspace) approaches. For our thesis, we focus on the latter: authoring requires not only visualization but also robust spatial input, registration to world or robot coordinates, and a program representation that is simple enough for non-expert users yet expressive enough useful tasks. 
+
+\section{XR robot programming systems}
+
+Existing XR robot programming systems span a wide design space. We summarize representative systems using the following two dimensions:
+\begin{enumerate*}[label=(\roman*)]
+    \item \emph{where authoring happens} (online in the real workspace vs. offline in a simulated environment/digital twin), and
+    \item \emph{how is motion specified} (point-by-point waypoints, teach-by-demonstration trajectories, or higher-level rules).
+\end{enumerate*}
+
+\subsection{Online trajectory authoring} \label{subsec:related_work_online_trajectory_authoring}
+
+Ong et al.\ present \emph{ARRPS}, an augmented-reality-based system for intuitive robot programming, that transforms the robot workcell into an AR environment and uses a handheld pointer to define 3D points and paths for the real robot to follow \cite{Ong2020}. Their system explicitly addresses feasibility using sensor-based methods for motion planning, collision detection, and plan validation, aiming to reduce required robot-programming expertise.
+
+This line of work is close in spirit to our approach, since the user also operates in the real scene, and the system is responsible for turning spatial intent into robot motion. However, the interaction is primarily path/waypoint-centric --- the user specifies \emph{how} the robot should move rather than stating higher-level, task-oriented intent. 
+
+\subsection{Online rule-based authoring}
+
+Ikeda and Szafir propose \emph{PRogramAR}, an AR system for end-user robot programming where instead of explicit low-level motion specifications, the user uses more declarative, rule-based (if-then, while-do) program structure \cite{Ikeda2024}. They ask the user to define areas in the workspace that contains tracked objects and use these areas and objects as conditions for triggering robot actions. This allows users to create program logic without needing to specify low-level motion details.
+
+This direction is closer to our focus because it aligns with the motivation for task-oriented use cases --- user should not be forced to create the full internal sequence of approach, action and retreat steps if the system can infer them from intent and scene context. However, their system is focused on discrete actions triggered by spatial conditions, and it does not cover continuous trajectories that are common in many tasks. Our approach instead focuses on specific fixed use-cases, instead of a more general-purpose programming system with the idea that if there is a repetitive task that we do not yet support, we can add a new use case with the required interpretation logic on top of the core system. 
+
+\subsection{Offline trajectory authoring}
+
+Both of the approaches above are online, meaning that the user is present in the real workspace while authoring, which requires the robot to be available, potentially causes downtime and may be unsafe due to unexpected robot motion. An alternative is therefore offline authoring, which is also covered by several works in the literature. The idea is similar to the traditional offline programming approach --- we also have a virtual robot, but instead of programming on a desktop interface with a 3D model, the user can program the robot in an AR environment, either with virtual or real-world objects. 
+
+One such system is proposed by Müller et al., where the user constructs an identical workspace in a different room, programs a virtual robot in it, and then transfers the program to the real robot by calibrating the virtual and real workspaces \cite{Muller2024}. Compared to other similar AR-based approaches, this work exhibits a comparatively high degree of practical viability. The authors use high-precision pen tracking and cover calibration between the workspace and virtual robot, virtual and real robot, and real robot and its workspace well, as well as validating the feasibility of the program in both the simulated and (after calibration) real environments and exporting the created program to a real robot language. This workflow enables offline programming without requiring an exact, manually created digital model workspace, while still supporting flexible robot base placement and reliable transfer to real execution.
+
+The approach in our thesis is targeting a different trade-off --- we focus on online authoring, but attempt to minimize the required expertise and time to create and execute a program for frequently changing tasks at the cost of using fixed use-cases with more limited expressiveness than a general-purpose programming system. This also avoids a full workspace duplication (real or virtual) and the associated calibration.
+
+\subsection{Online point-by-point hand-tracking authoring}
+
+Hand tracking is an attractive input modality for robot programming, because it is intuitive and does not require additional handheld devices. However, practical systems often face constraints in accuracy and occlusion robustness. Vysocký et al.\ implement a hand-tracking-based system with gesture interface for programming robot motions and the subsequent execution of the created program \cite{Vysocky2023}. 
+
+The robot motion is programmed by defining waypoints in the workspace using hand gestures. The hand-tracking is accomplished using several calibrated RGB-D cameras with a MediaPipe-based hand landmark detection. Their results show that hand-tracking waypoint creation is much faster than both the teach pendant approach (jogging the robot to the desired pose on the pendant) and hand-guiding the robot, however the accuracy of the created waypoints is lower for hand-tracking. This provides a useful data point for the input tradeoff in our thesis --- if we require precise pose specification, we may have to consider other input modalities.
+
+Similarly to \autoref{subsec:related_work_online_trajectory_authoring}, our thesis shares the online programming approach and the input modality of spatial input, but we focus on a more high-level, intent-based, use-case driven approach, where the user does not need to specify the full sequence of waypoints or tool actions.
+
+
+\section{Multimodal intent: combining gestures with language}
+
