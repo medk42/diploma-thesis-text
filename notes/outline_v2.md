@@ -78,16 +78,27 @@ Motivation → high-level approach → contributions → thesis structure
 
 The goal is not an exhaustive survey, but to justify why the proposed approach matters and to frame the design space.
 
+- “Unlike X, we…”, “Similar to Y, but…”) — this makes it feel “researchy” fast.
+    - Abstract + intro + system overview figure + conclusion is enough.
+
 Work:
-    https://www.semanticscholar.org/paper/PRogramAR%3A-Augmented-Reality-End-User-Robot-Ikeda-Szafir/fb46cc7e1c079f970ff7d997ecf3e52b13bdfb73  -  similar to my work, with more trackers and full AR
-    https://arxiv.org/pdf/1309.2093  -  similar to me, programming with a Wii controller, just 3dof + some voice commands; simple, can be referenced
+    Ikeda & Szafir, 2024 - https://www.semanticscholar.org/paper/PRogramAR%3A-Augmented-Reality-End-User-Robot-Ikeda-Szafir/fb46cc7e1c079f970ff7d997ecf3e52b13bdfb73  -  similar to my work, with more trackers and full AR
+
+    Neto et al., 2010 - https://arxiv.org/pdf/1309.2093  -  similar to me, programming with a Wii controller, just 3dof + some voice commands; simple, can be referenced
+
+    Bieller (IFR), 2023 – IFR Blog (industry) - https://ifr.org/post/traditional-robot-programming-vs-ai-machine-vision - "programming and integration account for 50-70% of the cost of a robot application", welding task defined, example implementation (pretty good); actually really good example why typical programming is slow / hard! great for introduction.
+
     TracePen
-    digital twin?
+
     2024_12_Corsetti_Tesi_01 pdf  -  this is some welding auto-shape detection; similar vibe as my thesis. Pretty cool work. Also GOOD experimental design.
-    https://calinon.ch/papers/Thoo-arXiv2021.pdf
+
+    Thoo et al., 2021 - https://calinon.ch/papers/Thoo-arXiv2021.pdf
+
     https://pmc.ncbi.nlm.nih.gov/articles/PMC9583918/
-    https://www.mdpi.com/2075-1702/12/7/480 - VR/AR robot programming tool? good robot programming approaches description
-    https://openreview.net/pdf?id=BnKSO5x2BC&utm_source=chatgpt.com - essentially offline version of the teach pendant programming / hand-guiding in mixed reality; they move an AR (hololens) version of the robot around and program it that way; no intent
+
+    Dević et al., 2024 - https://www.mdpi.com/2075-1702/12/7/480 - VR/AR robot programming tool? good robot programming approaches description
+
+    Maccio et al., 2024 - https://openreview.net/pdf?id=BnKSO5x2BC&utm_source=chatgpt.com - essentially offline version of the teach pendant programming / hand-guiding in mixed reality; they move an AR (hololens) version of the robot around and program it that way; no intent
 
 
 
@@ -129,6 +140,28 @@ Work:
 - VR controllers / tracked devices (strong tracking ecosystem, integration constraints) 
 - *(Optional)* Multimodal intent (speech + deictic gesture) as future work teaser  (one)
 - This is where we can put hand tracking paper list (or 3.3)
+
+### Comparison to ours:
+Add a tiny taxonomy early in Related Work (or at the end as a summary table)
+Axes
+- Authoring target: (a) pure motion, (b) motion + tool actions, (c) task programs (parameterized)
+- Context: (a) offline/sim, (b) online/in-situ, (c) context-aware (scene + intent)
+- Inputs: teach pendant / lead-through / tracked tool / hand / controller / speech+gesture
+- System stance: single-purpose prototype vs extensible pipeline
+
+- Then your claim becomes: “Most work clusters in (a) visualization + (b) motion authoring; we target motion+actions + task-oriented acquisition + extensibility.”
+    - Even if a missing paper exists, it will likely just land somewhere else in your grid—not “steal your thesis”.
+
+- Don’t claim “no one does X”. Claim a bounded gap. In theses, the safest strong wording is:
+    - “To the best of our knowledge…”
+    - “We did not find systems that combine A+B+C under constraints D…”
+    - “Most prior work focuses on [bucket], whereas we focus on [your bucket].”
+
+
+- Prior work on AR/VR robot programming largely focuses on digital-twin visualization and interactive offline/online authoring of robot motions in a spatial UI. Fewer systems address task-oriented program acquisition that combines (i) in-workspace spatial specification of motion primitives with (ii) tool/action semantics and (iii) a reusable acquisition/execution pipeline designed for adding new task-specific use cases. Multimodal intent-based approaches (e.g., combining deictic gesture and speech) demonstrate a different point in the design space, but typically trade off generality, reproducibility, or integration with existing robot programming workflows. In this thesis, we focus on validating spatial authoring as a practical alternative to teach pendant/lead-through for representative collaborative tasks, while structuring the system so that additional inputs and intent interpretation can be integrated later.
+    - That reads “we know the landscape” without betting your life on an absolute novelty claim.
+
+
 
 - We can mention Neura Robotics here - for the welding (we wanted a general system).
 
@@ -212,6 +245,14 @@ For each task, specify required elements:
     - Hand tracking vs pen tracking vs VR vs  other solutions (commercial, motionleap?)
         - 2d vs 3d
         - we will discuss hand tracking solutions, the issues with them, the work from czech students; pen solution; vr; hand tracking + intent problem; hand tracking + single camera problem
+    - Sources:
+        - Zhang et al., 2023 - HAND_TRACK, HEAT, TracePen mention; probability heavy
+        - D-Point pen
+            - https://github.com/Jcparkyn/dpoint/tree/main
+            - https://hackaday.com/2023/11/14/d-point-a-digital-pen-with-optical-inertial-tracking/
+            - https://rijnieks.com/blog/2023-11-25-replicating-dpoint/
+        - Wandelbots (product, 2022) - TracePen
+        - Mueller et al., 2024 and Ong et al., 2020 use OptiTrack, mention it here, to get sub mm accuracy
 - Scene strategies: lightweight fiducials vs industrial localization vs full 3D scanning  
     - What you need (table frame, objects/meshes/markers, alignment)
     - Why you choose your simplified approach for a pilot
@@ -219,12 +260,15 @@ For each task, specify required elements:
 - Technical constraints (accuracy, world coordinates, occlusion, calibration, jitter) = Analysis, because they determine what is feasible.
 - Sensing: mono vs stereo vs multi-camera; fixed vs robot-mounted  
     - both previous require camera, both would be better with multiple cameras, therefore the system should support multi-camera system (flexibly)
-    - mono vs stereo vs multi-cameras
-    - fixed vs robot-mounted
+    - mono vs stereo vs multi-cameras (next to each other or at sides of workspace; mention the czech study)
+    - RGBD camera, Kinect (https://gmv.cast.uark.edu/scanning/hardware/microsoft-kinect-resourceshardware/), Iphone (depth sensor)
+    - fixed vs robot-mounted (allowing camera movement)
     - merging camera views
     - calibration issues for all of theses and synchronization
     - In all of these -> our system should allow to use single camera, but it should not be hard to switch to multiple cameras or stereo camera etc. This nicely introduces the requirement for the module / middleware infrastructure. 
     - FOV, resolution, refresh rate...
+
+    - normal 
 
 Discussion:
 - When 2D hand tracking may be sufficient (known 3D seam geometry)  
@@ -267,6 +311,9 @@ Resulting requirements:
 - Argue possibilities and what we chose and why. 
 - UI has to allow us to create the modular plugin mapping and activate modules (argue it somehow)
     - It then has to allow us selection of usecases and entering of the usecase parameters. It should also visualize the 3d scene and created usecases. 
+- HMD? Expensive and weird, but way easier for visualization and usage.
+- Platform - either with UI or separate chapter
+    - cross-platform design
 
 ---
 
@@ -352,9 +399,22 @@ Rationale:
 
 ## 5. Implementation
 
-Factual description of what was built.
+Factual description of what was built. Mention github here. 
 
 [what is actually implemented in sequencer/UI; pen HW/FW/SW; calibration; scene detection; Kassow module; UI limits]
+
+A reproducible demo path (even if narrow): “from fresh checkout → run → see pen+scene → run weld/pick demo”.
+    - either here, or in appendix; or at least in github
+
+### 5.0 system at a glance
+
+- ref from intro!
+- One paragraph: what the system is (modules + spatial authoring + use-cases + execution)
+- One figure: your “mega graph” but simplified (5–8 boxes).
+    - One clear system overview figure (box/dataflow diagram) in the thesis (Implementation or System Design)?
+- Bullet list: “Inputs → Core capabilities → Use-case plugins → Robot execution”.
+
+
 
 ### 5.1 Hardware and setup
 - Cameras  
@@ -410,6 +470,11 @@ Factual description of what was built.
 
 - Describe how i have used AI / which parts are written by me, which parts by chatgpt, which parts by cursor. 
 - AI usually used as a first draft later refined by me, but some parts were left mostly intact (seam detection for example).
+
+### 5.9 Usage
+
+- project available on github
+- usage guide?
 
 ---
 
@@ -497,6 +562,8 @@ See chapter 2 (like https://pmc.ncbi.nlm.nih.gov/articles/PMC9583918/ for exampl
 
 Separate prototype limitations from inherent constraints.
 
+SEE FUTURE WORK FOR MORE RESOURCES
+
 [where it shines (welding); where it’s weaker (general programming); CBun vs independent runtime tradeoff; limitations + future direction to context-aware (voice+hand+intent)]
 
 - What we achived - describe the results of the usecases pick and place / move works, but not too useful in this setup; weld is / could be really useful (compare with the SmoothTool?)
@@ -514,10 +581,21 @@ Separate prototype limitations from inherent constraints.
 - What did not (accuracy, occlusion, UI roughness, one-shot nature)  
     - Where it breaks down - scene accuracy, UI polish, “one-shotness”
     - Qualitative “what we learned”: where it struggles (scene detection precision; complex program logic; UI overhead)
+    - UX issues with displaying errors...
+        - system reports success on robot torque deviation and joint limits
     - Tracking accuracy / stability: pen is usable but noisy; scene pose may be systematically off; absolute accuracy is hard to prove quickly.
     - Visible corner-cutting in UI / UX; “one-shot program tree” doesn’t fully match the system’s potential;
     - Demo limitations - some tasks are more "proof of flexibilityu" than "best solutions"
     - Platform is strong, but not production-ready.
+- System
+    - motion planning (to avoid obstacles)
+        - to avoid obstacles, but also kept getting issue with joint range exceeded!
+    - path validation infrastructure
+    - improve robot interface -> these should be in developer documentation to keep thesis focused
+        - in KR trajectory move was limiting...
+        - Robot Interface ToolIO - capability flags / versioning / tool abstraction.
+    - cross-platform design
+        - compilable both on windows and linux, but camera module developed only for windows; BLE cross-platform, but behaves differently on linux (doesnt connect)
 - What is inherent vs improvable with better sensing or UI  
 - Expressiveness / applicability limits
     - See "Diploma Thesis Archive/Linear Program"
@@ -553,7 +631,6 @@ Future work:
     - See "Diploma Thesis Archive/Linear Program"
 
 Future work
-- Robot Interface ToolIO - capability flags / versioning / tool abstraction.
 - Input and intent
     - Hand tracking drop-in replacement
     - Using VR controllers instead (connected with the UI Quest 3 integration)
@@ -569,11 +646,39 @@ Future work
 - UI
     - Kassow CBun improvements - fixes, support for teach pendent command (for usecase commands or just pose definition)
     - Quest 3 AR integration
+        - HMD? Expensive and weird, but way easier for visualization and usage.
     - UI cleanup (blocking tasks, repeated visualization READ_FULL calls, code cleanup / better decomposition etc.)
+    - UX issues with displaying errors...
+        - system reports success on robot torque deviation and joint limits
+    - improve visualization interface
+- System
+    - motion planning (to avoid obstacles)
+        - to avoid obstacles, but also kept getting issue with joint range exceeded!
+    - path validation infrastructure - together with ^
+    - improve robot interface -> these should be in developer documentation to keep thesis focused
+        - in KR trajectory move was limiting...
+        - Robot Interface ToolIO - capability flags / versioning / tool abstraction.
+    - cross-platform design
+        - compilable both on windows and linux, but camera module developed only for windows; BLE cross-platform, but behaves differently on linux (doesnt connect)
+- Post-thesis vision: AR-first + hand tracking + LLM + high-level task planning + obstacle-aware synthesis, built as modules on top of this pipeline
+    - this would be the ideal programming system, high level, speech-first, optimally actually building the program in the background
+    - also talk limitations - main issue is robot, gripper, camera, welding tool etc. compatibility
+        - we would need to build a system that can be extended by these tools in a way that the system understands all these tools (system has to be able to understand tools) -> general interfaces and some general hooks into the LLM's for user speech and gesture based programming
+    - would require motion planning, path validation, proper full path visualization, 
 
 ---
 
 ## Appendices
+
+- Main appendix: developer docs - should be "A short developer appendix that freezes the interfaces + architecture intent (so someone can build on it)."
+    - Build and tooling notes + licencing
+        - packages used and versions and vcpkg
+    - full system graph
+    - Message and interface tables (message structure,  serialized message blob form, expected communication graphs)
+    - .aergo / .paergo structure
+        - module data folders structure
+    - technical limitations of the system here! not in results. If we have this section, we shouldnt clutter the main system with technical limitations like faulty UX etc.
+    - mention github
 
 - Full system graph  
 - Message and interface tables (message structure,  serialized message blob form, expected communication graphs)
@@ -598,6 +703,14 @@ Future work
         - Message types + routing/mapping
         - Serialization of state (modules + connections)
         - Activation, configuration, defaults, error handling
+
+        - Module lifecycle (load → activate → run → stopThreads)
+        - Communication primitives (pub/sub + req/resp) and when used
+        - Shared blob rationale (camera-rate data)
+        - Minimal interface summary (tables, not prose)
+        - “How to add a module/use-case” in 8–12 bullet steps
+            - This appendix is what turns “messy repo” into “platform someone can build on”.
+            - Everything else (mega-graph, full message schemas) is optional.
     - Interface structure (for each interface)
     - One big graph of the full / complete setup how everything communicates
     - Example module implementation (module usecase), developer workflow - “how to add a new module/use case”

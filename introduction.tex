@@ -3,12 +3,12 @@
 
 Collaborative robots are attractive for automating tasks that are repetitive but frequently changing, such as small batch production or tasks requiring frequent changeovers. In such cases, the bottleneck is often not the execution time itself, but the time and effort required to re-create robot programs for each new task.
 
-Robot programming is both time-consuming and skill-intensive. This creates friction whenever tasks need to be re-taught. This thesis explores whether this friction can be reduced by changing how users specify robot tasks.
+Robot programming is both time-consuming \cite{IFR2023TraditionalVsNew} and skill-intensive. This creates friction whenever tasks need to be re-taught. This thesis explores whether this friction can be reduced by changing how users specify robot tasks.
 
 \section*{Motivation}
 \addcontentsline{toc}{section}{Motivation}
 
-Industrial robots are commonly programmed using combinations of the following approaches \cite{DevicVidakovicZivkovic24}:
+Industrial robots are commonly programmed using combinations of the following approaches \cite{VILLANI201866}:
 \begin{itemize}
     \item \emph{Offline programming}: The user creates the robot program in a simulated environment, often based on a CAD model of the workspace. This approach allows programming without the physical presence of the robot, therefore avoiding downtime and allowing testing in a simulated environment. However, it requires accurate models of the robot and the environment, and it can be complex to set up and use effectively.
     \item \emph{Teach pendant programming}: The user enters robot motions and commands step-by-step using a handheld device (the teach pendant). This can make teaching poses more intuitive, since you can see the robot's movements in the real world, but programming still involves iterating on trajectories, tool actions, and program structure, which can be time-consuming and typically requires physical presence at the robot.
@@ -30,7 +30,7 @@ These limitations motivate the research question of this thesis: can robot progr
 
 We propose \emph{spatial authoring} of cooperative robot motions and tool actions directly in the real workspace using AR-inspired inputs, supported by external sensing. While general-purpose robot programming is expressive, it also exposes many low-level details (motion primitives, tool coordination, error handling) that dominate effort in small programs for frequently changing tasks. Therefore, this thesis focuses on task-oriented use cases for common task families, where the user specifies intent at a higher level of abstraction for a specific task and the system expands it into the required motion and tool commands.
 
-This approach has four conceptual stages, illustrated in \autoref{fig:intro__img_2__usecase_stages}: 
+This approach has four conceptual stages, illustrated in \autoref{fig:intro__img_2__usecase_stages}:
 \begin{enumerate*}[label=(\roman*)]
     \item \emph{workspace sensing} to estimate the relevant workspace context (e.g., reference frames and task-relevant objects);
     \item \emph{authoring}, where the user specifies spatial intent in the workspace;
@@ -72,3 +72,7 @@ Based on the high-level approach described above, we define three goals:
 \addcontentsline{toc}{section}{Thesis structure}
 
 In \emph{chapter 1} we review the background and related work on robot programming methods, spatial authoring approaches, and relevant technologies for sensing and execution. \emph{Chapter 2} derives requirements and decomposes the problem into core components and design trade-offs. \emph{Chapter 3} describes the system architecture and design decisions. \emph{Chapter 4} presents the hardware setup and implementation details of each component. \emph{Chapter 5} focuses on user usage of the system with system setup and two user stories for the two use cases. \emph{Chapter 6} evaluates the system with experiments on tracking stability, end-to-end workflow trials and real robot validation. \emph{Chapter 7} discusses the results, limitations, and future work. Finally, \emph{chapter 8} concludes the thesis with a summary of contributions and final remarks.
+
+\xxx{add a 5–8 line “System at a glance”. This should cover what our thesis actually does in a nutshell, before jumping into the analysis. Or at the very least clearly link it in the structure.}
+
+\xxx{Do not forget to refernce the chapters with autoref, and to update the chapter numbers if you add/remove chapters.}

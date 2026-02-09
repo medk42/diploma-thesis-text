@@ -16,18 +16,166 @@
 %
 %  ===========================================================================
 
-
-# Extended reality (XR) in industrial robotics (Unity); how robots are programmed section
-@ARTICLE{DevicVidakovicZivkovic24,
-  author  = {Devic, Andrija and Vidakovic, Jelena and Zivkovic, Nikola},
-  title   = {Development of Standalone Extended-Reality-Supported Interactive Industrial Robot Programming System},
-  journal = {Machines},
-  year    = {2024},
-  volume  = {12},
-  number  = {7},
-  pages   = {480},
-  doi     = {10.3390/machines12070480}
+% Villani et al., 2018 - SURVEY, overview of common robot programming approaches - first online, offline; then multi-modal, virtual, augmented reality.
+@article{VILLANI201866,
+  title = {Survey on Human-Robot Interaction for Robot Programming in Industrial Applications},
+  journal = {IFAC-PapersOnLine},
+  volume = {51},
+  number = {11},
+  pages = {66-71},
+  year = {2018},
+  note = {16th IFAC Symposium on Information Control Problems in Manufacturing INCOM 2018},
+  issn = {2405-8963},
+  doi = {https://doi.org/10.1016/j.ifacol.2018.08.236},
+  url = {https://www.sciencedirect.com/science/article/pii/S2405896318313600},
+  author = {Valeria Villani and Fabio Pini and Francesco Leali and Cristian Secchi and Cesare Fantuzzi},
+  keywords = {Intelligent interfaces, Robotics technology, Human operator support, Multi-modal interaction, Design methodology for HMS},
+  abstract = {The recent trends in modern industry highlight an increasing use of robots for a wide range of applications, which span from established manufacturing operations to novel tasks characterized by a close collaboration with the operators. Although human-robot collaboration allows to relieve operators of exhausting works, an effective collaboration requires a straightforward interaction to foster the use of robot assistants. This paper provides a comprehensive survey on human-robot interaction approaches and related interfaces addressed to robot programming. An overview of on-line and off-line robot programming techniques is first presented. Then, novel intuitive interaction means, such as those based on multi-modal interaction, virtual and augmented reality, are considered. The paper aims at pointing out that collaborative robotics can effectively reduce operator’s physical workload if easy to use interfaces for robot programming are provided.}
 }
+
+% Makhataeva & Varol, 2020 - SURVEY, AR applications in robotics (not just programming!)
+@Article{Makhataeva2020,
+  AUTHOR = {Makhataeva, Zhanat and Varol, Huseyin Atakan},
+  TITLE = {Augmented Reality for Robotics: A Review},
+  JOURNAL = {Robotics},
+  VOLUME = {9},
+  YEAR = {2020},
+  NUMBER = {2},
+  ARTICLE-NUMBER = {21},
+  URL = {https://www.mdpi.com/2218-6581/9/2/21},
+  ISSN = {2218-6581},
+  ABSTRACT = {Augmented reality (AR) is used to enhance the perception of the real world by integrating virtual objects to an image sequence acquired from various camera technologies. Numerous AR applications in robotics have been developed in recent years. The aim of this paper is to provide an overview of AR research in robotics during the five year period from 2015 to 2019. We classified these works in terms of application areas into four categories: (1) Medical robotics: Robot-Assisted surgery (RAS), prosthetics, rehabilitation, and training systems; (2) Motion planning and control: trajectory generation, robot programming, simulation, and manipulation; (3) Human-robot interaction (HRI): teleoperation, collaborative interfaces, wearable robots, haptic interfaces, brain-computer interfaces (BCIs), and gaming; (4) Multi-agent systems: use of visual feedback to remotely control drones, robot swarms, and robots with shared workspace. Recent developments in AR technology are discussed followed by the challenges met in AR due to issues of camera localization, environment mapping, and registration. We explore AR applications in terms of how AR was integrated and which improvements it introduced to corresponding fields of robotics. In addition, we summarize the major limitations of the presented applications in each category. Finally, we conclude our review with future directions of AR research in robotics. The survey covers over 100 research works published over the last five years.},
+  DOI = {10.3390/robotics9020021}
+}
+
+% Dianatfar et al., 2021 - SURVEY, review of VR/AR solutions in human-robot collaboration
+@article{DIANATFAR2021407,
+  title = {Review on existing VR/AR solutions in human–robot collaboration},
+  journal = {Procedia CIRP},
+  volume = {97},
+  pages = {407-411},
+  year = {2021},
+  note = {8th CIRP Conference of Assembly Technology and Systems},
+  issn = {2212-8271},
+  doi = {https://doi.org/10.1016/j.procir.2020.05.259},
+  url = {https://www.sciencedirect.com/science/article/pii/S2212827120314815},
+  author = {Morteza Dianatfar and Jyrki Latokartano and Minna Lanz},
+  keywords = {Human–robot collaboration, Virtual reality, Augmented reality},
+  abstract = {During the last decades, there has been wide interest towards creating more agile and reconfigurable automation systems. This includes the research interest towards human–robot collaboration (HRC) solutions, where semi or fully automated process could be combined with human dexterity and flexibility without complexity and inflexibility. However, the communication between the human and the robot is not intuitive, fast or flexible yet. The emerging technologies such as Augmented Reality (AR), Virtual Reality (VR) and Mixed Reality (XR) are seen as good solution candidates for increasing the communication between human and the machine during the design, commission and operation phases. The design of the HRC system includes layout design evaluation, task scenario analysis, robot programming, cycle time calculations, and safety analysis. Virtual Reality and Augmented Reality technologies provide immersive experiences to visualize and analyze these procedures. This paper aims to review the current status of virtual and augmented reality solutions in HRC with meta-analysis and highlight missing elements. Finally, future research directions and requirements are presented.}
+}
+
+% (IFR), 2023 - programming slow (50-70%), OFFLINE PROGRAMMING, align to scene, collision avoidance
+@misc{IFR2023TraditionalVsNew,
+  author = {Kate Degai},
+  title = {Traditional robot programming vs AI \& machine vision},
+  year = {2023},
+  month = {2},
+  url = {https://ifr.org/post/traditional-robot-programming-vs-ai-machine-vision},
+  note = {Accessed: 2026-02-09}
+}
+
+
+% Ikeda & Szafir, 2024 - AR/HOLOLENS; INTENT; TWIN(ON,StRO), PRogramAR, trigger-action rules (if-then or while-do); add zones, if-object-in-zone then-move-to-zone; steamvr trackers for objects; Motion Planner MoveIt!
+@article{Ikeda2024,
+  author = {Ikeda, Bryce and Szafir, Daniel},
+  year = {2024},
+  month = {01},
+  pages = {},
+  title = {PRogramAR: Augmented Reality End-User Robot Programming},
+  volume = {13},
+  journal = {ACM Transactions on Human-Robot Interaction},
+  doi = {10.1145/3640008}
+}
+
+% Ong et al., 2020 - AR/DK2; TbD, PbP, CAD edge/feature; COLL_DET; TWIN(ON,StRO); (head-track, OptiTrack pen, kinect2 workspace); OMPL MoveIt!
+@article{Ong2020,
+  author = {Thanigaivel, Naresh Kumar and Ong, S K and Nee, Andrew},
+  year = {2019},
+  month = {06},
+  pages = {},
+  title = {Augmented reality-assisted robot programming system for industrial applications},
+  volume = {61},
+  journal = {Robotics and Computer-Integrated Manufacturing},
+  doi = {10.1016/j.rcim.2019.101820}
+}
+
+% Devic et al., 2024  - AR,VR/PHONE,RiftS; TbD, PbP; TWIN(OFF,SIM); HMLV; simulate + debug support (system checks attainability); custom path planning/IK
+@Article{Devic2024,
+  AUTHOR = {Devic, Andrija and Vidakovic, Jelena and Zivkovic, Nikola},
+  TITLE = {Development of Standalone Extended-Reality-Supported Interactive Industrial Robot Programming System},
+  JOURNAL = {Machines},
+  VOLUME = {12},
+  YEAR = {2024},
+  NUMBER = {7},
+  ARTICLE-NUMBER = {480},
+  URL = {https://www.mdpi.com/2075-1702/12/7/480},
+  ISSN = {2075-1702},
+  ABSTRACT = {Extended reality (XR) is one of the most important technologies in developing a new generation of human–machine interfaces (HMIs). In this study, the design and implementation of a standalone interactive XR-supported industrial robot programming system using the Unity game engine is presented. The presented research aims to achieve a cross-platform solution that enables novel tools for robot programming, trajectory validation, and robot programming debugging within an extended reality environment. From a robotics perspective, key design tasks include modeling in the Unity environment based on robot CAD models and control design, which include inverse kinematics solution, trajectory planner development, and motion controller set-up. Furthermore, the integration of real-time vision, touchscreen interaction, and AR/VR headset interaction are involved within the overall system development. A comprehensive approach to integrating Unity with established industrial robot modeling conventions and control strategies is presented. The proposed modeling, control, and programming concepts, procedures, and algorithms are verified using a 6DoF robot with revolute joints. The benefits and challenges of using a standalone XR-supported interactive industrial robot programming system compared to integrated Unity–robotics development frameworks are discussed.},
+  DOI = {10.3390/machines12070480}
+}
+
+% Thoo et al., 2021 - AR/PHONE; ???; TWIN(OFF,CtT); HMLV - they simulate the real environment for offline programming which essentially turns their system into full offline programming tool, but in AR (MENTION)
+@misc{Thoo2021,
+      title={Online and Offline Robot Programming via Augmented Reality Workspaces}, 
+      author={Yong Joon Thoo and Jérémy Maceiras and Philip Abbet and Mattia Racca and Hakan Girgin and Sylvain Calinon},
+      year={2021},
+      eprint={2107.01884},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2107.01884}, 
+}
+
+% Mueller et al., 2024 - AR/VivePro; COMPLEX; TWIN(OFF,CtT,Next Room); Bio-IK solver; HMLV; (SmartPd pen (theirs), using OptiTrack (sub-mm accuracy)); "Real-er" approach: calibrate, SmartPd is end-effector, create frames (pose, flags (grip, release, approach...), type (PtP, spline), ref coord system), build trajectories (PtP, spline = welding), validate (sim, check reachability, singularities, collisions), calibrate real robot, recompute all joints, validate again, export to source code, execute, https://www.mdpi.com/2218-6581/13/3/35
+@Article{Muller2024,
+  AUTHOR = {Müller, Fabian and Koch, Michael and Hasse, Alexander},
+  TITLE = {User Study to Validate the Performance of an Offline Robot Programming Method That Enables Robot-Independent Kinesthetic Instruction through the Use of Augmented Reality and Motion Capturing},
+  JOURNAL = {Robotics},
+  VOLUME = {13},
+  YEAR = {2024},
+  NUMBER = {3},
+  ARTICLE-NUMBER = {35},
+  URL = {https://www.mdpi.com/2218-6581/13/3/35},
+  ISSN = {2218-6581},
+  ABSTRACT = {The paper presents a novel offline programming (OLP) method based on programming by demonstration (PbD), which has been validated through user study. PbD is a programming method that involves physical interaction with robots, and kinesthetic teaching (KT) is a commonly used online programming method in industry. However, online programming methods consume significant robot resources, limiting the speed advantages of PbD and emphasizing the need for an offline approach. The method presented here, based on KT, uses a virtual representation instead of a physical robot, allowing independent programming regardless of the working environment. It employs haptic input devices to teach a simulated robot in augmented reality and uses automatic path planning. A benchmarking test was conducted to standardize equipment, procedures, and evaluation techniques to compare different PbD approaches. The results indicate a 47\% decrease in programming time when compared to traditional KT methods in established industrial systems. Although the accuracy is not yet at the level of industrial systems, users have shown rapid improvement, confirming the learnability of the system. User feedback on the perceived workload and the ease of use was positive. In conclusion, this method has potential for industrial use due to its learnability, reduction in robot downtime, and applicability across different robot sizes and types.},
+  DOI = {10.3390/robotics13030035}
+}
+
+
+% Czech guys - GESTURE/HAND; PbP; TWIN(ON); MediaPipe; good results, but no intent, "Similar to one part of my system (pick and place), however, I'd like my system to be more general", https://www.mdpi.com/1424-8220/23/9/4219
+@Article{Vysocky2023,
+  AUTHOR = {Vysocký, Aleš and Poštulka, Tomáš and Chlebek, Jakub and Kot, Tomáš and Maslowski, Jan and Grushko, Stefan},
+  TITLE = {Hand Gesture Interface for Robot Path Definition in Collaborative Applications: Implementation and Comparative Study},
+  JOURNAL = {Sensors},
+  VOLUME = {23},
+  YEAR = {2023},
+  NUMBER = {9},
+  ARTICLE-NUMBER = {4219},
+  URL = {https://www.mdpi.com/1424-8220/23/9/4219},
+  PubMedID = {37177421},
+  ISSN = {1424-8220},
+  ABSTRACT = {The article explores the possibilities of using hand gestures as a control interface for robotic systems in a collaborative workspace. The development of hand gesture control interfaces has become increasingly important in everyday life as well as professional contexts such as manufacturing processes. We present a system designed to facilitate collaboration between humans and robots in manufacturing processes that require frequent revisions of the robot path and that allows direct definition of the waypoints, which differentiates our system from the existing ones. We introduce a novel and intuitive approach to human–robot cooperation through the use of simple gestures. As part of a robotic workspace, a proposed interface was developed and implemented utilising three RGB-D sensors for monitoring the operator’s hand movements within the workspace. The system employs distributed data processing through multiple Jetson Nano units, with each unit processing data from a single camera. MediaPipe solution is utilised to localise the hand landmarks in the RGB image, enabling gesture recognition. We compare the conventional methods of defining robot trajectories with their developed gesture-based system through an experiment with 20 volunteers. The experiment involved verification of the system under realistic conditions in a real workspace closely resembling the intended industrial application. Data collected during the experiment included both objective and subjective parameters. The results indicate that the gesture-based interface enables users to define a given path objectively faster than conventional methods. We critically analyse the features and limitations of the developed system and suggest directions for future research. Overall, the experimental results indicate the usefulness of the developed system as it can speed up the definition of the robot’s path.},
+  DOI = {10.3390/s23094219}
+}
+
+
+% Lin et al., 2023 - GESTURE+SPEECH; GIRAF, human language+deictic gesture instructions
+@misc{Lin2023,
+      title={Gesture-Informed Robot Assistance via Foundation Models}, 
+      author={Li-Heng Lin and Yuchen Cui and Yilun Hao and Fei Xia and Dorsa Sadigh},
+      year={2023},
+      eprint={2309.02721},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO},
+      url={https://arxiv.org/abs/2309.02721}, 
+}
+
+
+
+
+
+
+
+
 
 @misc{KassowRobotsManuals,
   title = {{K}assow {R}obots {P}roduct {M}anuals},
@@ -40,89 +188,4 @@
   title  = {{World Robotics 2023: Industrial Robots (Extended Version)}},
   url    = {https://ifr.org/img/worldrobotics/2023_WR_extended_version.pdf},
   note   = {Accessed: 2026-02-07}
-}
-
-
-
-/// TO REMOVE THE EXAMPLE ENTRIES BELOW AND ADD YOUR OWN
-
-@BOOK{Andel07,
-  title = {Základy matematické statistiky},
-  publisher = {Matfyzpress},
-  year = {2007},
-  author = {Anděl, J.},
-  address = {Praha},
-  series = {Druhé opravené vydání},
-  isbn = {80-7378-001-1}
-}
-
-@BOOK{Andel98,
-  title = {Statistické metody},
-  publisher = {Matfyzpress},
-  year = {1998},
-  author = {Anděl, J.},
-  address = {Praha},
-  series = {Druhé přepracované vydání},
-  isbn = {80-85863-27-8}
-}
-
-@ARTICLE{Cox72,
-  author = {Cox, D. R.},
-  title = {Regression models and life-tables (with {D}iscussion)},
-  journal = {Journal of the Royal Statistical Society, Series B},
-  year = {1972},
-  volume = {34},
-  pages = {187--220},
-  number = {2}
-}
-
-@ARTICLE{DempsterLairdRubin77,
-  author = {Dempster, A. P. and Laird, N. M. and Rubin, D. B.},
-  title = {Maximum likelihood from incomplete data via the {EM} algorithm},
-  journal = {Journal of the Royal Statistical Society, Series B},
-  year = {1977},
-  volume = {39},
-  pages = {1--38},
-  number = {1}
-}
-
-@ARTICLE{Genberget08,
-  author = {Genberg, B. L. and Kulich, M. and Kawichai, S. and Modiba, P. and
-	Chingono, A. and Kilonzo, G. P. and Richter, L. and Pettifor, A.
-	and Sweat, M. and Celentano, D. D.},
-  title = {{HIV} risk behaviors in Sub-{S}aharan {A}frica and {N}orthern {T}hailand:
-	{B}aseline behavioral data from project {A}ccept},
-  journal = {Journal of Acquired Immune Deficiency Syndrome},
-  year = {2008},
-  volume = {49},
-  pages = {309--319}
-}
-
-@ARTICLE{KaplanMeier58,
-  author = {Kaplan, E. L. and Meier, P.},
-  title = {Nonparametric estimation from incomplete observations},
-  journal = {Journal of the American Statistical Association},
-  year = {1958},
-  volume = {53},
-  pages = {457--481},
-  number = {282}
-}
-
-@BOOK{LehmannCasella98,
-  title = {Theory of Point Estimation},
-  publisher = {Springer-Verlag},
-  year = {1998},
-  author = {Lehmann, E. L. and Casella, G.},
-  address = {New York},
-  series = {{S}econd {E}dition},
-  isbn = {0-387-98502-6}
-}
-
-@ARTICLE{Student08,
-  author = {Student},
-  title = {On the probable error of the mean},
-  journal = {Biometrika},
-  year = {1908},
-  volume = {6},
-  pages = {1-25}
 }
