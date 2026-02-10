@@ -1,3 +1,100 @@
 \chapter{Problem Decomposition and Analysis} \label{chapter:ch2_analysis}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a diam lectus. Sed sit amet ipsum mauris. Maecenas congue ligula ac quam viverra nec consectetur ante hendrerit. Donec et mollis dolor. Praesent et diam eget libero egestas mattis sit amet vitae augue. Nam tincidunt congue enim, ut porta lorem lacinia consectetur. Donec ut libero sed arcu vehicula ultricies a non tortor. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean ut gravida lorem.
+In this chapter we will analyze the goals of this thesis and derive requirements for our system. We will then analyze different approaches of meeting these requirements, compare them to each other, and select an approach best suited to our goals and requirements. 
+
+\section{Target tasks and their requirements}
+
+Let us first re-state the goals we want to achieve with our system for reference:
+\begin{goals}
+  \item \label{an_goal:1} Explore and validate programming of cooperative robots directly in the real workspace by defining robot motions and tool actions using spatial, AR-inspired inputs, as an alternative to traditional teach pendant, offline programming, and hand-guiding workflows.
+  \item \label{an_goal:2} Provide an extensible system where task-oriented use cases can be implemented as plugins that reuse the same acquisition/execution infrastructure.
+  \item \label{an_goal:3} Demonstrate the approach on a real robot with representative use cases for a material-handling task (pick-and-place) and a trajectory-centric task (seam welding), and evaluate the benefits and limitations of spatial authoring for these tasks.
+\end{goals}
+
+First, we will define the requirements for the system based on the use cases we want to implement. The two use cases mentioned in goal \ref{an_goal:3} are a material-handling task (\emph{pick-and-place}) and a trajectory-centric task (\emph{seam welding}). 
+
+Our system should also support the addition of new use cases (goal~\ref{an_goal:2}), so we will outline some potential future use cases and see if the requirements derived from our main use cases are sufficient to support them as well. 
+
+One example of a future use case is a \emph{painting task}, where the goal is to uniformly paint a selected face of an object using a spray gun. In addition, the system should be capable of expressing traditional robot motion primitives (e.g., moving to a point or along a path). While such primitives are not the main focus of our work, their compatibility with the proposed input architecture is relevant.
+
+The ability to support both these additional tasks and the primary use cases does not constitute a formal proof of generality; rather, it serves as a \emph{plausibility check} and a concrete data point indicating that the proposed requirements and abstractions are sufficiently expressive to cover a broader class of tasks, including ones not explicitly targeted during system design.
+
+\subsection{Pick-and-place}
+
+One way to implement a \emph{pick-and-place} task is the following:
+\begin{enumerate*}[label=(\arabic*)]
+    \item \emph{scan the scene} to find the object to be picked (we also need to know which object to pick),
+    \item \emph{calculate the grasp pose} (the detected position of the object is not necessarily the same as the grasp pose),
+    \item \emph{move to the grasp pose},
+    \item \emph{close the gripper},
+    \item \emph{move to the release pose} without crashing into anything,
+    \item \emph{open the gripper}, and
+    \item \emph{move away}, for example, to a safe home position.
+\end{enumerate*}
+
+This gives us several task-specific requirements:
+\begin{enumerate*}[label=(\roman*)]
+    \item the system needs to be able to capture the scene and detect objects in it, \label{req:scene_detection}
+    \item the system needs to be able to calculate the grasp pose based on the detected object, \label{req:grasp_calculation}
+    \item the user needs to define the object type to be picked, and \label{req:object_type}
+    \item the user needs to define the release pose. \label{req:release_pose}
+\end{enumerate*}
+
+Therefore the system will need to be able to provide at least \emph{scene detection} logic (covers requirement \ref{req:scene_detection}) and a spatial \emph{6D input interface} (requirement \ref{req:release_pose}). Requirement \ref{req:object_type} can be fulfilled either by a simple UI element (e.g. dropdown) or by spatial input as well --- given that we already plan to support a \emph{6D input interface}, we can also use it for object type selection too. Finally requirement \ref{req:grasp_calculation} can be fulfilled either on the use case plugin level (plugin will calculate the grasp pose based on the detected object) or even from the user input (user selects the object with a 6D input, we can also consider the selection pose as the grasp pose).
+
+\subsection{Seam welding}
+
+One way to implement a \emph{seam welding} task is the following:
+\begin{enumerate*}[label=(\arabic*)]
+    \item \emph{approach the seam} to be welded (usually not the start of the seam, but a point close to it),
+    \item \emph{approach the start of the seam},
+    \item \emph{start welding},
+    \item \emph{move along the seam} while welding,
+    \item \emph{stop welding} at the end of the seam, and
+    \item \emph{move away}, for example, to a safe home position.
+\end{enumerate*}
+
+This gives us the following task-specific requirements:
+\begin{enumerate*}[label=(\roman*)]
+    \item the user needs to define the approach pose (a point close to the start of the seam), \label{req:approach_pose}
+    \item the user needs to define the seam (either as a linear segment --- start and end points --- or as a trajectory), and \label{req:seam_definition}
+    \item the user needs to define the welding parameters (e.g. welding speed, welding power, weaving settings). \label{req:welding_parameters}
+\end{enumerate*}
+
+To fulfill these requirements, we could use the same \emph{6D input interface} as for the pick-and-place use case --- the user can select the approach pose (fulfilling requirement \ref{req:approach_pose}) and then define the seam by either selecting the start and end points of the seam or by defining a trajectory along the seam (requirement \ref{req:seam_definition}).
+
+However this approach would depend heavily on the precision of the \emph{6D input interface}. Therefore we could instead first use the \emph{scene detection} logic to detect objects within the scene and then use use case specific logic to detect possible seams between the detected objects --- the user would then still use the \emph{6D input interface} to enter a trajectory representing the seam, however the system would align the user's input to the closest detected seam (requirement \ref{req:seam_definition}). The approach pose (requirement \ref{req:approach_pose}) could be automatically defined by the use case as a point at a certain distance from the start of the seam along the seam normal. Finally, the welding parameters (requirement \ref{req:welding_parameters}) could be defined by a simple UI element (with reasonable defaults).
+
+
+
+
+\newpage
+
+\xxx{old stuff}
+
+\xxx{scene detection}
+\xxx{6d input for pose and trajectories}
+\xxx{ui, select usecase, set parameters, visualize, confirm programming}
+
+To fulfil these goals, we need to develop a system that:
+\begin{itemize}
+    \item provides some sort of spatial input interface to the use case plugins (goal \ref{an_goal:1})
+    \item contains a robot communication interface that can execute the created program on a real robot and supports changing the robot brand/model (goal \ref{an_goal:2})
+    \item supports addition of new use cases as plugins that reuse the same input and execution infrastructure (goal \ref{an_goal:2})
+    \item lets the user select the use case they want to program for and visualizes the created program in some AR-adjacent way (goals \ref{an_goal:1}, \ref{an_goal:2})
+\end{itemize}
+
+
+
+We first need to define what the use cases require from the system. For that, we need to analyze the use cases we want to implement (goal \ref{an_goal:3}) and future use cases that we may want to support (goal \ref{an_goal:2}) and derive the requirements for the system from them.
+
+Goal \ref{an_goal:3} requires us to implement two use cases: a material-handling task (pick-and-place) and a trajectory-centric task (seam welding). We can easily extend this list by traditional robot move command primitives (move to point, move along path) --- move command primitives are not the main focus of our work, but if the input architecture derived from our two main tasks supports them, it can help to show that the system is general enough. We also define one more complex use case --- a painting task, where our defined goal is to paint a selected face of an object with a spray gun uniformly.
+
+
+\xxx{Above we need: scene input (not known how yet), robot interface, modular architecture for plugins, UI/visualization}
+
+\xxx{Here we will argue that we should start from the usecases and define couple more (extension requirement) and then analyze the requirements to enter the uscase programs}
+
+\xxx{Then we will have the requirements and we write a chapter that summarizes them and tells us step by step what we need to implement / do / design}
+
+\xxx{The next chapter will start with scene input requirement - pen tracking + scene + camera }
