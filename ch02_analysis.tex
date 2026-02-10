@@ -19,7 +19,7 @@ One example of a future use case is a \emph{painting task}, where the goal is to
 
 The ability to support both these additional tasks and the primary use cases does not constitute a formal proof of generality; rather, it serves as a \emph{plausibility check} and a concrete data point indicating that the proposed requirements and abstractions are sufficiently expressive to cover a broader class of tasks, including ones not explicitly targeted during system design.
 
-\subsection{Pick-and-place}
+\subsection{Pick-and-place} \label{subsec:ch2_analysis_pick_and_place}
 
 One way to implement a \emph{pick-and-place} task is the following:
 \begin{enumerate*}[label=(\arabic*)]
@@ -42,7 +42,7 @@ This gives us several task-specific requirements:
 
 Therefore the system will need to be able to provide at least \emph{scene detection} logic (covers requirement \ref{req:scene_detection}) and a spatial \emph{6D input interface} (requirement \ref{req:release_pose}). Requirement \ref{req:object_type} can be fulfilled either by a simple UI element (e.g. dropdown) or by spatial input as well --- given that we already plan to support a \emph{6D input interface}, we can also use it for object type selection too. Finally requirement \ref{req:grasp_calculation} can be fulfilled either on the use case plugin level (plugin will calculate the grasp pose based on the detected object) or even from the user input (user selects the object with a 6D input, we can also consider the selection pose as the grasp pose).
 
-\subsection{Seam welding}
+\subsection{Seam welding} \label{subsec:ch2_analysis_seam_welding}
 
 One way to implement a \emph{seam welding} task is the following:
 \begin{enumerate*}[label=(\arabic*)]
@@ -65,35 +65,26 @@ To fulfill these requirements, we could use the same \emph{6D input interface} a
 
 However this approach would depend heavily on the precision of the \emph{6D input interface}. Therefore we could instead first use the \emph{scene detection} logic to detect objects within the scene and then use use case specific logic to detect possible seams between the detected objects --- the user would then still use the \emph{6D input interface} to enter a trajectory representing the seam, however the system would align the user's input to the closest detected seam (requirement \ref{req:seam_definition}). The approach pose (requirement \ref{req:approach_pose}) could be automatically defined by the use case as a point at a certain distance from the start of the seam along the seam normal. Finally, the welding parameters (requirement \ref{req:welding_parameters}) could be defined by a simple UI element (with reasonable defaults).
 
+\subsection{System requirements}
+
+Subsections \ref{subsec:ch2_analysis_pick_and_place} and \ref{subsec:ch2_analysis_seam_welding} give us the following system requirements:
+\begin{requirements}
+    \item \emph{6D input interface} for defining poses and trajectories (both in 6D; that is, with position and orientation) in the workspace. While extreme precision is not strictly required --- since use-case-specific logic can refine the user input with the help of the scene data --- higher input precision is nevertheless preferable, as it simplifies downstream processing, improves alignment robustness, and better supports future use cases with tighter accuracy requirements.
+    \item \emph{scene detection} logic that can detect objects in the scene and provide their poses. The precision requirements for the scene detection are higher than for the 6D input interface, because we use the detected objects to refine the user input.
+    \item \emph{UI} for defining non-spatial parameters (e.g. object type for pick-and-place, welding parameters for seam welding). 
+\end{requirements}
+
+Beyond the requirements directly derived from the use cases, we also have some more general requirements:
+\begin{requirements}[resume]
+    \item \emph{UI} also has to support selection of the use case to be programmed, visualization of the created program, and confirmation of the programming. This requirement is not directly derived from the use cases, but it is necessary for a complete system that can be used by end-users.
+    \item \emph{robot communication interface} that allows the use cases to move the robot and control its tool, and that can support multiple robot brands/models to ensure broader applicability.
+    \item \emph{use case plugin support} that allows the addition of new use cases as plugins, reusing the same input and execution infrastructure outlined in the previous requirements.
+\end{requirements}
 
 
 
 \newpage
 
-\xxx{old stuff}
-
-\xxx{scene detection}
-\xxx{6d input for pose and trajectories}
-\xxx{ui, select usecase, set parameters, visualize, confirm programming}
-
-To fulfil these goals, we need to develop a system that:
-\begin{itemize}
-    \item provides some sort of spatial input interface to the use case plugins (goal \ref{an_goal:1})
-    \item contains a robot communication interface that can execute the created program on a real robot and supports changing the robot brand/model (goal \ref{an_goal:2})
-    \item supports addition of new use cases as plugins that reuse the same input and execution infrastructure (goal \ref{an_goal:2})
-    \item lets the user select the use case they want to program for and visualizes the created program in some AR-adjacent way (goals \ref{an_goal:1}, \ref{an_goal:2})
-\end{itemize}
-
-
-
-We first need to define what the use cases require from the system. For that, we need to analyze the use cases we want to implement (goal \ref{an_goal:3}) and future use cases that we may want to support (goal \ref{an_goal:2}) and derive the requirements for the system from them.
-
-Goal \ref{an_goal:3} requires us to implement two use cases: a material-handling task (pick-and-place) and a trajectory-centric task (seam welding). We can easily extend this list by traditional robot move command primitives (move to point, move along path) --- move command primitives are not the main focus of our work, but if the input architecture derived from our two main tasks supports them, it can help to show that the system is general enough. We also define one more complex use case --- a painting task, where our defined goal is to paint a selected face of an object with a spray gun uniformly.
-
-
-\xxx{Above we need: scene input (not known how yet), robot interface, modular architecture for plugins, UI/visualization}
-
-\xxx{Here we will argue that we should start from the usecases and define couple more (extension requirement) and then analyze the requirements to enter the uscase programs}
 
 \xxx{Then we will have the requirements and we write a chapter that summarizes them and tells us step by step what we need to implement / do / design}
 
