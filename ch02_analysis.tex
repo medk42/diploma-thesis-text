@@ -2,7 +2,7 @@
 
 In this chapter we will analyze the goals of this thesis and derive requirements for our system. We will then analyze different approaches of meeting these requirements, compare them to each other, and select an approach best suited to our goals and requirements. 
 
-\section{Target tasks and their requirements}
+\section{Target tasks and their requirements} \label{sec:ch2_analysis_tasks_and_requirements}
 
 Let us first re-state the goals we want to achieve with our system for reference:
 \begin{goals}
@@ -65,7 +65,7 @@ To fulfill these requirements, we could use the same \emph{6D input interface} a
 
 However this approach would depend heavily on the precision of the \emph{6D input interface}. Therefore we could instead first use the \emph{scene detection} logic to detect objects within the scene and then use use case specific logic to detect possible seams between the detected objects --- the user would then still use the \emph{6D input interface} to enter a trajectory representing the seam, however the system would align the user's input to the closest detected seam (requirement \ref{req:seam_definition}). The approach pose (requirement \ref{req:approach_pose}) could be automatically defined by the use case as a point at a certain distance from the start of the seam along the seam normal. Finally, the welding parameters (requirement \ref{req:welding_parameters}) could be defined by a simple UI element (with reasonable defaults).
 
-\subsection{System requirements}
+\subsection{System requirements} \label{subsec:ch2_analysis_system_requirements}
 
 Subsections \ref{subsec:ch2_analysis_pick_and_place} and \ref{subsec:ch2_analysis_seam_welding} give us the following system requirements:
 \begin{requirements}
@@ -81,11 +81,14 @@ Beyond the requirements directly derived from the use cases, we also have some m
     \item \emph{use case plugin support} that allows the addition of new use cases as plugins, reusing the same input and execution infrastructure outlined in the previous requirements.
 \end{requirements}
 
+\subsection{Coverage of Additional Use Cases}
 
+The requirements outlined in \autoref{subsec:ch2_analysis_system_requirements} are sufficient to cover the additional use cases mentioned in \autoref{sec:ch2_analysis_tasks_and_requirements}. 
+
+For example, the \emph{painting task} can be implemented using the \emph{6D input interface} to select the face to be painted as a 6D pose or a trajectory circling the the face. The requested face can then be chosen by the use case logic as the face closest to the user input. The \emph{UI} can be used to define painting parameters (e.g. paint flow rate, spray pattern) and the use case can then generate the appropriate robot trajectory.
+
+Similarly, traditional robot motion primitives can also be implemented using the same \emph{6D input interface} for defining target poses or paths. This use would require higher precision and lower noise of the input, particularly for defining paths, which further emphasizes the importance of a high-quality \emph{6D input interface}. At the same time, a use case may apply smoothing or refinement to the user-provided path, which can partially relax the precision requirements on the input.
 
 \newpage
-
-
-\xxx{Then we will have the requirements and we write a chapter that summarizes them and tells us step by step what we need to implement / do / design}
 
 \xxx{The next chapter will start with scene input requirement - pen tracking + scene + camera }
