@@ -1,23 +1,27 @@
 \chapter{Related Work} \label{chapter:ch1_related_work}
 
-This thesis explores the concept of \emph{in-workspace spatial authoring}, where the user specifies spatial intent directly in the real workspace using AR-inspired input, supported by external sensing. The system then expands this intent into the required motion and tool commands for the robot. The goal of this chapter is not an exhaustive survey, but rather a compact overview of 
+This thesis explores the concept of \emph{in-workspace spatial authoring}, where the user specifies spatial intent directly in the real workspace using AR-inspired input, supported by external sensing. The system then expands this intent into the required motion and tool commands for the robot. The goal of this chapter is not an exhaustive survey, but rather a compact overview of
 \begin{enumerate*}[label=(\roman*)]
     \item what directions have been explored in the literature for reducing friction in robot programming, and
     \item where our approach fits in the landscape of related work.
 \end{enumerate*}
 
-\section{XR and human-facing interfaces for robot programming: context from surveys}
+\section{AR and human-facing interfaces for robot programming: context from surveys}
 
-A common theme in the robot programming literature is that robot deployment effort is often dominated by programming, integrations and changeovers, rather than the execution time of the robot. This becomes a problem especially in high-mix low-volume scenarios \cite{IFR2023TraditionalVsNew}. Surveys on human-robot collaboration mention that alternative programming approaches can increase productivity and safety \cite{VILLANI201866}. AR/VR have become a common interface direction to attempt to achieve this in both offline and online programming \cite{Makhataeva2020, DIANATFAR2021407}. They help visualize the robot (and optionally the workspace) while programming and preview the robot's runtime behavior and constraints before executing on a real robot. They can also allow users to specify robot poses and trajectories directly in the workspace.
-
-Across these works, a distinction emerges between \emph{visualization}-focused (showing robot state, planned motion, or safety zones in context) and \emph{authoring}-focused (letting the user create or edit robot behavior directly in the workspace) approaches. For our thesis, we focus on the latter: authoring requires not only visualization but also robust spatial input, registration to world or robot coordinates, and a program representation that is simple enough for non-expert users yet expressive enough useful tasks. 
-
-\section{XR robot programming systems}
-
-Existing XR robot programming systems span a wide design space. We summarize representative systems using the following two dimensions:
+A common theme in the robot programming literature is that robot deployment effort is often dominated by programming and integrations rather than pure execution time. In high-mix low-volume scenarios, this becomes especially costly: an IFR industry perspective notes that \emph{programming and integration can account for 50--70\,\% of the cost of a robot application} \cite{IFR2023TraditionalVsNew}. Surveys on human-robot interaction for programming similarly motivate alternative programming interfaces for improving usability and productivity \cite{VILLANI201866}. AR/VR have become a common interface direction for both offline and online programming \cite{Makhataeva2020, DIANATFAR2021407}. Across these systems, AR/VR is used to
 \begin{enumerate*}[label=(\roman*)]
-    \item \emph{where authoring happens} (online in the real workspace vs. offline in a simulated environment/digital twin), and
-    \item \emph{how is motion specified} (point-by-point waypoints, teach-by-demonstration trajectories, or higher-level rules).
+    \item visualize robot state, planned motion, or safety zones in context, and
+    \item support authoring by letting the user specify poses, paths, or logic using spatial interaction.
+\end{enumerate*}
+
+Across these works, a distinction emerges between \emph{visualization}-focused (showing robot state, planned motion, or safety zones in context) and \emph{authoring}-focused (letting the user create or edit robot behavior directly in the workspace) approaches. For our thesis, we focus on the latter: authoring requires not only visualization but also robust spatial input, registration to world or robot coordinates, and a program representation that is simple enough for non-expert users yet expressive enough for useful tasks. 
+
+\section{AR robot programming systems}
+
+Existing AR robot programming systems span a wide design space. We summarize representative systems using the following two dimensions:
+\begin{enumerate*}[label=(\roman*)]
+    \item \emph{where authoring happens} (online in the real workspace vs.\ offline in a simulated environment/digital twin), and
+    \item \emph{how motion is specified} (point-by-point waypoints, teach-by-demonstration trajectories, or higher-level rules).
 \end{enumerate*}
 
 \subsection{Online trajectory authoring} \label{subsec:related_work_online_trajectory_authoring}
@@ -51,3 +55,13 @@ Similarly to \autoref{subsec:related_work_online_trajectory_authoring}, our thes
 
 \section{Multimodal intent: combining gestures with language}
 
+Beyond AR-only interaction, there is a growing interest in combining gestures (e.g. pointing) with natural language to express intent at a higher semantic level than explicit waypoints. Lin et al.\ propose \emph{GIRAF}, a framework that combines gesture recognition with large language model-based reasoning to interpret multimodal instructions in a context-dependent manner, and demonstrate it on several tabletop manipulation tasks \cite{Lin2023}. Conceptually, this direction is promising, as it removes the need for explicit interaction with flat-screen or AR-based interfaces and instead enables direct natural language communication with the system.
+
+That being said, the presented instantiation of \emph{GIRAF} is evaluated in a narrowly scoped tabletop manipulation setting and relies on a collection of task- and domain-specific perception, grounding, and reasoning components. Extending the system to other tasks or environments would require substantial additional development. Additionally, the system is used for real-time \emph{control} of the robot, rather than programming. In contrast, our thesis focuses on an extensible system for \emph{programming} a wider range of tasks with shared sensing and authoring capabilities. However, multimodal intent understanding (e.g., gesture and speech) is a promising direction for future work to further reduce friction in robot programming, and we discuss it further in \autoref{chapter:ch7_discussion}.
+
+
+\section{Positioning of this thesis}
+
+In summary, existing work shows multiple viable ways to reduce programming friction: AR-assisted online waypoint/path authoring with validation \cite{Ong2020}, rule-oriented online authoring in AR \cite{Ikeda2024}, and offline digital twin AR workflow that allows online-like programming without robot downtime \cite{Muller2024}. Hand-tracking-based waypoint authoring is also a promising direction for reducing friction, but it may require additional work to achieve the required accuracy for precise pose specification \cite{Vysocky2023}. Multimodal approaches such as \emph{GIRAF} show promise for enabling more natural communication of intent, but they are still in early stages of development and evaluation \cite{Lin2023}.
+
+Compared to these approaches, our thesis targets an extensible task-oriented online spatial authoring system that attempts to avoid the need for users to specify low-level motion details by inferring them from spatial intent and scene context by using reusable sensing, authoring and execution pipelines.
