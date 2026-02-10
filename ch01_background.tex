@@ -6,9 +6,9 @@ This thesis explores the concept of \emph{in-workspace spatial authoring}, where
     \item where our approach fits in the landscape of related work.
 \end{enumerate*}
 
-\section{AR and human-facing interfaces for robot programming: context from surveys}
+\section{AR/VR and human-facing interfaces for robot programming: context from surveys}
 
-A common theme in the robot programming literature is that robot deployment effort is often dominated by programming and integrations rather than pure execution time. In high-mix low-volume scenarios, this becomes especially costly: an IFR industry perspective notes that programming and integration can account for 50--70\,\% of the cost of a robot application \cite{IFR2023TraditionalVsNew}. Surveys on human-robot interaction for programming similarly motivate alternative programming interfaces for improving usability and productivity \cite{VILLANI201866}. AR/VR have become a common interface direction for both offline and online programming \cite{Makhataeva2020, DIANATFAR2021407}. Across these systems, AR/VR is used to
+A common theme in the robot programming literature is that robot deployment effort is often dominated by programming and integration rather than pure execution time. In high-mix low-volume scenarios, this becomes especially costly: an IFR industry perspective notes that programming and integration can account for 50--70\,\% of the cost of a robot application \cite{IFR2023TraditionalVsNew}. Surveys on human-robot interaction for programming similarly motivate alternative programming interfaces for improving usability and productivity \cite{VILLANI201866}. AR/VR have become a common interface direction for both offline and online programming \cite{Makhataeva2020, DIANATFAR2021407}. Across these systems, AR/VR is used to
 \begin{enumerate*}[label=(\roman*)]
     \item visualize robot state, planned motion, or safety zones in context, and
     \item support authoring by letting the user specify poses, paths, or logic using spatial interaction.
@@ -26,7 +26,7 @@ Existing AR robot programming systems span a wide design space. We summarize rep
 
 \subsection{Online trajectory authoring} \label{subsec:related_work_online_trajectory_authoring}
 
-Ong et al.\ present \emph{ARRPS}, an augmented-reality-based system for intuitive robot programming, that transforms the robot workcell into an AR environment and uses a handheld pointer to define 3D points and paths for the robot to follow \cite{Ong2020}. Their system addresses feasibility by integrating motion planning, collision checking, and plan validation to reduce the amount of robot-programming expertise needed during authoring.
+Ong et al.\ present \emph{ARRPS}, an augmented-reality-based system for intuitive robot programming that transforms the robot workcell into an AR environment and uses a handheld pointer to define 3D points and paths for the robot to follow \cite{Ong2020}. Their system addresses feasibility by integrating motion planning, collision checking, and plan validation to reduce the amount of robot-programming expertise needed during authoring.
 
 This line of work is close in spirit to our approach, since the user also operates in the real scene and the system is responsible for turning spatial input into feasible robot motion. However, the interaction is primarily waypoint/path-centric --- the user specifies \emph{how} the robot should move rather than stating higher-level, task-oriented intent.
 
@@ -54,7 +54,7 @@ Similarly to \autoref{subsec:related_work_online_trajectory_authoring}, our thes
 
 \section{Multimodal intent: combining gestures with language}
 
-Beyond AR-only interaction, there is growing interest in combining gestures (e.g.\ pointing) with natural language to express intent at a higher semantic level than explicit waypoints. Lin et al.\ propose \emph{GIRAF}, a framework that combines gesture recognition with large language model-based reasoning to interpret multimodal instructions in a context-dependent manner, and demonstrate it on tabletop manipulation tasks \cite{Lin2023}. Conceptually, this direction is promising because it can reduce the reliance on explicit GUI-based interfaces and instead enables direct natural language communication with the system..
+Beyond AR-only interaction, there is growing interest in combining gestures (e.g.\ pointing) with natural language to express intent at a higher semantic level than explicit waypoints. Lin et al.\ propose \emph{GIRAF}, a framework that combines gesture recognition with large language model-based reasoning to interpret multimodal instructions in a context-dependent manner, and demonstrate it on tabletop manipulation tasks \cite{Lin2023}. Conceptually, this direction is promising because it can reduce the reliance on explicit GUI-based interfaces and instead enables direct natural language communication with the system.
 
 That being said, the presented instantiation of \emph{GIRAF} is evaluated in a narrowly scoped tabletop setting and relies on a collection of task- and domain-specific perception, grounding, and reasoning components. Extending the approach to other tasks or environments would require substantial additional development. Moreover, \emph{GIRAF} primarily demonstrates \emph{interactive task assistance} from instructions, rather than authoring reusable robot programs in industrial workflows. In contrast, our thesis focuses on an extensible system for \emph{programming} task families through reusable sensing and authoring capabilities. Nevertheless, multimodal intent understanding (e.g., gesture and speech) is a promising direction for future work to further reduce friction in robot programming, and we discuss it further in \autoref{chapter:ch7_discussion}.
 
