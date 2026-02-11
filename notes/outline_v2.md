@@ -587,6 +587,11 @@ SEE FUTURE WORK FOR MORE RESOURCES
     - Visible corner-cutting in UI / UX; “one-shot program tree” doesn’t fully match the system’s potential;
     - Demo limitations - some tasks are more "proof of flexibilityu" than "best solutions"
     - Platform is strong, but not production-ready.
+    - scene detection limitations
+    - scene visualization limitations
+    - all other interface based limitations
+    - robot communication limitations (non path planning, validation)
+    - tool io missing
 - System
     - motion planning (to avoid obstacles)
         - to avoid obstacles, but also kept getting issue with joint range exceeded!

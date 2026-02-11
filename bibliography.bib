@@ -170,6 +170,68 @@
 }
 
 
+# FB reality labs
+
+@misc{FB_research,
+  url={https://research.facebook.com/publications/},
+  urldate={2026-02-11},
+  title={Publications - Meta Research}
+}
+
+@inproceedings{FB__UmeTrack, series={SA ’22},
+   title={UmeTrack: Unified multi-view end-to-end hand tracking for VR},
+   url={http://dx.doi.org/10.1145/3550469.3555378},
+   DOI={10.1145/3550469.3555378},
+   booktitle={SIGGRAPH Asia 2022 Conference Papers},
+   publisher={ACM},
+   author={Han, Shangchen and Wu, Po-Chen and Zhang, Yubo and Liu, Beibei and Zhang, Linguang and Wang, Zheng and Si, Weiguang and Zhang, Peizhao and Cai, Yujun and Hodan, Tomas and Cabezas, Randi and Tran, Luan and Akbay, Muzaffer and Yu, Tsz-Ho and Keskin, Cem and Wang, Robert},
+   year={2022},
+   month=nov, pages={1–9},
+   collection={SA ’22} }
+
+@article{FB__MEgATrack,
+  author = {Han, Shangchen and Liu, Beibei and Cabezas, Randi and Twigg, Christopher D. and Zhang, Peizhao and Petkau, Jeff and Yu, Tsz-Ho and Tai, Chun-Jung and Akbay, Muzaffer and Wang, Zheng and Nitzan, Asaf and Dong, Gang and Ye, Yuting and Tao, Lingling and Wan, Chengde and Wang, Robert},
+  title = {MEgATrack: monochrome egocentric articulated hand-tracking for virtual reality},
+  year = {2020},
+  issue_date = {August 2020},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  volume = {39},
+  number = {4},
+  issn = {0730-0301},
+  url = {https://doi.org/10.1145/3386569.3392452},
+  doi = {10.1145/3386569.3392452},
+  abstract = {We present a system for real-time hand-tracking to drive virtual and augmented reality (VR/AR) experiences. Using four fisheye monochrome cameras, our system generates accurate and low-jitter 3D hand motion across a large working volume for a diverse set of users. We achieve this by proposing neural network architectures for detecting hands and estimating hand keypoint locations. Our hand detection network robustly handles a variety of real world environments. The keypoint estimation network leverages tracking history to produce spatially and temporally consistent poses. We design scalable, semi-automated mechanisms to collect a large and diverse set of ground truth data using a combination of manual annotation and automated tracking. Additionally, we introduce a detection-by-tracking method that increases smoothness while reducing the computational cost; the optimized system runs at 60Hz on PC and 30Hz on a mobile processor. Together, these contributions yield a practical system for capturing a user's hands and is the default feature on the Oculus Quest VR headset powering input and social presence.},
+  journal = {ACM Trans. Graph.},
+  month = aug,
+  articleno = {87},
+  numpages = {13},
+  keywords = {hand tracking, motion capture, virtual reality}
+}
+
+@article{FB__ElasticHandTrack,
+  author = {Smith, Breannan and Wu, Chenglei and Wen, He and Peluse, Patrick and Sheikh, Yaser and Hodgins, Jessica K. and Shiratori, Takaaki},
+  title = {Constraining dense hand surface tracking with elasticity},
+  year = {2020},
+  issue_date = {December 2020},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  volume = {39},
+  number = {6},
+  issn = {0730-0301},
+  url = {https://doi.org/10.1145/3414685.3417768},
+  doi = {10.1145/3414685.3417768},
+  abstract = {Many of the actions that we take with our hands involve self-contact and occlusion: shaking hands, making a fist, or interlacing our fingers while thinking. This use of of our hands illustrates the importance of tracking hands through self-contact and occlusion for many applications in computer vision and graphics, but existing methods for tracking hands and faces are not designed to treat the extreme amounts of self-contact and self-occlusion exhibited by common hand gestures. By extending recent advances in vision-based tracking and physically based animation, we present the first algorithm capable of tracking high-fidelity hand deformations through highly self-contacting and self-occluding hand gestures, for both single hands and two hands. By constraining a vision-based tracking algorithm with a physically based deformable model, we obtain an algorithm that is robust to the ubiquitous self-interactions and massive self-occlusions exhibited by common hand gestures, allowing us to track two hand interactions and some of the most difficult possible configurations of a human hand.},
+  journal = {ACM Trans. Graph.},
+  month = nov,
+  articleno = {219},
+  numpages = {14},
+  keywords = {simulation, hand tracking, elasticity}
+}
+
+
+
+
 
 
 
@@ -188,4 +250,34 @@
   title  = {{World Robotics 2023: Industrial Robots (Extended Version)}},
   url    = {https://ifr.org/img/worldrobotics/2023_WR_extended_version.pdf},
   urldate = {2026-02-07}
+}
+
+@misc{MediaPipeRoot,
+  title = {{MediaPipe} Solutions Guide},
+  url = {https://ai.google.dev/edge/mediapipe/solutions/guide},
+  urldate = {2026-02-11}
+}
+
+
+@article{Zhang2023,
+  author = {Zhang, Yan and Fütterer, Richard and Notni, Gunther},
+  year = {2023},
+  month = {03},
+  pages = {1120357},
+  title = {Interactive robot teaching based on finger trajectory using multimodal RGB-D-T-data},
+  volume = {10},
+  journal = {Frontiers in Robotics and AI},
+  doi = {10.3389/frobt.2023.1120357}
+}
+
+@misc{dpoint_github,
+  title = {D-POINT: Digital Pen with Optical-Inertial Tracking},
+  url = {https://github.com/Jcparkyn/dpoint/tree/main},
+  urldate = {2026-02-11}
+}
+
+@misc{dpoint_issues,
+  title = {Replicating D-POINT},
+  url = {https://rijnieks.com/blog/2023-11-25-replicating-dpoint/},
+  urldate = {2026-02-11}
 }
