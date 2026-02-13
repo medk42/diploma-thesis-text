@@ -188,6 +188,7 @@ Low\textsuperscript{c} \\
 \textsuperscript{c} Marker detection widely available; intent is easy via tool button.
 \end{table}
 
+\paragraph{Summary}
 Since both demonstrative use cases require repeated capture of stable poses and short trajectories near objects, we prioritize robustness and predictable capture over maximum intuitiveness.
 
 Table~\ref{tab:6D_input_comparison} summarizes the trade-offs. Given our constraints, marker tracking provides the best balance of implementation effort and usable tracking quality for pose and trajectory authoring, while keeping hardware requirements low. Therefore, we select a camera-based marker tracking approach for the 6D input interface in this thesis. At the same time, we keep the input interface modular to allow substituting alternative 6D input sources (e.g., hand tracking or VR controllers) in future work.
@@ -196,34 +197,118 @@ In principle, marker pose can be estimated from a single calibrated RGB camera. 
 
 \subsection{Scene detection}
 
-Based on requirement \ref{req:scene_detection_logic}, our system needs to provide \emph{scene detection} logic that can detect objects in the scene and provide their poses. The accuracy of this detection matters much more than in the 6D input interface, because we use the detected objects to refine the user input. For example, in the seam welding use case, we rely on the detected objects to find the seam between them and align the user-defined trajectory to it --- if the detected object poses are inaccurate, the seam detection and trajectory alignment will also be inaccurate, which will directly impact execution quality.
+Based on requirement \ref{req:scene_detection_logic}, our system needs to provide \emph{scene detection} logic that can detect objects in the scene and provide their poses. The accuracy requirements for scene detection are higher than for the 6D input interface, since the detected object poses are used to refine and constrain user-defined trajectories. For example, in the seam welding use case, we rely on the detected objects to find the seam between them and align the user-defined trajectory to it. If the estimated object poses are inaccurate, the derived seam geometry and aligned trajectory will also be affected, directly degrading execution quality.
 
 When selecting an approach for scene detection, we consider:
 \begin{enumerate*}[label=(\roman*)]
-    \item accuracy/robustness,
-    \item setup effort,
-    \item runtime complexity,
+    \item accuracy,
+    \item implementation effort,
+    \item generalizability,
     \item cost, and
-    \item failure modes.
+    \item runtime complexity.
 \end{enumerate*}
 
 We consider six candidate approaches:
 \begin{enumerate*}[label=(\roman*)]
     \item \emph{fiducial-based detection}, where known fiducial markers are placed on the objects to be detected,
-    \item \emph{single-view model-based pose estimation}, where the system detects objects from a single camera based on known 3D models,
-    \item \emph{multi-view model-based pose estimation}, where the system detects objects from multiple cameras based on known 3D models,
-    \item \emph{3D scanning and reconstruction}, where the system reconstructs a 3D model of the scene from many cameras and detects objects based on it,
-    \item \emph{depth-based 3D scanning and reconstruction}, where the system merges multiple depth images of the scene into a 3D model and detects objects based on it, and
+    \item \emph{single-view model-based pose estimation}, where the system detects objects from a single camera based on known 3D models, \label{req:single_view_model_based_pose_estimation}
+    \item \emph{multi-view model-based pose estimation}, where the system detects objects from multiple cameras based on known 3D models, \label{req:multi_view_model_based_pose_estimation}
+    \item \emph{3D scanning and reconstruction}, where the system reconstructs a 3D model of the scene from many cameras and detects objects based on it, \label{req:3D_scanning_and_reconstruction}
+    \item \emph{depth-based 3D scanning and reconstruction}, where the system merges multiple depth images of the scene into a 3D model and detects objects based on it, and \label{req:depth_based_3D_scanning_and_reconstruction}
     \item \emph{commercial systems} that handle scene detection.
 \end{enumerate*}
 
-\xxx{well, let's consider them...}
+Approaches \ref{req:single_view_model_based_pose_estimation}-\ref{req:multi_view_model_based_pose_estimation} are discussed together as \emph{Model-based pose estimation} (single- vs multi-view variants), and \ref{req:3D_scanning_and_reconstruction}-\ref{req:depth_based_3D_scanning_and_reconstruction} are discussed together as \emph{Reconstruction-based approaches} (RGB vs depth-based variants).
 
-\xxx{In the current system, scene objects are restricted to primitive geometric proxies (e.g., boxes with known dimensions). This is sufficient for the demonstrated tasks but limits generality.}
+\paragraph{Fiducial-based detection.}
+Fiducial-based detection relies on artificial markers placed on the objects to be detected. The system detects the marker in the camera image, estimates its 6D pose, and applies a known transformation between the marker coordinate frame and the object coordinate frame to obtain the object pose. When markers such as \emph{ArUco} or \emph{AprilTag} are used, the object can also be identified through the marker ID.
 
-We treat fiducial-based scene detection as a controlled proxy that isolates the interaction and execution aspects of spatial authoring, while keeping the sensing component replaceable.
+This approach can operate with a single calibrated camera and is relatively simple to implement. However, it requires physically instrumenting each object with a marker and ensuring precise marker placement. Errors in marker placement directly translate into systematic pose errors, and rotational inaccuracies can be amplified for points further away from the marker location.
 
-\xxx{In the long term, accurate scene understanding is central because it provides the reference frames that ground and refine user-authored trajectories. In this thesis, however, we prioritize validating the spatial authoring workflow end-to-end on a real robot under time and engineering constraints. We therefore implement a simplified scene detection approach based on fiducial markers attached to relevant objects. This choice trades generality for reliability and fast iteration: it provides stable object poses for the demonstrator while keeping the sensing stack lightweight. The limitation is that objects must be instrumented and the approach does not generalize to arbitrary unprepared scenes; we discuss this explicitly in Chapter~7 and outline how model-based 6D pose estimation (e.g., BOP-style pipelines) could replace the fiducial module in future work.}
+The accuracy depends on camera resolution, calibration quality, marker size, viewing angle, and lighting conditions. It can be improved by using larger markers, optimizing camera placement, and reducing viewing angles that cause perspective distortion.
+
+The implementation effort is low, as it primarily involves camera calibration and integration of an existing marker detection library. The hardware cost is also minimal, requiring only printed markers and a camera.
+
+The runtime complexity is low, since marker detection and pose estimation can typically be performed in real time on a single camera stream.
+
+While robust and efficient, this approach does not generalize well to scenarios where placing markers on objects is impractical or undesirable.
+
+
+\paragraph{Model-based pose estimation.}
+Model-based pose estimation relies on known 3D models of the objects to be detected. The goal is to estimate the 6D pose of each object instance in the scene relative to the camera or world coordinate system. Multiple approaches exist, using single- or multi-view RGB, grayscale, or depth cameras. The yearly BOP challenge \cite{BopChallenge} benchmarks the state of the art in 6D object pose estimation. An example of a multi-view multi-object 6D pose estimation system is \emph{CosyPose} \cite{labbe2020,CosyPoseWebsite}.
+
+Compared to fiducial-based detection, this approach does not require instrumenting objects with markers. However, unlike fiducial-based detection, it requires known 3D object models in order to estimate object poses. In return, it directly provides object-level detection and pose estimation, inherently separating the scene into individual object instances without requiring explicit scene segmentation.
+
+The accuracy of model-based pose estimation can be high, but depends on several factors, including the quality of the object models, the camera setup, and the specific algorithm used. Multi-view approaches typically provide higher robustness and accuracy than single-view ones, as they reduce depth ambiguity and improve handling of occlusions. Single-view RGB-based approaches must infer depth from visual cues and learned priors, which can introduce ambiguity in challenging scenarios.
+
+The implementation effort can be significant, as it requires integration of the pose estimation pipeline, preparation of accurate object models, and potentially object-specific tuning to achieve reliable results in the target environment. In multi-camera setups, additional calibration and synchronization are required.
+
+The approach generalizes well across different environments as long as object models are available. However, it does not naturally extend to previously unseen objects without first acquiring their 3D models.
+
+The cost can remain relatively low when using open-source implementations and a limited camera setup. However, hardware costs increase if multiple synchronized cameras or depth sensors are required.
+
+The runtime complexity can also be considerable, particularly for multi-view systems that require synchronization and processing of multiple camera streams.
+
+
+\paragraph{Reconstruction-based approaches.}
+3D scanning and reconstruction approaches aim to create a geometric 3D representation of the scene, either as a dense point cloud or directly as a mesh. This can be achieved by acquiring and aligning depth images of the scene from multiple viewpoints, or by capturing a sufficiently dense set of overlapping RGB/grayscale images from multiple viewpoints and applying structure-from-motion and multi-view stereo techniques.
+
+This approach does not require known 3D models of the objects. However, it also does not inherently separate the scene into individual objects --- downstream processing is required to segment the scene into object-level representations, which can be a non-trivial problem. For example, seam detection for welding may still be feasible through geometric analysis of the reconstructed surfaces, whereas pick-and-place applications typically require explicit object-level segmentation and instance identification.
+
+The accuracy of the reconstructed model can be high, but strongly depends on the properties of the captured scene (e.g., low-texture or reflective surfaces can cause difficulties for RGB-based reconstruction, while depth-based reconstruction can struggle with thin structures or small objects).
+
+The implementation effort can be significant, as it requires integrating multiple views into a consistent geometric representation. The cost varies depending on the hardware setup, ranging from a single moving camera to a dense multi-camera configuration. RGB-based systems can be more affordable, but require good lighting and sufficient surface texture. Depth-based systems can be more robust to lighting and texture variation, but typically require more specialized hardware.
+
+The runtime complexity can also be high, as many images must be captured and processed from multiple viewpoints, especially for RGB-based approaches relying on structure-from-motion.
+
+\paragraph{Commercial systems.}
+Commercial machine vision systems integrate sensing hardware and proprietary software into turnkey solutions for industrial scene detection and pose estimation. Examples include industrial 3D vision platforms such as Photoneo PhoXi \cite{PhotoneoWebsite} and Cognex In-Sight systems \cite{CognexWebsite}. These systems are typically designed for applications such as bin picking, part localization, and automated inspection. They combine calibrated sensing hardware (often structured-light, laser, or stereo-based) with optimized segmentation and model-matching pipelines to provide object-level detection and 6D pose estimation directly to industrial robots.
+
+The primary advantage of commercial systems is their robustness and industrial maturity. They are optimized for reliability in controlled industrial environments, provide vendor support, and can achieve high accuracy when properly configured. Integration effort can be moderate when using supported robot platforms, as standardized communication interfaces and deployment tools are typically available.
+
+However, these systems are usually associated with high acquisition costs. They are also less flexible than custom research pipelines, since internal algorithms are proprietary and access to intermediate representations is limited. This can make adaptation to experimental setups or rapidly evolving research requirements more difficult. Furthermore, extending the system to new object categories or task types may require additional configuration, licensing, or vendor-specific retraining procedures.
+
+Since commercial systems are typically installed as fixed sensing units and operate without requiring sensor movement during runtime, their online computational requirements are generally moderate. Nevertheless, they often operate in a request–response mode rather than streaming every frame, which can increase effective end-to-end latency depending on the deployment.
+
+
+\begin{table}[t]
+\centering
+\caption{Comparison of candidate scene detection approaches.}
+\label{tab:scene_detection_comparison}
+
+\small
+
+\begin{tabular}{l c c c c c}
+\toprule
+Approach & Accuracy & Impl. Effort & Generaliz. & Cost & Runtime \\
+\midrule
+Fiducial & Med--High & Low & Low & Low & Low \\
+MB-S & Medium & Medium & Medium & Low & Medium \\
+MB-M & High & High & Medium & Medium & High \\
+Recon-RGB & Medium & High & High & Low & High \\
+Recon-D & High & High & High & Medium & High \\
+Commercial & High & Medium & Medium & Very High & Medium \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+\footnotesize
+\emph{Abbreviations:}
+MB-S – single-view model-based pose estimation;
+MB-M – multi-view model-based pose estimation;
+Recon-RGB – RGB-based 3D reconstruction (SfM/MVS);
+Recon-D – depth-based 3D reconstruction.
+\end{table}
+
+\paragraph{Summary}
+Table~\ref{tab:scene_detection_comparison} summarizes the trade-offs between the considered scene detection approaches. 
+
+Given the scope of this thesis and the available hardware, fiducial-based detection provides the most favorable balance between implementation effort, cost, and sufficient pose accuracy for our target use cases. The approach can be implemented using the same camera setup as the 6D input interface, and the detection pipeline can reuse significant parts of the existing marker-based pose estimation logic.
+
+While marker-based detection does not provide perfect accuracy and may exhibit pose noise due to suboptimal lighting conditions and limited camera resolution, the obtained precision is sufficient for the seam welding and pick-and-place demonstrations presented in this thesis. Accuracy could be further improved by aggregating multiple observations over time or increasing image resolution.
+
+Therefore, we select a camera-based fiducial marker detection approach for scene detection in this thesis. At the same time, we will keep the system architecture modular, allowing replacement of the detection component with model-based or reconstruction-based approaches in future work if higher robustness or model-free operation is required.
+
 
 \subsection{Camera trade-offs} \label{subsec:ch2_analysis_camera_tradeoffs}
 
@@ -239,6 +324,17 @@ We treat fiducial-based scene detection as a controlled proxy that isolates the 
 
 \xxx{WATCH OUT, this is already covered above:   Although marker pose can be estimated from a single calibrated RGB camera, our early monocular experiments exhibited substantial noise in the estimated depth component (translation along the camera z axis), which degraded pose capture and trajectory authoring. For this reason, we adopt a stereo camera configuration to obtain more stable depth estimates at typical working distances. In addition, a stereo setup benefits the scene module by improving robustness of object pose estimates under perspective ambiguity and corner localization noise. Metric accuracy still depends on calibration quality and marker size specification, and we observed small systematic deviations under some lighting conditions; these effects are characterized and treated as limitations rather than ignored.}
 
+\subsection{Robot interface}
+
+\subsection{UI}
+
+\subsection{Use case plugin support}
+
+\xxx{or rename to modular architecture?}
+
+\subsection{Modular architecture}
+
+\subsection{Summary}
 
 
 \newpage
