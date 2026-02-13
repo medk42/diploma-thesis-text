@@ -107,7 +107,7 @@ Based on the requirements outline in \autoref{subsec:ch2_analysis_system_require
   \label{fig:ch2_analysis__base_components}
 \end{figure}
 
-For each component we compare feasible approaches and select one for this thesis.
+For each component we compare feasible approaches and select one for this thesis. The overall system architecture and integration of the selected components are described in \autoref{chapter:ch3_system_design}, while detailed implementation aspects are presented in \autoref{chapter:ch4_implementation}.
 
 \subsection{6D input interface}
 
@@ -130,7 +130,7 @@ We consider three candidate approaches:
 
 \paragraph{Hand tracking.}
 Hand tracking is an attractive option because it is intuitive and does not require a dedicated held tool. It can be implemented using open-source solutions such as MediaPipe \cite{MediaPipeRoot} (also used by Vysocký et al.\ \cite{Vysocky2023}) or via commercial ecosystems such as the Meta Quest headset or Leap Motion. Meta Reality Labs also reports several recent research systems for hand tracking on headset devices \cite{FB_research, FB__UmeTrack, FB__MEgATrack, FB__ElasticHandTrack}.
-However, robust 6D interaction in our setting requires not only a plausible hand pose, but also sufficiently stable spatial position and orientation for selecting poses and drawing trajectories. With a single RGB camera (e.g., MediaPipe), metric depth can only be estimated, which is typically not accurate enough for precise workspace authoring. Multi-camera setups or RGB-D sensors can mitigate this (as in \cite{Vysocky2023}), but at the cost of additional calibration effort and system complexity. Additionally, reported accuracy limitations for gesture-based robot path definition \cite{Vysocky2023} make hand tracking a risky default for our use case.
+However, robust 6D interaction in our setting requires not only a plausible hand pose, but also sufficiently stable spatial position and orientation for selecting poses and drawing trajectories. With a single RGB camera (e.g., MediaPipe), depth can only be estimated, which is typically not accurate enough for precise workspace authoring. Multi-camera setups or RGB-D sensors can mitigate this (as in \cite{Vysocky2023}), but at the cost of additional calibration effort and system complexity. Additionally, reported accuracy limitations for gesture-based robot path definition \cite{Vysocky2023} make hand tracking a risky default for our use case.
 A related idea by Zhang et al.\ \cite{Zhang2023} improves robustness for surface-following by using an RGB-D-T camera and thermal cues to infer contact on the object surface, but this does not directly generalize to trajectories in free space.
 
 Hand tracking also complicates \emph{intent signalling}, because there is no explicit hardware trigger for pose capture or trajectory start/stop. This can be implemented using gestures, but gesture recognition can be error-prone and may conflict with reliable orientation estimation (e.g., pointing provides a clear direction, while pinch-like gestures can be less stable and can be triggered accidentally). Tracking quality can also degrade under occlusions and changing lighting conditions.
@@ -191,6 +191,53 @@ Low\textsuperscript{c} \\
 Since both demonstrative use cases require repeated capture of stable poses and short trajectories near objects, we prioritize robustness and predictable capture over maximum intuitiveness.
 
 Table~\ref{tab:6D_input_comparison} summarizes the trade-offs. Given our constraints, marker tracking provides the best balance of implementation effort and usable tracking quality for pose and trajectory authoring, while keeping hardware requirements low. Therefore, we select a camera-based marker tracking approach for the 6D input interface in this thesis. At the same time, we keep the input interface modular to allow substituting alternative 6D input sources (e.g., hand tracking or VR controllers) in future work.
+
+In principle, marker pose can be estimated from a single calibrated RGB camera. In our early experiments, however, monocular pose estimation produced unstable depth (translation along the camera z axis), which directly impacts trajectory authoring. Therefore, while we select marker tracking as the input modality, we treat the underlying camera configuration (mono vs. stereo/RGB-D) as a separate system decision discussed in \autoref{subsec:ch2_analysis_camera_tradeoffs}.
+
+\subsection{Scene detection}
+
+Based on requirement \ref{req:scene_detection_logic}, our system needs to provide \emph{scene detection} logic that can detect objects in the scene and provide their poses. The accuracy of this detection matters much more than in the 6D input interface, because we use the detected objects to refine the user input. For example, in the seam welding use case, we rely on the detected objects to find the seam between them and align the user-defined trajectory to it --- if the detected object poses are inaccurate, the seam detection and trajectory alignment will also be inaccurate, which will directly impact execution quality.
+
+When selecting an approach for scene detection, we consider:
+\begin{enumerate*}[label=(\roman*)]
+    \item accuracy/robustness,
+    \item setup effort,
+    \item runtime complexity,
+    \item cost, and
+    \item failure modes.
+\end{enumerate*}
+
+We consider six candidate approaches:
+\begin{enumerate*}[label=(\roman*)]
+    \item \emph{fiducial-based detection}, where known fiducial markers are placed on the objects to be detected,
+    \item \emph{single-view model-based pose estimation}, where the system detects objects from a single camera based on known 3D models,
+    \item \emph{multi-view model-based pose estimation}, where the system detects objects from multiple cameras based on known 3D models,
+    \item \emph{3D scanning and reconstruction}, where the system reconstructs a 3D model of the scene from many cameras and detects objects based on it,
+    \item \emph{depth-based 3D scanning and reconstruction}, where the system merges multiple depth images of the scene into a 3D model and detects objects based on it, and
+    \item \emph{commercial systems} that handle scene detection.
+\end{enumerate*}
+
+\xxx{well, let's consider them...}
+
+\xxx{In the current system, scene objects are restricted to primitive geometric proxies (e.g., boxes with known dimensions). This is sufficient for the demonstrated tasks but limits generality.}
+
+We treat fiducial-based scene detection as a controlled proxy that isolates the interaction and execution aspects of spatial authoring, while keeping the sensing component replaceable.
+
+\xxx{In the long term, accurate scene understanding is central because it provides the reference frames that ground and refine user-authored trajectories. In this thesis, however, we prioritize validating the spatial authoring workflow end-to-end on a real robot under time and engineering constraints. We therefore implement a simplified scene detection approach based on fiducial markers attached to relevant objects. This choice trades generality for reliability and fast iteration: it provides stable object poses for the demonstrator while keeping the sensing stack lightweight. The limitation is that objects must be instrumented and the approach does not generalize to arbitrary unprepared scenes; we discuss this explicitly in Chapter~7 and outline how model-based 6D pose estimation (e.g., BOP-style pipelines) could replace the fiducial module in future work.}
+
+\subsection{Camera trade-offs} \label{subsec:ch2_analysis_camera_tradeoffs}
+
+\xxx{role of the camera subsystem --- supports both 6D input tracking and scene detection}
+\xxx{gray vs RGB vs RGB-D; mono vs stereo vs multi-camera}
+\xxx{mounting - fixed external vs robot-mounted (hand-eye calib, moving viewpoint)}
+\xxx{trade-offs - depth stability, occlusion handling, calibration burden, FOV/resolution/fps, synchronization}
+\xxx{decision - you chose stereo because mono depth was too noisy for pen and you also benefit for scene pose stability}
+\xxx{Calibration summary - intrinsics, stereo extrinsics/rectification, workspace frame alignment (and optionally robot/world)}
+\xxx{How your architecture keeps it flexible - multi-camera support as future extension (connects nicely to your middleware point)}
+
+\xxx{explain why stereo helps - This is where you justify the move properly: stereo improves depth stability and reduces scale/pose ambiguity sensitivity.}
+
+\xxx{WATCH OUT, this is already covered above:   Although marker pose can be estimated from a single calibrated RGB camera, our early monocular experiments exhibited substantial noise in the estimated depth component (translation along the camera z axis), which degraded pose capture and trajectory authoring. For this reason, we adopt a stereo camera configuration to obtain more stable depth estimates at typical working distances. In addition, a stereo setup benefits the scene module by improving robustness of object pose estimates under perspective ambiguity and corner localization noise. Metric accuracy still depends on calibration quality and marker size specification, and we observed small systematic deviations under some lighting conditions; these effects are characterized and treated as limitations rather than ignored.}
 
 
 
