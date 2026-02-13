@@ -8,21 +8,17 @@ This thesis explores the concept of \emph{in-workspace spatial authoring}, where
 
 \section{AR/VR and human-facing interfaces for robot programming: context from surveys}
 
-A common theme in the robot programming literature is that robot deployment effort is often dominated by programming and integration rather than pure execution time. In high-mix low-volume scenarios, this becomes especially costly: an IFR industry perspective notes that programming and integration can account for 50--70\,\% of the cost of a robot application \cite{IFR2023TraditionalVsNew}. Surveys on human-robot interaction for programming similarly motivate alternative programming interfaces for improving usability and productivity \cite{VILLANI201866}. AR/VR have become a common interface direction for both offline and online programming \cite{Makhataeva2020, DIANATFAR2021407}. Across these systems, AR/VR is used to
-\begin{enumerate*}[label=(\roman*)]
-    \item visualize robot state, planned motion, or safety zones in context, and
-    \item support authoring by letting the user specify poses, paths, or logic using spatial interaction.
-\end{enumerate*}
+A common theme in the robot programming literature is that robot deployment effort is often dominated by programming and integration rather than pure execution time. In high-mix low-volume scenarios, this becomes especially costly: an IFR industry perspective notes that programming and integration can account for 50--70\,\% of the cost of a robot application \cite{IFR2023TraditionalVsNew}. Surveys on human-robot interaction for programming similarly motivate alternative programming interfaces for improving usability and productivity \cite{VILLANI201866}. AR/VR have become a common interface direction for both offline and online programming \cite{Makhataeva2020, DIANATFAR2021407}.
 
 Across these works, a distinction emerges between \emph{visualization}-focused (showing robot state, planned motion, or safety zones in context) and \emph{authoring}-focused (letting the user create or edit robot behavior directly in the workspace) approaches. For our thesis, we focus on the latter: authoring requires not only visualization but also robust spatial input, registration to world or robot coordinates, and a program representation that is simple enough for non-expert users yet expressive enough for useful tasks. 
 
 \section{AR robot programming systems}
 
 Existing AR robot programming systems span a wide design space. We summarize representative systems using the following two dimensions:
-\begin{enumerate*}[label=(\roman*)]
+\begin{enumerate}[label=(\roman*)]
     \item \emph{where authoring happens} (online in the real workspace vs.\ offline in a simulated environment/digital twin), and
     \item \emph{how motion is specified} (point-by-point waypoints, teach-by-demonstration trajectories, or higher-level rules).
-\end{enumerate*}
+\end{enumerate}
 
 \subsection{Online trajectory authoring} \label{subsec:related_work_online_trajectory_authoring}
 
