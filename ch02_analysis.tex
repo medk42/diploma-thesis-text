@@ -317,23 +317,22 @@ Therefore, we select a camera-based fiducial marker detection approach for scene
 
 \subsection{Camera configuration} \label{subsec:ch2_analysis_camera_tradeoffs}
 
-In the previous subsections (\autoref{subsec:ch2_analysis_6D_input_interface} and \autoref{subsec:ch2_analysis_scene_detection}) we selected a camera-based marker tracking approach for both the 6D input interface and scene detection. This shifts the main design question to the camera configuration: the same sensing setup determines the achievable pose stability for the pen input and the pose accuracy for detected scene objects.
+In the previous subsections (\autoref{subsec:ch2_analysis_6D_input_interface} and \autoref{subsec:ch2_analysis_scene_detection}) we selected camera-based marker tracking for both the 6D input interface and the scene detection. This shifts the main design question to the \emph{camera configuration}: the same camera setup determines the achievable pose stability for the pen input and the pose accuracy for detected scene objects.
 
-We have decided to use the ArUco marker system for both the 6D input interface and scene detection, since it is widely used, well-documented, supported by open-source libraries, and since it fulfilled our needs. This was partially inspired by initially using the D-Point pen \cite{dpoint_github} as a 6D input device, which also uses ArUco markers for pose estimation. Other approaches (e.g., AprilTags) have not been evaluated, but could be integrated in the future if needed, since the underlying pose estimation logic would be similar. One promising alternative to ArUco are \emph{STag} markers \cite{BENLIGIRAY2019158}, which improve pose stability by combining a square border with an inner circular border and refining the homography using the more stably localized circle, supported by a more robust detection pipeline.
-
-We therefore evaluate alternative camera configurations along two axes:
+We evaluate alternative camera configurations along two axes:
 \begin{enumerate*}[label=(\roman*)]
   \item expected tracking quality for both pipelines (pen tracking and scene detection), and
-  \item practical deployment cost (mounting, calibration, synchronization, robustness).
+  \item practical deployment cost (mounting, calibration, synchronization, and robustness in a real workspace).
 \end{enumerate*}
 
+Although planar fiducial pose can be estimated from a single calibrated RGB camera, our early prototyping revealed two practical issues: (i) depth (translation along the viewing direction) was noticeably noisier than the in-plane components, and (ii) we observed small systematic depth offsets that varied with detection conditions (e.g., changes in lighting affecting the perceived marker scale). This motivated switching to a stereo camera, where depth is recovered primarily by triangulation rather than relying on apparent marker size.
 
-We will evaluate the candidate configurations using:
+We evaluate the candidate configurations using:
 \begin{enumerate*}[label=(\roman*)]
-    \item setup/maintenance complexity (calibration effort, synchronization), 
+    \item setup/maintenance complexity (calibration effort, synchronization),
     \item pen 6D tracking quality (depth stability, jitter),
     \item scene pose quality (achievable accuracy, robustness), and
-    \item mount robustness (likelihood the camera-to-world transform stays valid: bumps, vibration, robot motion, cable strain).
+    \item mount robustness (likelihood the calibrated camera-to-world transform stays valid: bumps, vibration, cable strain, and incidental contact).
 \end{enumerate*}
 
 We consider six candidate camera configurations:
@@ -343,58 +342,48 @@ We consider six candidate camera configurations:
     \item \emph{stereo robot-mounted camera}, where a stereo camera rig is rigidly mounted on the robot end-effector,
     \item \emph{stereo fixed camera}, where a stereo camera rig is rigidly mounted in the workspace,
     \item \emph{multiple fixed cameras}, where multiple cameras are rigidly mounted in the workspace, and
-    \item \emph{robot-mounted camera, multi-view capture}, where a single mono or stereo camera is mounted on the robot for pen tracking, and the robot is moved to multiple camera views for scene capture.
+    \item \emph{robot-mounted camera, multi-view capture}, where a robot-mounted camera is used for pen tracking and the robot is moved through multiple viewpoints for scene capture.
 \end{enumerate}
 
-In all of the robot-mounted configurations, we expect the robot to be stationary during pen input / scene capture (or controlled by the scene capture process). Therefore we do not consider the delay between reported and actual robot position as a significant factor for tracking quality or mount robustness, since the robot will be stationary during sensing. However, we do consider the likelihood of the camera-to-world transform becoming invalid due to bumps, vibrations, or cable strain as an important factor for mount robustness.
+In all robot-mounted configurations we assume the robot is stationary during pen input and scene capture (or the motion is fully controlled by the capture procedure). Therefore, we do not consider the delay between reported and actual robot position as a significant factor for tracking quality. Instead, the main practical factor is whether the calibrated extrinsic relations remain valid over time: small mechanical shifts can easily translate into millimeter-level errors in the workspace at typical camera-to-scene distances.
 
 \paragraph{Single robot-mounted camera.}
+A single camera mounted on the robot end-effector is one of the simplest configurations to deploy. It requires intrinsic calibration and a one-time extrinsic calibration of the camera relative to the robot flange/end-effector. During runtime, the camera pose in the robot/world frame can be derived from robot forward kinematics combined with this fixed extrinsic transform. Since there is only one camera stream, no synchronization is required.
 
-A single camera mounted on the robot end-effector is one of the simplest configurations to implement, requiring only the intrinsic calibration of the camera and the extrinsic calibration of the camera relative to the robot end-effector. During runtime, the camera-to-world transform can be obtained from the robot kinematics and the camera-to-robot transform. Since we only have a single camera, there is no synchronization required.
+However, in monocular planar marker detection, pose uncertainty is not uniform across degrees of freedom. Translation parallel to the image plane is driven mainly by pixel localization of marker corners, while translation along the viewing direction (depth) is more sensitive to projective geometry and the known physical marker size. In practice this often produces noticeably noisier depth, especially at larger viewing distances. Rotational stability also depends on viewing angle: orientations that produce strong image-plane changes are usually estimated more reliably than out-of-plane rotations that only induce subtle perspective distortions.
 
-In single camera planar marker detection, the uncertainty of the estimated pose is not uniform across all degrees of freedom. Translation components parallel to the image plane are primarily determined by pixel localization of marker corners, whereas translation along the viewing direction (depth) depends more strongly on the projective geometry and the known physical marker size. As a result, depth estimates are typically more sensitive to small image measurement errors than lateral components.
+Additionally, planar pose estimation can exhibit ambiguities in challenging views; practical libraries typically apply disambiguation heuristics, but failure cases exist. The estimate is also less well constrained under near-frontal views due to limited perspective distortion \cite{Rijlaarsdam2022}. For pen tracking, this matters because orientation noise can be amplified at the tool tip when the marker is located further from the tip (as in pen-like designs) \cite{dpoint_github}. For scene detection, similar issues arise when markers are placed on top faces and are frequently observed close to fronto-parallel.
 
-Similarly, rotational uncertainty depends on the viewing angle of the marker. Rotations that produce strong observable changes in the image (in-plane rotations) are typically estimated more reliably than rotations that result in subtle perspective distortions (out-of-plane rotations). 
+Regarding mount robustness, a robot-mounted camera can be mechanically very repeatable if it is attached through a rigid, well-defined interface (e.g., a bracket keyed to the robot flange). In our setup, once the camera is mounted and calibrated, the relative camera-to-robot transform tends to remain stable, and even removal/re-mounting can produce only small errors when the interface constrains the pose well. The main risks are direct collisions with the environment and gradual shifts due to cable strain; the latter of which can be mitigated by careful routing and strain relief.
 
-Additionally, planar pose from homography can exhibit ambiguities in challenging views; practical libraries usually disambiguate, but failure cases exist. They are also less constrained to use for pose estimation under frontal views, due to the lack of perspective distortion. \cite{Rijlaarsdam2022}.
+\paragraph{Single fixed camera.}
+A single camera rigidly mounted in the workspace avoids collisions caused by robot motion and simplifies cabling, but it shifts the burden to the external mounting structure. Calibration requires intrinsic calibration and an extrinsic calibration of the camera relative to the robot/world frame. In principle this is comparable in complexity to the robot-mounted case, but in practice the calibrated transform is more likely to drift: a tripod, clamp, or wall mount can flex, be bumped, or settle over time.
 
-Due to these limitations, a single camera configuration may struggle to provide stable and accurate 6D input for pen tracking, particularly for depth estimation and certain orientations (orientation error is multiplied for points further away from the marker, so orientation stability is especially important for some pen designs where the marker is located further from the tip \cite{dpoint_github}). Similarly, single camera scene detection may also be affected by depth estimation errors and pose ambiguity, especially because in our simplified ArUco-based detection, the codes are often placed on the top of the objects, where they are often viewed from a mostly frontal angle with a robot-mounted camera.
-
-Finally, mounting a camera on the robot minimizes the length of the kinematic chain between the camera and the robot end-effector. Therefore the camera-to-world transform is very likely to stay valid. The main risk to mount robustness is the robot accidentally hitting the camera against the environment (or itself) during operation and cable strain due to robot motion (however that can be mitigated by careful cable management and strain relief).
-
-\paragraph{Single fixed camera}.
-
-A single camera mounted in the workspace has the advantage of being physically separate from the robot, therefore minimizing the risk of accidental collisions and cable strain. Calibration is similar to the robot-mounted case, only replacing the camera-to-robot extrinsic calibration with a camera-to-world extrinsic calibration. Therefore, the setup and quality requirements are similar to the robot-mounted case. However, the camera-to-world transform is more likely to become invalid due to bumps or vibrations, since the camera is not rigidly attached to the robot, but instead relies on a separate mounting solution (e.g., tripod, wall mount) that may be more susceptible to disturbances.
+The key practical disadvantage is that the camera-to-robot/world relation depends on the integrity of a longer external chain (mounting hardware, attachment points, surrounding structure). Small mechanical shifts at the mount can translate into significant pose errors in the workspace. Therefore, the limiting factor is often not the calibration procedure itself, but maintaining a rigid, disturbance-resistant mounting solution.
 
 \paragraph{Stereo robot-mounted camera.}
+A stereo configuration directly targets the main weakness of monocular pose estimation: unstable depth. Stereo recovers depth from disparity between two viewpoints, which reduces sensitivity to small changes in apparent marker scale and improves depth stability at typical working distances. In addition, some rotations that are weakly constrained in monocular views benefit indirectly from improved depth consistency across the marker surface.
 
-Compared to the single camera estimation, a stereo setup introduces an additional geometric constraint through triangulation, which significantly improves depth accuracy. Stereo estimation recovers depth from disparity between views, making it less sensitive to small image-space errors. Rotations that induce depth variation across the marker surface also benefit from this additional constraint. Therefore a stereo camera targets exactly the main weaknesses of single camera pose estimation, while maintaining the same physical mounting and similar calibration requirements (only adding the stereo rig calibration). The main additional complexity is the need to synchronize the two camera streams --- some stereo rigs provide hardware sync; otherwise synchronization must be handled explicitly.
-
-Therefore, a stereo robot-mounted camera has only slightly higher implementation effort, same user calibration requirements, and similar mount robustness compared to a single robot-mounted camera (slightly worse due to the larger size of the stereo rig, which may increase the risk of collisions), while providing significantly improved tracking quality for both pen input and scene detection.
+Compared to a single robot-mounted camera, a stereo rig requires additional calibration (stereo extrinsics) and some form of synchronization between the two streams (often supported by the camera hardware). The rig is also larger, which can increase collision risk and complicate cable management. Nevertheless, the deployment workflow can remain simple, while tracking quality for both pen input and scene detection improves substantially.
 
 \paragraph{Stereo fixed camera.}
-
-A stereo camera rig mounted in the workspace has similar advantages and disadvantages compared to the single fixed camera case. It provides improved tracking quality compared to a single fixed camera, while keeping similar setup and calibration requirements and similar mount robustness. Compared to the stereo robot-mounted case, it again loses some mount robustness due to being physically separate from the robot.
+A fixed stereo rig provides the same geometric depth advantages as the robot-mounted stereo case, while keeping the sensor physically separate from robot motion. The trade-offs are similar to the single fixed camera case: the critical factor becomes maintaining a rigid, stable mount so that the calibrated camera-to-world transform stays valid. The setup effort is higher than mono due to stereo calibration and synchronization, but the achievable tracking quality is typically much better than with a single fixed camera.
 
 \paragraph{Multiple fixed cameras.}
+Multiple fixed cameras can further improve robustness by providing additional viewpoints. Compared to stereo, extra cameras can reduce occlusions and provide more diverse viewing angles, making near-frontal and ambiguous views less likely. Both pen tracking and scene detection can benefit from multi-view constraints, especially in cluttered scenes or when the marker is frequently partially occluded.
 
-Multiple cameras mounted in the workspace can provide yet further improved tracking quality by providing additional viewpoints, which can help mitigate occlusions and provide more geometric constraints for pose estimation --- compared to the stereo case, additional cameras can have different viewing angles, making it much harder for the marker to suffer from pose ambiguity or frontal view issues. Both the pen tracking and scene detection pipelines can gain robustness and accuracy from the additional views, especially in challenging scenarios with occlusions or difficult viewing angles.
-
-However, this comes at the cost of significantly increased implementation effort, since each camera requires calibration and synchronization. Unlike the stereo camera, multiple fixed cameras typically do not have built-in synchronization, so a separate synchronization solution is required. That makes the initial setup, calibration, user workflow and implementation more complex. Additionally, the mount robustness issues with fixed cameras are further exacerbated in the multi-camera case due to the increased number of cameras that can be disturbed, and the fact that the system relies on multiple camera streams being valid and synchronized for pose estimation.
-
-Given perfect mounting, proper setup and calibration, and a robust synchronization solution, multiple fixed cameras can provide the best tracking quality. However, the practical challenges of achieving and maintaining such a setup in a real-world environment make this configuration less attractive, especially given the experimental nature of our use case.
+This comes at the cost of substantially increased complexity: each camera must be calibrated, the system must maintain consistent extrinsics across the set, and synchronization becomes more challenging (multi-camera rigs typically do not provide the same out-of-the-box synchronization as stereo devices). Mount robustness also becomes harder to guarantee, because the overall quality depends on \emph{all} cameras remaining rigidly aligned. While multi-camera setups can yield excellent results in controlled installations, they are less attractive under rapid prototyping and frequent workspace changes.
 
 \paragraph{Robot-mounted camera, multi-view capture.}
+In this configuration, a robot-mounted camera is used for pen tracking, and the robot is moved through multiple viewpoints to capture the scene for reconstruction or multi-view pose refinement. This combines the mechanical repeatability of a robot-mounted sensor with the geometric benefits of multiple viewpoints.
 
-In the robot-mounted camera, multi-view capture configuration, we would use a single mono or stereo camera (we consider stereo for accuracy comparisons) mounted on the robot for pen tracking, and move the robot to multiple fixed camera views for scene capture. This approach allows us to combine the advantages of a robot-mounted camera for pen tracking (robust mount, minimal calibration; precision is not critical for pen) with the advantages of multiple fixed cameras for scene detection (improved accuracy and robustness). 
+The main trade-off is workflow complexity and runtime: scene capture becomes an active procedure that requires moving the robot, acquiring multiple frames, and integrating them. This increases scene acquisition time and introduces additional safety and coordination requirements, but can significantly improve scene pose quality (e.g., by reducing occlusion and depth ambiguity) without installing multiple fixed cameras.
 
-The main complexity of this solution is on the software side due to the interactive workflow required for scene capture. Additionally, the scene capture process would require moving the robot to multiple viewpoints, which may increase the time required for scene detection and introduce additional risks of collisions or disturbances during operation.
+\paragraph{Summary.}
+Overall, monocular configurations are simplest but suffer from depth instability and viewing-angle sensitivities that are directly relevant to both pen input and scene object pose estimation. Stereo addresses these limitations with moderate additional calibration and integration effort. Based on our prototyping results and the practical requirement for stable depth, we implement the system using a stereo camera in this thesis.
 
-However, this approach allows us to achieve high tracking quality for both pipelines while keeping hardware costs low and avoiding the practical challenges of maintaining a multi-camera setup. Therefore, it represents an attractive compromise between tracking quality and practical deployment considerations, especially given our requirements for precise scene detection.
+Finally, while the analysis above is phrased in terms of planar fiducial tracking in general, the specific marker family can influence stability and failure modes. In our implementation we use OpenCV ArUco markers for both pen tracking and scene objects; alternative families (e.g., AprilTag) are compatible with the same overall pipeline. In particular, STag markers \cite{BENLIGIRAY2019158} are a promising option for improving pose stability, as they were designed to reduce jitter by combining square and circular features and were evaluated against several common marker systems.
 
-\paragraph{Summary}
-
-In early prototyping we initially used monocular ArUco pose estimation. In practice, translation along the viewing direction was noticeably noisier than the in-plane components, and we also observed small systematic depth offsets that varied with detection conditions (e.g., lighting affecting the apparent marker size). This motivated switching to a stereo camera, where depth is primarily recovered by triangulation rather than inferred from apparent scale, improving both depth stability and repeatability for pen input and scene object poses.
 
 
 
