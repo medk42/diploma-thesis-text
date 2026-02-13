@@ -1,0 +1,44 @@
+processMessage/Request/Response (base)
+save/load - serialization
+onIngress
+query_capability
+threadStart/threadStop
+getModuleInfo
+
+
+sendMessage/Response/Request
+createDynamicAllocator/createBufferAllocator/deleteAllocator
+getLoadedModulesCount/Info
+getRunningModulesCount/Info/ChannelMap
+getModulesMappingStateId - updates when modules get created or destroyed
+addModule
+collectDependencies/removeModuleById
+getExistingPublishChannelsByName/Response
+save/load
+
+thread vs process, DLL boundary (need to allocate and free safely)
+asynchronous req-resp (wait for resp)
+
+Describe our architecture from messages to module interconnection etc. 
+Then describe the thread vs process, how core and modules are launched and wired and how the messaging actually happens in the low level ^
+Module lifetime essentially - creation, existence (message passing) and destruction. Talk about the reflection api on core.
+	Cover "processMessage/Request/Response" and onIngress on module
+	And "sendMessage/Response/Request" and allocators on core
+
+activation interface/wrapper
+usecase interface/wrapper
+robot interface/wrapper
+scene detection interface
+3d visualization interface
+
+
+analysis
+system design
+experiments
+code cleanup - get code ready for the thesis (nicely packaged)	
+
+implementaci
+results
+
+user stories
+conclusion

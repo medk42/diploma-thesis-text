@@ -1,0 +1,17 @@
+interface overview - raw ptrs; how we send and receive messages and say what we need
+BaseModule - simplifying ICore interface for modules, takes care of a lot of work, handles memory safety (unique ptr wrap over raw ptrs with release logic), helper functions
+core + how core gets launched / interacted with
+	IDllModule - core is using threads + loaded modules as dlls, IDllModule instead of IModule (different but similar interfaces - IModule gives more objects, IDllModule some binarized data). So our module implements IModule and should not know about threads (design decision that module should not know if it is in threads or processes; again generalizing), therefore we need a IDllModule wrapper that the core can interact with. 
+Module contract:
+	DLL_API uint64_t readPluginApiVersion()
+	DLL_API const aergo::module::ModuleInfo* readModuleInfo();
+	DLL_API aergo::module::dll::IDllModule* createModule(const char* data_path, aergo::module::ICore* core, aergo::module::InputChannelMapInfo channel_map_info, aergo::module::logging::ILogger* logger, uint64_t module_id);
+	DLL_API void destroyModule(aergo::module::dll::IDllModule* module);
+DLLWrapper - implements IDllModule and wraps the module (return new dll::DllModuleWrapper(std::move(wrapper), core, module_id, logger);). Handles calling the processMessage etc. methods on the module from the module threads. When a module publishes, it publishes to the BaseModule -> ICore and that goes directly to core in our case (in processes it would go through one more layer). Then in the core, it gets sent to the subscribed modules, to their IDllModule's -> DLLModuleWrapper -> calls onIngress directly on the module within this thread and if successful enquees data for processing and then worker thread will call the modules processMes/Req/Resp. So the module does not know about anything - it can have it's own threads, but it doesn't care who calls it and how. It "just happens" correctly for the module. 
+Now we can finally do an example module or keep it for the end. 
+ActivationWrapper - activation is an interface (describe comms), but also a wrapper that goes above and below a module (IActivableModule below and ActivationWrapper above) - it intercepts messages and handles the activation logic calling the IActivable methods. 
+UsecaseWrapper - same deal, but along with BaseUsecase (built on top of BaseModule) that simplifies a lot of work from IUsecase. 
+Optionally also the following:
+	robot interface/wrapper
+	scene detection interface
+	3d visualization interface

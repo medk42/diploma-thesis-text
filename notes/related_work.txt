@@ -1,0 +1,114 @@
+Villani et al., 2018 - as introduction to the problem + covers several solutions
+	https://www.sciencedirect.com/science/article/pii/S2405896318313600#
+	SURVEY - short overview of common robot programming approaches - first online, offline; then multi-modal, virtual, augmented reality.
+
+Neto et al., 2010 - older simple system combining voice + 3dof movements (OLD, and very simple, but easy to understand, doesn't overshadow)
+	- MOVEMENT + VOICE
+
+Ikeda & Szafir, 2024 - HoloLens, PRogramAR, trigger-action rules with virtuyal buttons and anchored zones; animates virtual robot to simulate, study with 17 users
+	- this is essentially if-then or while-do programming; interesting AR heavy approach, but a bit orthogonal to our task specific scene understanding and user intent approach
+	- HOLOLENS/AR, IF-DO simplify programming
+		- its a GOOD ONE, compared to others it's kind of intent based
+
+Ong et al., 2020 - NO FULLTEXT, seems like AR path definition with motion planning, collision detection and plan validation; like Ted, just much better; not focused on intent, but still would significantly simplify work
+	- AR, simple path definition
+	- https://www.sciencedirect.com/science/article/abs/pii/S0736584519300250  ?
+	- Users with no prior experience programmed tasks 5–10× faster than experts using a teach pendant.
+		- evaluated on welding, pick-and-place
+		- OptiTrack tracking of a "pen", VR/AR (DK2 with stereo cameras + head tracking), kinect2 depth camera for workspace reconstruction and collision-free planning
+		- TbD (sampled path at points), click = pose (system generates collision-free paths, OML + MoveIt), system overlays CAD models onto real objects -> user points at edge or feature and selects it; user defines path, their system simulates robot motion on virtual robot overlaid on real one, user checks reachability, manipulatibility, collisions, then user selects execture for the real robot. 
+
+Dević et al., 2024 - AR/VR programming tool - define poses and then connect with linear segments (dumb programming; offline programming), also allows programming by demonstration where operator drags TCP. Ensures that the path is valid with IK.
+	- "Robots are important in high-mix, low-volume manufacturing"
+	- good intro candidate too
+	- also has playback in vr/ar - including a nice debugger for path attainability
+	- PHONE/AR/VR, simple path, teachByDemonstration; strongest contender
+
+Thoo et al., 2021 - AR interface for online-offline hybrid programming, digital twin
+	- do not use, i think that Davic is better
+	- AR, simple path?, Davic is better
+
+Maccio et al., 2024 - create digital twin, hand tracking for moving a sphere (therefore the robot) around, solving IK, voice interface for start/stop Kinesthetic Teaching session, open/close robot gripper. Uses record/playback. Nothing advanced.
+	- comparison heavy (good!) - MR guidance nearly as effective as real robot + preferred for safety reasons by some
+	- HOLOLENS/AR, simple record/playback path (+ gripper).
+
+Zhang et al., 2023 - hand tracking approach getting closer to tracepen accuracy by not tracking the finger (hidden by object) but the heat it leaves behind on the actual object + the depth camera for that point
+	- mentions TracePen 
+	- probability heavy, but REALLY interesting for pen vs hand
+	- HAND_TRACKING with heat, use in PENvsHAND
+
+Makhataeva & Varol, 2020 - good survey of AR applications in robotics
+	- did NOT READ MUCH
+	- mention maybe at the introduction (using spatial intent and scene understanding begs to use AR, here we have an overview)
+	- GOOD, USE
+
+Lin et al., 2023 - multimodal (speech+gesture) interfaces; point and say "give me that tool", not really programming, more of an assistant - but could be used for my task too
+	- speech and gesture -> robot plan
+		- segment scene, give 3d poses to tools, classify by pretrained vision, llm gets user speech (transformed to text), gesture classifiers say gesture type (pointing) -> this is given to llm task planner to write python code to extract info about the gesture (detect_referred_object("black tool") and then move, hand-over etc. robot asks / double checks it takes the right object; + grasping logic (model pretrained by demonstration, gets point cloud + pose of the object and predicts grasp pose)
+	- SPEECH+GESTURE, last chapter
+
+Bieller (IFR), 2023 – IFR Blog (industry) - traditional programming methods (50-70%) are very slow, speed up for example for welding is needed.
+	- demonstration of that
+	- pretty much offline programming (no downtime) with a system that auto-detects required welds and poins them out (user will choose welds and parameters). System will then scan the real part and adjust the welds/paths as required (since it may not exactly match the model). It can also detect fixtures and avoid collisions. 
+	- 10 minutes instead of 100min.
+	- Use in INTRO and RELATED WORK as ACTUAL WORKING EXAMPLE?
+	- OFFLINE PROGRAMMING + scene detect + potentially real use
+
+Dianatfar et al., 2021 - review of VR/AR solutions
+	mention at the start of review
+	SURVEY, USE - also read the results and discuss them 
+
+Mueller et al., 2024 - novel offline programming method with programming by demonstration with virtual robot and haptic input device; not at accuracy of industrial systems, but much faster to traditional KT methods in such systems
+	- with virtual robot, program the program with real workpieces and then adjust to real robot / calibrate. So we do approximate program with precise scene and then calibrate it to the real robot. Essentially offline programming in AR, but closest to the real deal. 
+		- closest to real-usable tool, compared to other AR
+	- high-mix, low-volume products AGAIN - but saved by offline programming instead of online like me
+	https://www.mdpi.com/2218-6581/13/3/35
+	- LOW-VOLUME, OFF-LINE AR (robot AR, parts real) DIGITAL TWIN -> calibration to real robot
+
+Kulecki et al.  -  https://wydawnictwo.umg.edu.pl/pp-rai2022/pdfs/30_pp-rai-2022-040.pdf
+	VOICE + HAND TRACKING (MediaPipe)
+	very simple
+
+
+Wandelbots (product, 2022) - supposedly there is a white-paper that covers this and teaching with tracepen should be 70x faster than coding via teach pendant.
+
+Calinon et al., 2021 - this is Thoo et al.  2021
+
+Neura robotics - MAIRA - mention?
+smooth robotics - developing a use-case is efficient as can be seen with smooth robotics, developing an in-depth welding use-case significantly simplified using the UR cobot for welding tasks. Our approach would like to explore this concept - in much less depth - but applied generally and with spatial intent instead of typical teach pendant programming. 
+
+Czech guys - https://www.mdpi.com/1424-8220/23/9/4219
+	- HAND-TRACKING program creation with gesture detection; good results, but not intent
+		- "Similar to one part of my system (pick and place), however, I'd like my system to be more general"
+
+	- HAND-TRACKING, ONLINE PROGRAMMING (MediaPipe)
+
+
+
+https://www.sciencedirect.com/science/article/pii/S2212827116309544 - gesture control -> robot control
+	dont use probably, just for variety, but its a weak paper
+
+
+digital twin is SIMPLER for AR (you do not need to solve the robot-ar device calibration/transformation. But it makes working in the robot's workspace impossible unless you clone the environment. It has same issues as offline programming does - you need an exact clone of the environment - but once you have that, AR programming with simple intent / snapping poses could be very efficient. However that is pretty much my system. 
+
+Neura Robotics MAiRA - as an example?
+
+freeze the vcpkg!
+
+
+	
+
+
+
+
+
+go through this again, add info where relevant
+go through it again, outline what we can use in introduction and where
+go through it again and build relevant work outline; also point out which work we will use in hand / pen detection (or later)
+read response from chat -> merge
+read outline -> merge
+write ch2
+
+design ch3 - what we will talk about and how and what will we decide
+deep research on ^ - i will give it the links i know (hand tracking, etc.) and my decisions (tablet, web, WT, single vs multi camera; and let it build a case for all of it supported by research where relevant). 
+	

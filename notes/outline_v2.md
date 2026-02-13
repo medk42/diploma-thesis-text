@@ -325,6 +325,8 @@ Focus on design guarantees and decisions. This will be a continuation of the ana
 
 Your notes justify a hybrid communication model (pub/sub + req/resp) and large-data blobs as necessary for camera-rate workloads (this is a strong, concrete design contribution).
 
+- C++? where?
+
 ### 4.1 Module / plugin model and lifecycle
 - Core responsibilities: load, map, route, supervise, persist  
 - Module metadata:
@@ -420,6 +422,7 @@ A reproducible demo path (even if narrow): “from fresh checkout → run → se
 - Cameras  
 - Robot  
 - Input devices  
+- C++? where?
 
 ### 5.2 Camera calibration pipeline
 - Intrinsic and extrinsic calibration  
@@ -429,6 +432,8 @@ A reproducible demo path (even if narrow): “from fresh checkout → run → se
 - Tracking pipeline  
 - Calibration strategy (mention of global optimization acceptable)  
 - Runtime performance notes  
+- started mono, observed z jitter; used stereo camera; mention smoothing
+    - we measured marker size, calibrated intrinsics, observed depth deviations of ~few % at 1 m under some lighting
 
 ### 5.4 Scene detection implementation
 - Techniques used (fiducials, ArUco, ChArUco, etc.)  
@@ -436,7 +441,9 @@ A reproducible demo path (even if narrow): “from fresh checkout → run → se
 
 ### 5.5 Robot module implementation
 - Kassow robot integration (CBun / CBunX)  
+    - CBun describe and how it works
     - Kassow cobot useful, since 7axes are more likely to avoid singularities
+    - trajectory sending limitations with robot
 - Supported motion and limited tool control  
     - state your current interface (motion + limited IO) and what you didn’t implement
 - Missing features and reasons  
@@ -592,6 +599,10 @@ SEE FUTURE WORK FOR MORE RESOURCES
     - all other interface based limitations
     - robot communication limitations (non path planning, validation)
     - tool io missing
+    - logging too much
+        - [ERROR] 2026/02/12 16:59:32.629 (stereo_camera_module_windows, ID: 1) Failed to grab frame from camera
+        - same for robot cbun
+    - trajectory sending limitations with robot
 - System
     - motion planning (to avoid obstacles)
         - to avoid obstacles, but also kept getting issue with joint range exceeded!
