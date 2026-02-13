@@ -380,9 +380,44 @@ In this configuration, a robot-mounted camera is used for pen tracking, and the 
 The main trade-off is workflow complexity and runtime: scene capture becomes an active procedure that requires moving the robot, acquiring multiple frames, and integrating them. This increases scene acquisition time and introduces additional safety and coordination requirements, but can significantly improve scene pose quality (e.g., by reducing occlusion and depth ambiguity) without installing multiple fixed cameras.
 
 \paragraph{Summary.}
-Overall, monocular configurations are simplest but suffer from depth instability and viewing-angle sensitivities that are directly relevant to both pen input and scene object pose estimation. Stereo addresses these limitations with moderate additional calibration and integration effort. Based on our prototyping results and the practical requirement for stable depth, we implement the system using a stereo camera in this thesis.
 
-Finally, while the analysis above is phrased in terms of planar fiducial tracking in general, the specific marker family can influence stability and failure modes. In our implementation we use OpenCV ArUco markers for both pen tracking and scene objects; alternative families (e.g., AprilTag) are compatible with the same overall pipeline. In particular, STag markers \cite{BENLIGIRAY2019158} are a promising option for improving pose stability, as they were designed to reduce jitter by combining square and circular features and were evaluated against several common marker systems.
+\begin{table}[t]
+\centering
+\caption{Qualitative comparison of candidate camera configurations for fiducial-based pen tracking and scene detection.}
+\label{tab:camera_config_comparison}
+
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{l c c c c}
+\toprule
+Configuration & Setup/Maint. & Pen 6D quality & Scene pose quality & Mount rob. \\
+\midrule
+Single robot & Low & Low--Med & Low--Med & High \\
+Single fixed & Low & Low--Med & Low--Med & Med \\
+Stereo robot & Low--Med & High & Med--High & High \\
+Stereo fixed & Low--Med & High & Med--High & Med \\
+Multiple fixed & Very High & Very High & Very High & Low \\
+Robot multi-view\textsuperscript{a} & Low--Med & High & Very High & High \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+\footnotesize
+\textsuperscript{a} Similar calibration to stereo, but higher workflow/runtime complexity (robot repositioning + multi-view optimization).
+
+\emph{Note:} Ratings are qualitative and reflect our expected performance and deployment effort in the thesis setup. Pen/scene quality assumes reasonable camera placement and calibration; mount robustness reflects how likely the calibrated extrinsics remain valid under typical disturbances (bumps, vibration, cable strain).
+\end{table}
+
+To make the trade-offs explicit, Table~\ref{tab:camera_config_comparison} summarizes the expected properties of the considered configurations.
+
+Overall, monocular configurations are the simplest to deploy but suffer from depth instability and viewing-angle sensitivities that directly affect both pen tracking and fiducial scene pose estimation. Stereo addresses these weaknesses with moderate additional calibration and integration effort. Multi-camera setups can further improve robustness (occlusion handling and view diversity), but at the cost of substantially higher calibration/synchronization complexity and lower flexibility for rapid prototyping.
+
+Robot-mounted configurations can provide stronger \emph{mount robustness} in practice because the camera pose remains mechanically tied to the robot, but they increase collision risk and require careful cable management. Fixed cameras avoid collision risks from robot motion, but maintaining calibration integrity depends heavily on the stiffness and disturbance-resistance of the external mount.
+
+Based on our prototyping results and the practical requirement for stable depth together with reliable mount robustness, we implement the system using a \emph{robot-mounted stereo camera} in this thesis. We do not use robot-mounted multi-view capture, since the single stereo setup is sufficient as a proof of concept for the overall system; nevertheless, multi-view capture remains an interesting option for future work if higher scene pose quality is required.
+
+Finally, the analysis above reflects our ArUco-based implementation and common planar-marker behavior. In our implementation we use OpenCV ArUco markers for both the pen and scene objects; alternative families (e.g., AprilTag) are compatible with the same overall pipeline. In particular, \emph{STag} markers \cite{BENLIGIRAY2019158} are a promising option for improving pose stability by combining square and circular features, and they were evaluated against several common marker systems.
 
 
 
