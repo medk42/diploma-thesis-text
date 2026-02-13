@@ -324,3 +324,39 @@
   url = {https://www.keyence.com/products/vision/vision-sys/},
   urldate = {2026-02-13}
 }
+
+
+@ARTICLE{Rijlaarsdam2022,
+      
+  AUTHOR={Rijlaarsdam, David D. W.  and Zwick, Martin  and Kuiper, J.M. (Hans) },
+            
+  TITLE={A novel encoding element for robust pose estimation using planar fiducials},
+            
+  JOURNAL={Frontiers in Robotics and AI},
+            
+  VOLUME={Volume 9 - 2022},
+    
+  YEAR={2022},
+    
+  URL={https://www.frontiersin.org/journals/robotics-and-ai/articles/10.3389/frobt.2022.838128},
+    
+  DOI={10.3389/frobt.2022.838128},
+    
+  ISSN={2296-9144},
+    
+  ABSTRACT={Pose estimation in robotics is often achieved using images from known and purposefully applied markers or fiducials taken by a monocular camera. This low-cost system architecture can provide accurate and precise pose estimation measurements. However, to prevent the restriction of robotic movement and occlusions of features, the fiducial markers are often planar. While numerous planar fiducials exist, the performance of these markers suffers from pose ambiguities and loss of precision under frontal observations. These issues are most prevalent in systems with less-than-ideal specifications such as low-resolution detectors, low FOV optics, far-range measurements etc. To mitigate these issues, encoding markers have been proposed in literature. These markers encode an extra dimension of information in the signal between marker and sensor, thus increasing the robustness of the pose solution. In this work, we provide a survey of these encoding markers and show that existing solutions are complex, require optical elements and are not scalable. Therefore, we present a novel encoding element based on the compound eye of insects such as the Mantis. The encoding element encodes a virtual point in space in its signal without the use of optical elements. The features provided by the encoding element are mathematically equivalent to those of a protrusion. Where existing encoding fiducials require custom software, the projected virtual point can be used with standard pose solving algorithms. The encoding element is simple, can be produced using a consumer 3D printer and is fully scalable. The end-to-end implementation of the encoding element proposed in this work significantly increases the pose estimation performance of existing planar fiducials, enabling robust pose estimation for robotic systems.}
+}
+
+@article{BENLIGIRAY2019158,
+  title = {STag: A stable fiducial marker system},
+  journal = {Image and Vision Computing},
+  volume = {89},
+  pages = {158-169},
+  year = {2019},
+  issn = {0262-8856},
+  doi = {https://doi.org/10.1016/j.imavis.2019.06.007},
+  url = {https://www.sciencedirect.com/science/article/pii/S0262885619300903},
+  author = {Burak Benligiray and Cihan Topal and Cuneyt Akinlar},
+  keywords = {Fiducial markers, Pose estimation stability, Geometric calibration, Mixed reality},
+  abstract = {Fiducial markers provide better-defined features than the ones naturally available in the scene. For this reason, they are widely utilized in computer vision applications where reliable pose estimation is required. Factors such as imaging noise and subtle changes in illumination induce jitter on the estimated pose. Jitter impairs robustness in vision and robotics applications, and deteriorates the sense of presence and immersion in AR/VR applications. In this paper, we propose STag, a fiducial marker system that provides stable pose estimation. STag is designed to be robust against jitter factors, thus sustains pose stability better than the existing solutions. This is achieved by utilizing geometric features that can be localized more repeatably. The outer square border of the marker is used for detection and homography estimation. This is followed by a novel homography refinement step using the inner circular border. After refinement, the pose can be estimated stably and robustly across viewing conditions. These features are demonstrated with a comprehensive set of experiments, including comparisons with the state of the art fiducial marker systems.}
+}
