@@ -434,28 +434,32 @@ Overall, we aim for a robot-agnostic interface: use cases operate on a small, co
 
 \subsection{UI}
 
-The user interface (UI) is the primary means for users to interact with the system, select use cases, enter parameters, visualize and confirm the generated robot program, and launch execution. 
+The user interface (UI) is the main point of interaction with the system: it lets the user select a use case, enter non-spatial parameters, inspect the generated program, and trigger execution.
 
-Given the requirements \ref{req:ui} and \ref{req:ui_use_case_selection}, the UI must support:
+Given requirements \ref{req:ui} and \ref{req:ui_use_case_selection}, the UI must support:
 \begin{enumerate}[label=(\roman*)]
-    \item defining non-spatial parameters for use cases, such as object types for pick-and-place or welding parameters for seam welding,
-    \item selecting the use case to be programmed, 
-    \item visualizing the created program (e.g., showing the planned robot trajectory in the workspace), and
+    \item defining non-spatial parameters for use cases (e.g., object type for pick-and-place, welding parameters for seam welding),
+    \item selecting the use case to be programmed,
+    \item visualizing the created program (e.g., displaying the planned robot trajectory in the workspace), and
     \item confirming the programming before execution.
 \end{enumerate}
 
-We were selecting between three main UI approaches:
-\begin{enumerate}[label=(\roman*)]
-    \item \emph{Computer application}, where users interact with the system through a standard desktop or laptop computer,
-    \item \emph{Tablet application}, where users interact with the system through a touchscreen tablet device, and
-    \item \emph{AR/VR interface}, where users interact with the system through an augmented reality (AR) or virtual reality (VR) headset.
-\end{enumerate}
+At a high level, we consider two UI directions:
 
-Computer and tablet applications both offer similar capabilities for use case selection, parameter entry, and program visualization. The implementation effort is also comparable, as both can be developed using standard UI frameworks and libraries. The main difference is in the form factor and interaction modality: a tablet can be more convenient for quick interactions in a workshop environment, while a computer application may provide a more powerful interface for complex parameter entry and visualization. Our system already provides us with robot-relative pen and scene object poses in the workspace, so program visualization can be implemented simply by rendering a virtual representation of the scene and the planned robot trajectory in a 3D view. 
+\paragraph{2D application (tablet/desktop).}
+A standard 2D UI running on a tablet or a computer can cover all required functions using common UI frameworks. Since our system already produces robot-relative spatial data (pen input and detected scene objects), visualization can be implemented by rendering a simple 3D scene view with the planned robot path and key poses. The main difference between tablet and desktop is the interaction modality: a tablet is convenient for quick, touch-based operation close to the workspace, while a desktop/laptop is comfortable for longer sessions (keyboard/mouse input, larger display) and parameter-heavy workflows. From the system perspective, both are similar frontends.
 
-AR/VR interfaces can provide a more immersive and intuitive interaction experience, allowing users to see the robot program directly overlaid on the real workspace. However, they require additional hardware (AR/VR headsets) and have a steeper learning curve for users who are not familiar with such devices. The implementation effort is also higher, as it involves developing for AR/VR platforms and solid calibration between the robot-relative coordinate system and the AR/VR environment.  
+\paragraph{AR/VR interface.}
+An AR/VR UI can, in principle, show the planned program directly in 3D over the real workspace and allow spatial adjustments in an intuitive way. The main downside is integration and calibration effort: the headset coordinate system must be aligned with the robot/workspace coordinate system with sufficient accuracy and long-term stability.
 
-Given the practical requirements for a simple, hardware-agnostic interface that can be easily operated in a workshop environment, we select a \emph{tablet application} for the UI in this thesis. This allows us to focus on the core spatial authoring workflow and use case implementation, while providing a convenient interface for users to interact with the system. This also aligns with the thesis idea of this system being used by either a non-expert operator (used to using a tablet more than an AR/VR solution) and for creating a program for a frequently changing tasks (quick tablet interaction is more suitable than having to use an AR/VR solution). However, the system architecture is designed to be flexible, allowing for future integration of alternative UI approaches such as computer applications or AR/VR interfaces if desired.
+Even with correct alignment, AR/VR interaction is not automatically well-defined for all use cases. In our workflow, the final robot program is often not a direct copy of the raw user input: it is produced by combining user-provided hints (poses or rough trajectories) with scene-derived constraints and use-case-specific logic. For example, in seam welding the user may draw only an approximate path, which is then aligned to a detected seam between two objects; or an approach pose may be generated automatically from the seam geometry. In such cases, a generic ``grab and move the program in 3D'' interaction becomes ambiguous unless the use case explicitly exposes which elements are meant to be edited (e.g., offset from seam, approach distance, weld direction) and how such edits should propagate through the underlying procedure.
+
+On the other hand, if AR/VR integration is done well, the same hardware can also provide 6D tracking of controllers or hands. This makes AR/VR a combined option for both the UI and the 6D input interface, with the integration effort largely paid once at the system level.
+
+
+Given the practical goal of a hardware-light solution suitable for rapid prototyping and workshop use, we select a \emph{2D UI with tablet-style operation} in this thesis. At the same time, we keep the UI as a separate frontend to the sensing and execution logic, so that alternative frontends (e.g., a desktop application or an AR/VR UI) can be integrated later if the deployment constraints and use case needs justify the additional complexity.
+
+
 
 \subsection{Use case plugin support}
 
