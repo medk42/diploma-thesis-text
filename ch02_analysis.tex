@@ -126,8 +126,10 @@ We consider three candidate approaches:
 \begin{enumerate}[label=(\roman*), itemsep=0.2em]
     \item \emph{hand tracking}, where the user's hand is the input device,
     \item \emph{VR/AR controllers}, using existing VR/AR hardware, and
-    \item \emph{camera-based marker tracking}, where the user holds a tool with a known marker tracked by an external camera.
+    \item \emph{camera-based fiducial marker tracking}, where the user holds a tool with a known planar marker tracked by an external camera.
 \end{enumerate}
+
+For clarity, we use the term \emph{fiducial marker tracking} as an umbrella for ArUco/AprilTag-like planar markers in general; the concrete marker family used in our prototype is introduced below.
 
 \paragraph{Hand tracking.}
 Hand tracking is an attractive option because it is intuitive and does not require a dedicated held tool. It can be implemented using open-source solutions such as MediaPipe \cite{MediaPipeRoot} (also used by Vysocký et al.\ \cite{Vysocky2023}) or via commercial ecosystems such as the Meta Quest headset or Leap Motion. Meta Reality Labs also reports several recent research systems for hand tracking on headset devices \cite{FB_research, FB__UmeTrack, FB__MEgATrack, FB__ElasticHandTrack}.
@@ -472,9 +474,24 @@ Second, separating use cases from the infrastructure makes the system more maint
 In this thesis, we demonstrate this plugin approach on two representative use cases (pick-and-place and seam welding). At the same time, the plugin boundary keeps the system open for additional tasks in future work (e.g., painting, dispensing, inspection, or surface processing), as long as they can be expressed using the same high-level acquisition and execution building blocks.
 
 
-\subsection{Modular architecture}
+\subsection{Modular architecture} \label{subsec:ch2_analysis_modular_architecture}
 
-\subsection{Summary}
+Across the previous subsections, we repeatedly relied on the same engineering principle: we commit to a pragmatic solution for the thesis prototype, but we want to keep the option to replace individual parts later. This applies to multiple parts of the system:
+\begin{enumerate}[label=(\roman*), itemsep=0.2em]
+    \item the 6D input source (marker tracking vs. other tracking modalities),
+    \item the scene detection approach (fiducials vs. model-based or reconstruction-based methods),
+    \item the camera configuration (robot-mounted stereo vs. fixed stereo vs. multi-view capture),
+    \item the robot integration (different robot brands/models),
+    \item the UI framework (tablet vs. AR/VR), and
+    \item the set of use cases supported by the system.
+\end{enumerate}
+
+Taken together with requirement~\ref{req:use_case_plugin_support}, these points naturally motivate a \emph{modular architecture}: the system should be composed of independent components with clear interfaces, so that one component can be replaced without rewriting the others. This shifts the emphasis from selecting the “best” algorithm upfront to defining \emph{stable interfaces} between components. With well-chosen interfaces, we can start with a simple proof-of-concept implementation and later upgrade only the relevant part (e.g., replace fiducial scene detection with a model-based pipeline) while keeping the rest unchanged.
+
+A modular decomposition also matches the structure derived from the requirements in \autoref{fig:ch2_analysis__base_components}. For example, different camera setups can be implemented as alternative sensing components that provide the same outputs (time-stamped images and calibrated poses in a shared reference frame). Similarly, the pen tracking and scene detection components can be exchanged independently as long as they produce the same abstract outputs used by the use cases (pen poses/trajectories and object poses/IDs). Finally, use cases consume these abstract inputs and translate them into robot actions executed through the common robot interface (e.g., sequences of motion primitives with associated parameters).
+
+The practical consequence is that the system design must focus on (i) defining stable component boundaries and data abstractions, and (ii) ensuring that components remain truly decoupled, i.e., they communicate only through the defined interfaces rather than by implicit assumptions or shared internal details. This is also beneficial during development: it enables incremental testing of components, clearer responsibility separation, and faster experimentation by swapping one part at a time.
+
 
 
 \newpage
