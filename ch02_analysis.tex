@@ -461,9 +461,16 @@ Given the practical goal of a hardware-light solution suitable for rapid prototy
 
 
 
-\subsection{Use case plugin support}
+\subsection{Use case plugin support} \label{subsec:ch2_analysis_use_case_plugins}
 
-\xxx{or rename to modular architecture?}
+Requirement~\ref{req:use_case_plugin_support} states that the system should support adding new task-oriented use cases while reusing the same input and execution infrastructure. This is important for two reasons.
+
+First, the set of tasks that can benefit from spatial authoring is broad, and different tasks require different task logic even when they share the same sensing and execution capabilities. For example, pick-and-place and seam welding both reuse the same 6D input and scene detection, but they interpret the input differently and generate different robot motion structure. Therefore, we avoid hard-coding task-specific logic into the core system and instead treat each task as an interchangeable \emph{use case plugin}.
+
+Second, separating use cases from the infrastructure makes the system more maintainable and easier to extend. A new use case should not require changes in the sensing pipeline, robot integration, or UI framework; it should only add a new plugin that (i) defines what inputs it needs (poses, trajectories, scene objects, parameters), (ii) implements the task-specific reasoning that turns these inputs into a robot program, and (iii) exposes a representation suitable for visualization and confirmation before execution.
+
+In this thesis, we demonstrate this plugin approach on two representative use cases (pick-and-place and seam welding). At the same time, the plugin boundary keeps the system open for additional tasks in future work (e.g., painting, dispensing, inspection, or surface processing), as long as they can be expressed using the same high-level acquisition and execution building blocks.
+
 
 \subsection{Modular architecture}
 
