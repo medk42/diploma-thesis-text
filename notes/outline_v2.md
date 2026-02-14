@@ -447,6 +447,7 @@ A reproducible demo path (even if narrow): “from fresh checkout → run → se
 - Supported motion and limited tool control  
     - state your current interface (motion + limited IO) and what you didn’t implement
 - Missing features and reasons  
+- The interface is command-based and asynchronous: motions start non-blocking, status is streamed, and completion is reported via finished notifications; we do not model queuing or arbitration between competing actions.
 
 ### 5.6 UI implementation
 - maybe this is already covered in the analysis enough, but maybe the persistency -> Chapter Persistency Handling
@@ -492,6 +493,7 @@ Concrete, narrative-driven chapter replacing user documentation.
 [safety notes; conservative speeds; E-STOP readiness; 1–2 user stories]
 
 ### 6.1 System setup
+- TCP setting - user needs to set TCP on the robot side
 - Load modules  
 - Map channels  
 - Activate and calibrate  
@@ -612,6 +614,7 @@ SEE FUTURE WORK FOR MORE RESOURCES
         - Robot Interface ToolIO - capability flags / versioning / tool abstraction.
     - cross-platform design
         - compilable both on windows and linux, but camera module developed only for windows; BLE cross-platform, but behaves differently on linux (doesnt connect)
+    - TCP setting - user needs to set TCP on the robot side
 - What is inherent vs improvable with better sensing or UI  
 - Expressiveness / applicability limits
     - See "Diploma Thesis Archive/Linear Program"
