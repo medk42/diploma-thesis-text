@@ -492,6 +492,13 @@ A modular decomposition also matches the structure derived from the requirements
 
 The practical consequence is that the system design must focus on (i) defining stable component boundaries and data abstractions, and (ii) ensuring that components remain truly decoupled, i.e., they communicate only through the defined interfaces rather than by implicit assumptions or shared internal details. This is also beneficial during development: it enables incremental testing of components, clearer responsibility separation, and faster experimentation by swapping one part at a time.
 
+\subsection{Summary} \label{subsec:ch2_analysis_summary}
+
+In this chapter, we derived system requirements from two representative tasks (pick-and-place and seam welding) and decomposed the system into five base components (\autoref{fig:ch2_analysis__base_components}). For the 6D input and scene detection, we selected camera-based fiducial tracking as the most practical approach under the thesis constraints. To address the main weakness observed during prototyping (unstable monocular depth), we selected a robot-mounted stereo configuration as the sensing setup used in this thesis.
+
+For execution, we require a robot interface that exposes a small set of motion primitives and the robot state needed for both control and sensing, while remaining robot-agnostic at the use case level. For interaction, we require a UI that supports parameter entry, use case selection, visualization, and confirmation prior to execution; we select a tablet-oriented UI as a practical default for workshop operation.
+
+Importantly, these choices are made in the context of a prototype. To keep the system open for future improvements (alternative sensing pipelines, alternative UIs, additional robots, and additional tasks), the requirements and decisions above motivate a modular architecture with explicit interfaces between components. The next chapter (\autoref{chapter:ch3_system_design}) therefore focuses on the overall system design and integration of the selected components into a single modular system.
 
 
 \newpage
