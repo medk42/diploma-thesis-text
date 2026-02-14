@@ -434,6 +434,29 @@ Overall, we aim for a robot-agnostic interface: use cases operate on a small, co
 
 \subsection{UI}
 
+The user interface (UI) is the primary means for users to interact with the system, select use cases, enter parameters, visualize and confirm the generated robot program, and launch execution. 
+
+Given the requirements \ref{req:ui} and \ref{req:ui_use_case_selection}, the UI must support:
+\begin{enumerate}[label=(\roman*)]
+    \item defining non-spatial parameters for use cases, such as object types for pick-and-place or welding parameters for seam welding,
+    \item selecting the use case to be programmed, 
+    \item visualizing the created program (e.g., showing the planned robot trajectory in the workspace), and
+    \item confirming the programming before execution.
+\end{enumerate}
+
+We were selecting between three main UI approaches:
+\begin{enumerate}[label=(\roman*)]
+    \item \emph{Computer application}, where users interact with the system through a standard desktop or laptop computer,
+    \item \emph{Tablet application}, where users interact with the system through a touchscreen tablet device, and
+    \item \emph{AR/VR interface}, where users interact with the system through an augmented reality (AR) or virtual reality (VR) headset.
+\end{enumerate}
+
+Computer and tablet applications both offer similar capabilities for use case selection, parameter entry, and program visualization. The implementation effort is also comparable, as both can be developed using standard UI frameworks and libraries. The main difference is in the form factor and interaction modality: a tablet can be more convenient for quick interactions in a workshop environment, while a computer application may provide a more powerful interface for complex parameter entry and visualization. Our system already provides us with robot-relative pen and scene object poses in the workspace, so program visualization can be implemented simply by rendering a virtual representation of the scene and the planned robot trajectory in a 3D view. 
+
+AR/VR interfaces can provide a more immersive and intuitive interaction experience, allowing users to see the robot program directly overlaid on the real workspace. However, they require additional hardware (AR/VR headsets) and have a steeper learning curve for users who are not familiar with such devices. The implementation effort is also higher, as it involves developing for AR/VR platforms and solid calibration between the robot-relative coordinate system and the AR/VR environment.  
+
+Given the practical requirements for a simple, hardware-agnostic interface that can be easily operated in a workshop environment, we select a \emph{tablet application} for the UI in this thesis. This allows us to focus on the core spatial authoring workflow and use case implementation, while providing a convenient interface for users to interact with the system. This also aligns with the thesis idea of this system being used by either a non-expert operator (used to using a tablet more than an AR/VR solution) and for creating a program for a frequently changing tasks (quick tablet interaction is more suitable than having to use an AR/VR solution). However, the system architecture is designed to be flexible, allowing for future integration of alternative UI approaches such as computer applications or AR/VR interfaces if desired.
+
 \subsection{Use case plugin support}
 
 \xxx{or rename to modular architecture?}
