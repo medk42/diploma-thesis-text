@@ -1,0 +1,116 @@
+\chapter{System Design} \label{chapter:ch3_system_design}
+
+Chapter~\ref{chapter:ch2_analysis} motivated a modular architecture with explicit interfaces, so that sensing, UI, robot backends, and task logic can be exchanged without rewriting the whole system. This chapter describes the design of the modular system itself and the main interfaces that enable communication between modules.
+
+\section{System at a glance} \label{sec:ch3_overview}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{img/ch3_system_design/four_parts.pdf}
+  \caption{Conceptual separation of contracts and implementations. The module contract defines how modules interact with the runtime core (lifecycle + message exchange). Interface contracts specify domain message semantics (e.g., camera stream, pen pose, scene detection) on top of the module contract. Concrete modules implement these contracts; the runtime core provides one concrete hosting and routing implementation.}
+  \label{fig:ch3_four_parts}
+\end{figure}
+
+The system is organized into four conceptual parts, shown in \autoref{fig:ch3_four_parts}. This separation helps to keep the design modular: stable contracts are defined once, while concrete implementations can be replaced as the system evolves.
+
+\begin{enumerate}[label=(\arabic*), itemsep=0.3em]
+    \item \textbf{Module contract.}
+    This part defines \emph{what a module is} and how modules interact, without assuming a specific runtime implementation by defining a module and core contracts.
+    It specifies the communication primitives (publish/subscribe and request/response), message structure (small headers with optional shared blobs for large data), channel declaration, channel mapping, module lifecycle and abstract core API.
+    All module code depends only on this contract.
+
+    \item \textbf{Core implementation.}
+    The core is the concrete runtime that \emph{implements} the module contract.
+    It is responsible for loading modules, instantiating them, applying the channel mapping, routing messages, scheduling message processing, and managing shared memory for large payloads.
+    Different core implementations are possible in principle (threads, processes, distributed), while still keeping the same module contract.
+
+    \item \textbf{Interface contracts.}
+    On top of the generic module communication, we define standard interfaces for our application domain (e.g., robot control, scene data, camera image) and for UI interaction (e.g., activation, use case execution, 3D visualization). Interfaces define \emph{what} messages mean and what behavior other modules can rely on, independent of a specific module implementation.
+
+    \item \textbf{Modules.}
+    Finally, the concrete functionality is implemented as modules: camera acquisition, calibration, 6D pen input, scene detection, use cases, and robot execution. UI itself is also implemented as a module, since it is just another component that interacts with others through the defined interfaces.
+    These modules use the standard interfaces and are hosted by the runtime core.
+    As long as the interfaces are respected, modules can be added, removed, or replaced with minimal impact on the rest of the system.
+\end{enumerate}
+
+In the remainder of this chapter we describe these parts in the same order: first the module contract, then the concrete core implementation, then the interface contracts. Implementation details of the actual modules are covered in \autoref{chapter:ch4_implementation}.
+
+
+% writing about my system design in latex:
+
+% The system is split into four conceptual parts: modules backbone (the "backbone" of modules, architecture to support messages passing, channels, the idea how modules work, how they receive messages, how they send messages - this is actually all the interfaces for describing how a module works without any dependence on a concrete core implementation (just covered by ICore interface), therefore not yet deciding how core should be implemented (threads vs processes etc.); they implement independent functionality (camera, calibration, pen tracking, scene detection, UI, use case, robot), however that is said later, here we want to describe just the backbone), core (concrete implementation of the core, handles loading modules, how modules are represented (dlls, but not mention yet in overview), how concretely they are called, how are messages passed to the correct modules, how is memory allocated, etc; the modules part describes what we need to do, core how it is done - we can name these differently, actually, but i do want to maintain four conceptual parts), interfaces for various (and their accompying helper classes and wrappers; interfaces fix a certain way of communicating - where modules defined interface and core defined implementation, interfaces define how is the system used, what is built on top of the system, they are more abstract, higher level logic, saying how do messages look, what do they contain, what is the message flow etc. - for example simple interfaces like camera or pen data to more complex like activation interface and its corresponding module wrapper (allowing a module to be activated in the UI, after providing parameters), usecase interface and its wrapper (allowing the module to be used as a usecase from the UI, with providing parameters, confirming teaching, providing visualization data of the taught program and actually running it), scene detection interface (allowing modules to request scan of the scene, request the objects that the scanning module is able to find in the scene etc.), 3d visualization interface and its helper class (allowing modules to provide custom 3d visualization in the UI - again by defining both a pub-sub (scene updates) and req-resp (UI requests full scene or full scene + all objects that can be shown on the scene) messaging) - all of these are *not* UI dependent, they are created indepndent of the UI and UI just implements them) and modules (these actually use the mentioned interfaces, they are built on top of the modules part (with a small wrapper connecting them to the core - they dont actually know about the wrapper, all the logic stays independent of the core) and they implement the actual functionality while using the fixed interfaces to communicate with other modules).
+
+% This design allows for a high degree of modularity and flexibility. the modules backbone needs to be well defined, because it is the foundation of the entire system and it would be complex to change later. The core on the other hand can be implemented in various ways and is not as critical to be implemented perfectly. The interfaces are again important, because like the backbone, they define and fix the communication between modules so changing them would require changing all the modules that use them. Finally modules are (by design) the most flexible part, as they can be added, removed, or modified without affecting the overall system - as long as they adhere to the defined interfaces and use the backbone for communication. 
+
+% In summary we should also have a figure showing the four parts and their relationships.
+
+% Then we go on to cover these parts in the same order, starting with the backbone, then core, then interfaces and finally modules. 
+
+% In backbone, we describe the module lifecycle (in abstract). Also cover:
+%     3.3.X Channel declaration and mapping
+%         Producer/consumer declare channel type + cardinality (single / N / auto-all).
+%         Mapping binds consumer inputs → specific producer outputs at instantiation.
+%         Pub/sub is conceptually pub/sub, but wiring is explicit (directed), not "global topic soup".
+%     Auto-create modules
+%         Motivation: the UI (or a bootstrap module) must exist early to orchestrate runtime creation/mapping.
+%         Why you restricted it: "In this thesis, auto-created modules are constrained to auto-all wiring because there is no separate static configuration step before UI becomes available."
+%         Also add one sentence to acknowledge the alternative (so reviewers don't think you missed it):
+%             "A file-driven bootstrap that instantiates modules and wiring is compatible with the design; in our prototype, UI-driven configuration is the primary path."
+%     Constructor must not call core; oningress vs processed
+%     async req/resp
+%     describe:
+%         what a module is, what it must implement, and lifecycle
+%         how messages are routed (pub/sub + req/resp)
+%         blob ownership rule (allocator + handles)
+%         how wiring/mapping works (single vs many vs auto-all)
+%     CoreAPI - cover reflection (module discovery, creation/destruction, seeing what exists, save/load)
+%     At the end some summary of the APIs, because throughout we are describing parts (pub-sub, sendMsg/procesMsg, module reflection etc.)
+
+% core - concrete "implementation" of the backbone - wrapper over the backbone
+%     handles loading modules, how modules are represented (dlls, but not mention yet in overview), how concretely they are called, how are messages passed to the correct modules, how is memory allocated, etc; the modules part describes what we need to do, core how it is done - we can name these differently, actually, but i do want to maintain four conceptual parts
+%     reiterate onIngress vs processMessage/processRequest/processResponse; async req/resp
+%         hosting runtime: explain scheduling (ingress path is fast; worker threads do the slow work; requests are async; queueing; priority).
+%     this could be actually also in ch4. technically. But then we could argue that ch4 should be module backbone, ch5 core, ch6 interfaces and ch7 modules... that is too much imo, i'd rather have this all in one chapter (and potentially ch4 only separate as implementation details of important modules). So i think keep the ch3 for backbone/core/interfaces and ch4 for module implementation.
+
+% interfaces
+%     two types: for UI (to make UI general; activation, use case, visualization) and for the actual domain (cameras, pen, scene, robot) -> group by purpose
+%         1. "wrappers" (activation, usecase)
+%         2. domain interfaces (camera, pen, scene, robot)
+%         3. orchestration and persistence (ui-driven system composition)
+%         This way, UI comes after the reader understands wrappers + domain protocols, which makes the UI behavior feel natural instead of magic.
+%         Also: 
+%             How persistence reconstructs a system (graph + config + module state)"
+%                 Keep it at semantic level: File formats can be appendix/Ch4 if needed.
+%                     Saved data: (module instances (type + parameters), channel mapping (who consumes what), optional per-module state (save/load capability), UI session/program state (selected use case, confirmed steps, etc.)); 
+%                     Load order: (create modules, connect mappings, restore per-module state (if supported), restore UI session/program state (optional)).
+
+%     announce must be after activation
+%     Domain interfaces (robot/scene/visualization) and your "message graphs"
+%         don't paste full channel_type_identifier strings into main text
+%         In Ch3: show one small sequence diagram / numbered flow per interface.
+%         Keep fields at the level of: "request type, response type, main payload, optional blob".
+%         Put the exact message schemas (like your enum values, versioned identifiers, and serialization lists) into an Appendix "Reference" or into Ch4 if you really want it close to implementation.
+%     Robot interface is limited; tool stubs exist
+%         moveJ/moveL/moveT/moveA + status + TFC/TCP + cancel (if you have it)
+%         explicitly say: tool IO not part of the demonstrated workflow; future extension; stubs exist but not used
+%         Don't over-explain the stubs. One honest sentence is enough.
+%     what wrappers do and how capabilities are exposed
+%     semantics of domain interfaces (robot/scene/vis) at a "what you can rely on" level
+
+% UNKNOWN:
+%     how persistence reconstructs a system (graph + config + module state)
+%     I think after interfaces we should have a "putting it together" section, where we describe first UI (what maps into it and what UI handles), persistance based on UI (or as part of UI), and then start of the system (system starts, loads modules, UI is created, UI allows creating and activating modules, saving/loading system state, creating use cases, visualizing scene, running a program, (requesting a scene, moving robot to home pose...)). And "putting it together" what modules exist and how they connect to each other
+%         This can also be done at the start of chapter 4, since that covers implementation details. I like the overall flow i have outlined here, since the readers understand the system design as it was created, but also it is clearly separated into the nice and clean stages, but when we get to the interfaces, it gets a bit muddy - we have designed and explained the modules, the core runtime and now (with all the heavy pieces in the readers head) we cover specific interfaces. Maybe we should do a short ui overview section at the start of the interfaces. It is out of order, but it can help to understand the interfaces (and why they are the way they are) better. 
+%         Also UI is technically a module (therefore implementation) however it is also the main entry point and orchestrator of the entire system. Essentially UI is an extended part of the core, since it is responsible for configuring the system, creating modules, wiring them together, saving/loading system state, and providing the main user interaction for programming. So it is a bit of a special case. How would we integrate it into our new design?
+
+% Helpers: Only include helpers that are essential to understanding extension (so not sync request, mixed allocator etc.) -> keep these for the appendix
+
+% write appendix in parallel - if we choose it
+%     as user stories / explanation of parts
+%     how to create a new module - what does each part represent, limitations, what to implement and how
+%     exact message schemas for all interfaces (channel_type_identifiers, message fields, etc) and wrapper user stories (how to use the wrapper, what does it do, what does it not do, etc) - what methods to implement and how to implement them, etc.
+
+% chapter 4: implementation details for important modules (calibration, pen tracking, scene detection, use case, robot) - how they work, what do they do, how do they use the interfaces, etc. Yes on "concrete choices + calibration + algorithms + engineering", but for important modules. Essentially this could / should be part of ch3, since it covers the conceptual part n.4. However it is also the most implementation-specific part less (ch.3 covers the system design and architecture, while ch.4 covers the actual implementation of the modules, which is more specific to the prototype and less generalizable). 
+%     In Ch3, end each big subsystem with 1 line: "Implementation details in Ch4.X". - no, ch.4 will cover modules, not usecase wrappers etc. Those should be covered in ch.3 or appendix. Ch.4 will cover the actual conceptual part 4 (modules).
+
+%     c++/vcpkg/cmake/libraries (Wt, libzippp, OpenCV, Three.js)
