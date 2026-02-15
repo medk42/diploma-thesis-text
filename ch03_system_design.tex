@@ -1,13 +1,13 @@
 \chapter{System Design} \label{chapter:ch3_system_design}
 
-Chapter~\ref{chapter:ch2_analysis} motivated a modular architecture with explicit interfaces, so that sensing, UI, robot backends, and task logic can be exchanged without rewriting the whole system. This chapter describes the design of the modular system itself and the main interfaces that enable communication between modules.
+Chapter~\ref{chapter:ch2_analysis} motivated a modular architecture with explicit interfaces, so that sensing, UI, robot backends, and task logic can be exchanged without rewriting the whole system. This chapter describes the design of this modular system and the main interfaces that enable communication between its components.
 
 \section{System at a glance} \label{sec:ch3_overview}
 
 \begin{figure}
   \centering
   \includegraphics[width=\textwidth]{img/ch3_system_design/four_parts.pdf}
-  \caption{Conceptual separation of contracts and implementations. The module contract defines how modules interact with the runtime core (lifecycle + message exchange). Interface contracts specify domain message semantics (e.g., camera stream, pen pose, scene detection) on top of the module contract. Concrete modules implement these contracts; the runtime core provides one concrete hosting and routing implementation.}
+  \caption{Conceptual separation of contracts and implementations. The module contract defines how modules interact with the runtime core (lifecycle + message exchange). Interface contracts specify domain message semantics (e.g., camera stream, pen pose, scene detection) on top of the module contract. Concrete modules implement these contracts, while the core provides one concrete hosting and routing implementation.}
   \label{fig:ch3_four_parts}
 \end{figure}
 
@@ -15,7 +15,7 @@ The system is organized into four conceptual parts, shown in \autoref{fig:ch3_fo
 
 \begin{enumerate}[label=(\arabic*), itemsep=0.3em]
     \item \textbf{Module contract.}
-    This part defines \emph{what a module is} and how modules interact, without assuming a specific runtime implementation by defining a module and core contracts.
+    This part defines \emph{what a module is} and how modules interact, without assuming a specific runtime implementation. It does so by specifying the module and core contracts.
     It specifies the communication primitives (publish/subscribe and request/response), message structure (small headers with optional shared blobs for large data), channel declaration, channel mapping, module lifecycle and abstract core API.
     All module code depends only on this contract.
 
@@ -25,7 +25,7 @@ The system is organized into four conceptual parts, shown in \autoref{fig:ch3_fo
     Different core implementations are possible in principle (threads, processes, distributed), while still keeping the same module contract.
 
     \item \textbf{Interface contracts.}
-    On top of the generic module communication, we define standard interfaces for our application domain (e.g., robot control, scene data, camera image) and for UI interaction (e.g., activation, use case execution, 3D visualization). Interfaces define \emph{what} messages mean and what behavior other modules can rely on, independent of a specific module implementation.
+    On top of the generic module communication, we define standard interfaces for our application domain (e.g., robot control, scene data, camera image) and for UI interaction (e.g., activation, use case execution, 3D visualization). These interfaces define \emph{what} messages mean and what behavior other modules can rely on, independent of a specific module's implementation of the required functionality.
 
     \item \textbf{Modules.}
     Finally, the concrete functionality is implemented as modules: camera acquisition, calibration, 6D pen input, scene detection, use cases, and robot execution. UI itself is also implemented as a module, since it is just another component that interacts with others through the defined interfaces.
@@ -33,7 +33,7 @@ The system is organized into four conceptual parts, shown in \autoref{fig:ch3_fo
     As long as the interfaces are respected, modules can be added, removed, or replaced with minimal impact on the rest of the system.
 \end{enumerate}
 
-In the remainder of this chapter we describe these parts in the same order: first the module contract, then the concrete core implementation, then the interface contracts. Implementation details of the actual modules are covered in \autoref{chapter:ch4_implementation}.
+In the remainder of this chapter, we describe these parts in the same order: first the module contract, then the concrete core implementation, and finally the interface contracts. Implementation details of the actual modules are covered in \autoref{chapter:ch4_implementation}.
 
 
 % writing about my system design in latex:
