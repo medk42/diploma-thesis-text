@@ -112,17 +112,30 @@ Consumer contains the count field which allows for more flexibility in the chann
 
 \subsection{Message structure: header and optional shared blobs}
 
-The message structure is designed to be efficient for both small control messages and large data payloads. Messages structure is defined in the \type{MessageHeader} structure. This header is used both on the producer side (when sending a message) and on the consumer side (when receiving a message). The header contains the following fields:
+The message model is designed to efficiently handle both small control messages and large data payloads. All messages are represented by the \type{MessageHeader} structure, which is used uniformly for publish/subscribe as well as request/response communication.
+
+The header contains:
 \begin{itemize}
-    \item data pointer and length (this covers the ``header'' of the message and is copied from producer to each consumer; this is enough for most messages, for example pen intent, control messages, etc.),
-    \item array of blobs (via blob pointer and length; this is used for large data payloads, for example camera frames, scene data, etc.)
-    \item id and success flag (only used for request/response messages; the id is used to match requests and responses, while the success flag indicates whether a failure occurred on a transport level; for example wrong channel mapping or unknown request in the receiving module)
-    \item timestamp
+    \item \textbf{Small copied payload} given by a data pointer and length. This part is intended for small, trivially copyable control data (e.g., pen intent, state updates) and is copied from the producer to each consumer.
+    \item \textbf{Optional blob array} (pointer + count), representing one or more shared payloads used for large data (e.g., images, point clouds, serialized structures) that should not be copied repeatedly.
+    \item \textbf{Request/response metadata:} \type{id_} to match requests with responses and a \type{success_} flag indicating whether the request was processed successfully at the communication layer.
+    \item \textbf{Timestamp} (\type{timestamp_ns_}) for tracing and ordering.
 \end{itemize}
 
-The data pointer and length cover the main content of the message, which is typically small and can be copied efficiently. For larger payloads, such as images or point clouds, the message can include an array of blobs. Blobs are designed to avoid repeated copying of large data between modules --- for example, a camera module can capture an image and allocate a blob in shared memory to hold the image data, then it can publish a message with a pointer to that blob. The consumer module (or multiple modules) can then access the blob directly without copying the image data and even forward it as a part of its own message to other modules (camera module -> calibration module -> pen tracking module). Blobs are represented by the \type{SharedDataBlob} class, which contains a reference to the core-allocated data (\type{ISharedData*}) and handles reference counting and deletion of the data. When all modules are done with the blob, it will be automatically deallocated. This design allows for efficient sharing of large data between modules while keeping the main message header small for efficient routing and processing of control messages.
+In practice, most messages consist only of the small copied payload. When large data needs to be transmitted, the message includes one or more blobs. A producer allocates a blob, writes the payload into it, and sends a message that references the blob. Consumers can then read the payload directly and may forward the same blob further (e.g., camera $\rightarrow$ calibration $\rightarrow$ pen tracking) without copying the underlying data.
 
-Allocation of \type{SharedDataBlob} is done through \type{IAllocator} objects. Modules can request an allocator from the core via \type{ICore::createDynamicAllocator()} or \type{ICore::createBufferAllocator(slot_size, slot_count)}. The module can then use the allocator to create blobs of the desired size. The allocated blobs are automatically registered with the core and can be shared between modules. The producer module is responsible for allocating the blob and including a pointer to it in the message header, while the consumer modules can access the blob through the pointer in the message header. The blob allocators and therefore the blobs themselves must be handled by the core, because the core defines the runtime environment (e.g., threads or processes) and therefore it is the only component that can ensure that the shared memory is properly managed and accessible to all modules. Modules are required to remove the requested allocators when they are done with them (via \type{ICore::deleteAllocator(allocator)}) to avoid memory leaks --- this is already handled by the \type{BaseModule} class that all modules inherit from (described in \autoref{subsec:ch3_basemodule}), so module implementers do not have to worry about it.
+\subsection{Shared payload ownership and allocator contract}
+
+Large payloads are represented by \type{SharedDataBlob}, which acts as a handle to core-managed shared data (\type{ISharedData}). Modules never free raw memory directly. Instead, they only copy, store, and pass \type{SharedDataBlob} handles; the underlying shared memory is released automatically once the last handle is destroyed.
+
+Blobs are allocated through core-provided allocators (\type{IAllocator}). A module can request an allocator via \type{ICore::createDynamicAllocator()} or \type{ICore::createBufferAllocator(slot_size, slot_count)} and then allocate blobs using \type{IAllocator::allocate()} (or helper methods such as \type{allocateFromData}).
+We distinguish two allocator types at the contract level:
+\begin{itemize}
+    \item \textbf{Dynamic allocator:} supports variable allocation sizes (suitable for irregular payloads such as scene snapshots) at the cost of relying on system allocations for each request.
+    \item \textbf{Buffer allocator:} preallocates a fixed number of equally-sized slots (suitable for streaming payloads with known bounds, such as camera frames), requiring a known maximum size in advance and offering only a limited number of slots.
+\end{itemize}
+
+Allocator and blob lifetime are owned by the core to ensure consistent memory management across modules and to allow safe sharing between independently developed components. Modules are expected to delete allocators they no longer need using \type{ICore::deleteAllocator}. In this thesis, allocator cleanup is handled by the common \type{BaseModule} helper (\autoref{subsec:ch3_basemodule}) so that module implementations do not need to manage allocator lifetimes manually.
 
 
 \subsection{Message delivery lifecycle} \label{subsec:ch3_message_lifecycle}
