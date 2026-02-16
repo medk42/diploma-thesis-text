@@ -61,8 +61,8 @@ To allow modules to communicate, the contract defines two complementary communic
 Each module then has to contain a \type{ModuleInfo} structure that contains the information about the module. This structure contains the following fields:
 \begin{itemize}
     \item module type identifier (a string that uniquely identifies the type of the module, for example \type{CameraModule} or \type{SceneDetectionModule}),
-    \item module name (a user friendly name of the module, for example ``My Camera Module'' or ``My Scene Detection Module''),
-    \item module description (a user friendly description of the module, for example ``This module captures images from a camera and publishes them on the camera channel'' or ``This module detects objects in the scene and publishes them on the scene channel''),
+    \item module name (a user-friendly name of the module, for example ``My Camera Module'' or ``My Scene Detection Module''),
+    \item module description (a user-friendly description of the module, for example ``This module captures images from a camera and publishes them on the camera channel'' or ``This module detects objects in the scene and publishes them on the scene channel''),
     \item list of publish channels (module produces camera stream),
     \item list of response channels (module accepts scene detection requests and produces scene detection responses),
     \item list of subscribe channels (module consumes camera stream),
@@ -88,9 +88,9 @@ There are two types of channels: producer channels (covered by \type{communicati
 The \type{Producer} structure contains the following fields:
 \begin{itemize}
     \item channel type identifier (a string that uniquely identifies the type of the channel, for example \type{camera_stream} or \type{scene_req_resp}),
-    \item channel name (a user friendly name of the channel, for example ``Camera Stream'' or ``Scene Detection Response'' --- this is used for visualization purposes in the UI to show the user what channels are available and what they represent),
-    \item channel description (a user friendly description of the channel, for example ``This channel publishes images from a camera'' or ``This channel publishes the response to scene detection requests''),
-    \item prioritized flag (a boolean that indicates whether the channel is prioritized or not).
+    \item channel name (a user-friendly name of the channel, for example ``Camera Stream'' or ``Scene Detection Response'' --- this is used for visualization purposes in the UI to show the user what channels are available and what they represent),
+    \item channel description (a user-friendly description of the channel, for example ``This channel publishes images from a camera'' or ``This channel publishes the response to scene detection requests''),
+    \item prioritized flag (a boolean that indicates whether the channel is prioritized or not),
     \item message queue capacity (an integer that specifies the maximum number of messages that can be queued for this channel)
 \end{itemize}
 
@@ -101,13 +101,13 @@ We define a message queue capacity to bound the amount of pending work at the re
 The \type{Consumer} structure contains the following fields:
 \begin{itemize}
     \item channel type identifier, channel name, channel description, prioritized flag and message queue capacity (same as in the producer),
-    \item count (single, range or auto-all; specifies how many producer channels of the same type can be connected to this consumer channel; single means that only one producer channel of the same type can be connected, range means that a specific range of producer channels of the same type can be connected, auto-all means that all producer channels of the same type will be automatically connected to this consumer channel).
+    \item count (single, range or auto-all; specifies how many producer channels of the same type can be connected to this consumer channel; single means that only one producer channel of the same type can be connected, range means that a specific range of producer channels of the same type can be connected, auto-all means that all producer channels of the same type will be automatically connected to this consumer channel),
     \item min and max (integers that specify the minimum and maximum number of producer channels of the same type that can be connected to this consumer channel; only used if count is range).
 \end{itemize}
 
 Prioritization in the consumer is used for both subscribe and request channels. For subscribe channels, if the channel is prioritized, the messages from that channel are processed by a prioritized worker thread. For request channels, if the channel is prioritized, the response is processed by a prioritized worker thread.
 
-Consumer contains the count field which allows for more flexibility in the channel mapping. For example, if we have a scene detection module that can accept input from multiple camera modules, we can set the count to range of 2 to 4 (see \autoref{fig:ch3_channel_mapping}). This means that the scene detection module can be connected to at least 2 and at most 4 camera modules. If we set the count to auto-all, it means that the scene detection module will be automatically connected to all camera modules that produce camera stream. This is required for the auto-created modules, since they cannot receive a specific channel mapping, but they can still have consumer channels that are automatically connected to all producer channels of the same type. For example, the UI module is auto-created and it has a subscribe channel for camera stream that is set to auto-all, which means that the UI will be automatically connected to all camera modules that produce camera stream and so it will receive all the messages from those channels. This combines the advantages of fixed channel-to-channel mapping and full broadcast. 
+Consumer contains the count field which allows for more flexibility in the channel mapping. For example, if we have a scene detection module that can accept input from multiple camera modules, we can set the count to a range of 2 to 4 (see \autoref{fig:ch3_channel_mapping}). This means that the scene detection module can be connected to at least 2 and at most 4 camera modules. If we set the count to auto-all, it means that the scene detection module will be automatically connected to all camera modules that produce camera stream. This is required for the auto-created modules, since they cannot receive a specific channel mapping, but they can still have consumer channels that are automatically connected to all producer channels of the same type. For example, the UI module is auto-created and it has a subscribe channel for camera stream that is set to auto-all, which means that the UI will be automatically connected to all camera modules that produce camera stream and so it will receive all the messages from those channels. This combines the advantages of fixed channel-to-channel mapping and full broadcast. 
 
 
 
