@@ -41,7 +41,7 @@ In the remainder of this chapter, we describe these parts in the same order: fir
 
 In this section, we describe the module contract, which defines the core abstractions and communication patterns that all modules and the runtime core must follow. The contract is independent of any specific implementation of the core or modules, and it provides a stable foundation for building the system.
 
-\subsection{Roles and separation of responsibilities}
+\subsection{Roles and separation of responsibilities} \label{subsec:ch3_roles}
 
 The contract defines two main interfaces that separate the responsibilities of modules and the core: \type{IModule} and \type{ICore}. Every module implements \type{IModule}, which defines its lifecycle, how it handles incoming messages, serialization of module state, and a few other required methods. The core exposes \type{ICore}, which provides services to modules, including message routing, shared-memory allocation for large payloads, and system management capabilities (module discovery, instantiation, save/load, etc.).
 
@@ -56,7 +56,7 @@ As shown in \autoref{fig:ch3_four_parts}, modules do not communicate directly. I
   \label{fig:ch3_channel_mapping}
 \end{figure}
 
-To allow modules to communicate, typically we would need a publish/subscribe infrastructure with some identifier to specify the type of message being sent. We extend this to also support request/response communication (for example, publish/subscribe is great for streaming camera data, but for scene detection, we want to send a request to the scene detection module and get a response with the detected objects so that we do not need to detect the scene on every frame). Therefore we have a publish/subscribe and request/response model, where modules can declare their inputs (consumers; subscribe or request) and outputs (producers; publish or response) of both types. Each of these inputs and outputs is associated with a channel type identifier (a string) that specifies the type of message being sent. This approach is visualized in \autoref{fig:ch3_channel_mapping}.
+To allow modules to communicate, the contract defines two complementary communication primitives: publish/subscribe for streams and request/response for on-demand queries. Publish/subscribe is used for continuously produced data such as camera frames, while request/response is used when the producer should run only when asked (e.g., a scene module performs detection only after receiving a request and returns the detected objects). Modules therefore declare their inputs (consumers: subscribe or request) and outputs (producers: publish or response). Each channel is tagged by a channel type identifier (a string) that specifies the message type. An example mapping is shown in \autoref{fig:ch3_channel_mapping}.
 
 Each module then has to contain a \type{ModuleInfo} structure that contains the information about the module. This structure contains the following fields:
 \begin{itemize}
@@ -71,13 +71,13 @@ Each module then has to contain a \type{ModuleInfo} structure that contains the 
     \item worker thread count (described later).
 \end{itemize}
 
-The module uses the lists of channels to define its input requirements and output capabilities. In our system, the mapping between publish/subscribe and request/response channels is not implemented as a broadcast, but rather as a directed connection between specific producer and consumer channels --- the type of the channel just specifies the message type, however the actual wiring between existing producer channels from already initialized modules and the consumer channels of the module being instantiated is defined during module instantiation by providing a channel mapping (in \autoref{fig:ch3_channel_mapping} we can see that the \type{Pen} module receives \type{camera_stream} messages only from \type{Camera A}). The channel mapping defines for each consumer channel of the module being instantiated, which producer channel it should be connected to --- by specifically naming the producer module and the producer channel for each consumer channel. This is done to allow for more flexibility in the system, for example (as seen in \autoref{fig:ch3_channel_mapping}), if we have two camera modules that produce camera stream, we can choose which one to connect to the pen tracking module. 
+The module uses the lists of channels to define its input requirements and output capabilities. In our system, the mapping between publish/subscribe and request/response channels is not implemented as a broadcast, but rather as a directed connection between specific producer and consumer channels --- the type of the channel just specifies the message type, however the actual wiring between existing producer channels from already initialized modules and the consumer channels of the module being instantiated is defined during module instantiation by providing a channel mapping (in \autoref{fig:ch3_channel_mapping} we can see that the \type{Pen} module receives \type{camera_stream} messages only from \type{Camera A}). The channel mapping defines, for each consumer channel of the module being instantiated, which producer channel(s) it is connected to --- by identifying the producer module and the producer channel for each bound connection. This is done to allow for more flexibility in the system, for example (as seen in \autoref{fig:ch3_channel_mapping}), if we have two camera modules that produce camera stream, we can choose which one to connect to the pen tracking module. 
 
 As mentioned before in \autoref{subsec:ch3_roles}, the core handles dispatching worker threads to process incoming messages for modules. The module can specify how many worker threads it needs, which allows it to process multiple messages in parallel. The worker threads are initialized per module and there are two types: \emph{prioritized} and \emph{regular}. 
 
 Prioritized worker threads are dispatched to process messages from channels that are marked as prioritized, while regular worker threads are dispatched to process messages from non-prioritized channels. The multiple worker threads and the prioritization mechanism are both crucial for fast UI responsiveness, as they allow modules to process UI messages in parallel with other messages that require heavy processing (camera data for pen tracking). 
 
-Finally the auto-create flag allows a module to be automatically created when the system starts, without the need for manual instantiation. This is useful for modules that are essential for the system to function, such as the UI module. Auto-created cannot require any specific channel mapping, since they are created automatically. They can still have consumer channels, but the channels have to be of a specific type as we outline in \autoref{subsec:ch3_channel_contract}.
+Finally, the auto-create flag marks modules that are instantiated automatically when the system starts (e.g., the UI module). Auto-created modules cannot depend on a manually provided channel mapping. In this thesis, we therefore restrict auto-created modules to \emph{AUTO\_ALL} consumer channels: they may declare inputs, but only in a form that can be wired automatically to all currently available producers of the given type (see \autoref{subsec:ch3_channel_contract}).
 
 \subsection{Channel contract} \label{subsec:ch3_channel_contract}
 
@@ -96,7 +96,7 @@ The \type{Producer} structure contains the following fields:
 
 Prioritization in the producer is only used for response producers, since request-response covers sending messages both ways, and if the producer is prioritized, the request is processed by a prioritized worker thread.
 
-We need to define the message queue capacity to avoid unbounded memory growth in case a producer produces messages faster than the consumer can process them. The system also supports modules deciding what to do when the message queue is full, this will be covered in \autoref{subsec:ch3_message_lifecycle}.
+We define a message queue capacity to bound the amount of pending work at the receiver. If incoming messages/requests arrive faster than the module can process them, the queue capacity prevents unbounded buffering; the module can then decide how to handle overload (drop, replace, etc.), described in \autoref{subsec:ch3_message_lifecycle}.
 
 The \type{Consumer} structure contains the following fields:
 \begin{itemize}
@@ -116,6 +116,10 @@ Consumer contains the count field which allows for more flexibility in the chann
 
 
 \subsection{BaseModule}
+
+\subsection{Module lifecycle and implementer rules}
+
+\xxx{mention thread requirements; no core calls in ctor / dtor; onIngress non-blocking; processing callbacks may be slow but must be safe under hosting concurrency; do not assume stable module IDs across save/load}
 
 % writing about my system design in latex:
 
