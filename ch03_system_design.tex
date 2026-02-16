@@ -76,7 +76,9 @@ Finally, the auto-create flag marks modules that are instantiated automatically 
 
 \subsection{Channel contract} \label{subsec:ch3_channel_contract}
 
-The previous subsection introduced channels and channel mappings at a high level. Here we define the producer/consumer channel structures and the wiring constraints in more detail.
+In the previous section, we described how modules declare their inputs and outputs using channels. In this section, we define the channel structures and the wiring constraints in more detail.
+
+Channel definitions are provided \emph{per module} as part of its \type{ModuleInfo}: they describe the module's channel \emph{endpoints} (what it can produce and what it can consume). Concrete \emph{connections} between endpoints are created by the core when a module is instantiated, by binding consumer endpoints to selected producer endpoints according to the provided channel mapping.
 
 There are two kinds of channels: producer channels (described by \type{Producer} structure) and consumer channels (described by \type{Consumer} structure).
 
@@ -95,13 +97,15 @@ We define message queue capacity to bound the amount of pending work at the rece
 A \type{Consumer} contains:
 \begin{itemize}
     \item channel type identifier, name, description, prioritized flag, and message queue capacity (same meaning as in \type{Producer}),
-    \item count policy (\type{single}, \type{range}, or \type{auto_all}), specifying how many producer channels of the same type may be connected,
+    \item count policy (\type{single}, \type{range} or \type{auto_all}); specifies how many producer endpoints of the same type must be bound to this consumer endpoint when the module is instantiated,
     \item min/max bounds (used only for the \type{range} policy).
 \end{itemize}
 
+When \type{ICore::addModule} is called, the core validates that the provided channel mapping satisfies these constraints (type match and required cardinality bounds); otherwise the module instantiation fails.
+
 Prioritization on the consumer side applies to both subscribe and request channels. If a subscribe consumer is prioritized, incoming messages are processed by a prioritized worker thread. If a request consumer is prioritized, the corresponding response is processed by a prioritized worker thread.
 
-The count policy controls wiring flexibility. With \type{single}, exactly one producer channel of the given type is connected. With \type{range}, a bounded number of producers can be connected (e.g., 2--4 camera streams for a scene module). With \type{auto_all}, the consumer is connected automatically to all currently available producers of the given type. This is required for auto-created modules, which do not receive a manual mapping, but still need to observe relevant system streams. For example, the UI module can subscribe to all available \type{camera_stream} producers via an \type{auto_all} subscribe consumer, combining the convenience of broadcast with the explicit wiring model used elsewhere.
+The count policy expresses wiring requirements. With \type{single}, exactly one producer endpoint of the given type must be connected. With \type{range}, the consumer requires between \type{min} and \type{max} connected producer endpoints (inclusive). With \type{auto_all}, the consumer is wired automatically to all currently available producer endpoints of the given type, which is primarily used for auto-created modules that cannot receive an explicit mapping. For example, the UI module can subscribe to all available \type{camera_stream} producers via an \type{auto_all} subscribe consumer, combining the convenience of broadcast with the explicit wiring model used elsewhere.
 
 \subsection{Message structure: header and optional shared blobs}
 
