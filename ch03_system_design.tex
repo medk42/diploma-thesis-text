@@ -36,6 +36,87 @@ The system is organized into four conceptual parts, shown in \autoref{fig:ch3_fo
 In the remainder of this chapter, we describe these parts in the same order: first the module contract, then the concrete core implementation, and finally the interface contracts. Implementation details of the actual modules are covered in \autoref{chapter:ch4_implementation}.
 
 
+
+\section{Module contract}
+
+In this section, we describe the module contract, which defines the core abstractions and communication patterns that all modules and the runtime core must follow. This contract is independent of any specific implementation of the core or modules, and it provides a stable foundation for building the system.
+
+\subsection{Roles and separation of responsibilities} \label{subsec:ch3_roles}
+
+The contract defines two main interfaces that separate the responsibilities of modules and the core: \type{IModule} and \type{ICore}. Every module must implement the \type{IModule} interface, which defines its lifecycle, how it handles incoming messages, serialization of the module state and few other important methods. The \type{ICore} interface then defines the services that the core provides to modules, such as message routing, memory management for large payloads and system management capabilities (module discovery, instantiation, save/load functionality, etc).
+
+As seen on \autoref{fig:ch3_four_parts}, there is no direct module-to-module communication. Instead, all interaction goes through the core, which routes messages between modules based on the declared channel mapping. When a module wants to send a message, it calls the corresponding method on the \type{ICore} interface. The core then delivers the message to the appropriate recipient modules based on a channel mapping. On the target module's side, the core then enqueues the message for processing, and when possible dispatches a worker thread to call the target module's message processing method on the \type{IModule} interface.
+
+\subsection{Module description contract}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\textwidth]{img/ch3_system_design/channel_mapping.pdf}
+  \caption[Example of a channel mapping]{Example of a channel mapping; \type{Camera A} and \type{Camera B} both produce \type{camera_stream} messages; \type{Pen} consumes \type{camera_stream} messages from \type{Camera A} and produces \type{pen_intent} messages. \type{Scene} consumes \type{camera_stream} messages from both \type{Camera A} and \type{Camera B} and contains a response producer channel for \type{scene_req_resp} messages. \type{Use Case} consumes \type{pen_intent} messages from \type{Pen} and sends \type{scene_req_resp} requests to \type{Scene} and consumes the corresponding responses.}
+  \label{fig:ch3_channel_mapping}
+\end{figure}
+
+To allow modules to communicate, typically we would need a publish/subscribe infrastructure with some identifier to specify the type of message being sent. We extend this to also support request/response communication (for example, publish/subscribe is great for streaming camera data, but for scene detection, we want to send a request to the scene detection module and get a response with the detected objects so that we do not need to detect the scene on every frame). Therefore we have a publish/subscribe and request/response model, where modules can declare their inputs (consumers; subscribe or request) and outputs (producers; publish or response) of both types. Each of these inputs and outputs is associated with a channel type identifier (a string) that specifies the type of message being sent. This approach is visualized in \autoref{fig:ch3_channel_mapping}.
+
+Each module then has to contain a \type{ModuleInfo} structure that contains the information about the module. This structure contains the following fields:
+\begin{itemize}
+    \item module type identifier (a string that uniquely identifies the type of the module, for example \type{CameraModule} or \type{SceneDetectionModule}),
+    \item module name (a user friendly name of the module, for example ``My Camera Module'' or ``My Scene Detection Module''),
+    \item module description (a user friendly description of the module, for example ``This module captures images from a camera and publishes them on the camera channel'' or ``This module detects objects in the scene and publishes them on the scene channel''),
+    \item list of publish channels (module produces camera stream),
+    \item list of response channels (module accepts scene detection requests and produces scene detection responses),
+    \item list of subscribe channels (module consumes camera stream),
+    \item list of request channels (module sends scene detection requests and consumes scene detection responses),
+    \item auto-create flag (described later),
+    \item worker thread count (described later).
+\end{itemize}
+
+The module uses the lists of channels to define its input requirements and output capabilities. In our system, the mapping between publish/subscribe and request/response channels is not implemented as a broadcast, but rather as a directed connection between specific producer and consumer channels --- the type of the channel just specifies the message type, however the actual wiring between existing producer channels from already initialized modules and the consumer channels of the module being instantiated is defined during module instantiation by providing a channel mapping (in \autoref{fig:ch3_channel_mapping} we can see that the \type{Pen} module receives \type{camera_stream} messages only from \type{Camera A}). The channel mapping defines for each consumer channel of the module being instantiated, which producer channel it should be connected to --- by specifically naming the producer module and the producer channel for each consumer channel. This is done to allow for more flexibility in the system, for example (as seen in \autoref{fig:ch3_channel_mapping}), if we have two camera modules that produce camera stream, we can choose which one to connect to the pen tracking module. 
+
+As mentioned before in \autoref{subsec:ch3_roles}, the core handles dispatching worker threads to process incoming messages for modules. The module can specify how many worker threads it needs, which allows it to process multiple messages in parallel. The worker threads are initialized per module and there are two types: \emph{prioritized} and \emph{regular}. 
+
+Prioritized worker threads are dispatched to process messages from channels that are marked as prioritized, while regular worker threads are dispatched to process messages from non-prioritized channels. The multiple worker threads and the prioritization mechanism are both crucial for fast UI responsiveness, as they allow modules to process UI messages in parallel with other messages that require heavy processing (camera data for pen tracking). 
+
+Finally the auto-create flag allows a module to be automatically created when the system starts, without the need for manual instantiation. This is useful for modules that are essential for the system to function, such as the UI module. Auto-created cannot require any specific channel mapping, since they are created automatically. They can still have consumer channels, but the channels have to be of a specific type as we outline in \autoref{subsec:ch3_channel_contract}.
+
+\subsection{Channel contract} \label{subsec:ch3_channel_contract}
+
+In the previous section, we described the module contract, which defines how modules declare their inputs and outputs in terms of channels. In this section, we describe how channels are defined and how the channel mapping works in more detail.
+
+There are two types of channels: producer channels (covered by \type{communication_channel::Producer} structure) and consumer channels (covered by \type{communication_channel::Consumer} structure). 
+
+The \type{Producer} structure contains the following fields:
+\begin{itemize}
+    \item channel type identifier (a string that uniquely identifies the type of the channel, for example \type{camera_stream} or \type{scene_req_resp}),
+    \item channel name (a user friendly name of the channel, for example ``Camera Stream'' or ``Scene Detection Response'' --- this is used for visualization purposes in the UI to show the user what channels are available and what they represent),
+    \item channel description (a user friendly description of the channel, for example ``This channel publishes images from a camera'' or ``This channel publishes the response to scene detection requests''),
+    \item prioritized flag (a boolean that indicates whether the channel is prioritized or not).
+    \item message queue capacity (an integer that specifies the maximum number of messages that can be queued for this channel)
+\end{itemize}
+
+Prioritization in the producer is only used for response producers, since request-response covers sending messages both ways, and if the producer is prioritized, the request is processed by a prioritized worker thread.
+
+We need to define the message queue capacity to avoid unbounded memory growth in case a producer produces messages faster than the consumer can process them. The system also supports modules deciding what to do when the message queue is full, this will be covered in \autoref{subsec:ch3_message_lifecycle}.
+
+The \type{Consumer} structure contains the following fields:
+\begin{itemize}
+    \item channel type identifier, channel name, channel description, prioritized flag and message queue capacity (same as in the producer),
+    \item count (single, range or auto-all; specifies how many producer channels of the same type can be connected to this consumer channel; single means that only one producer channel of the same type can be connected, range means that a specific range of producer channels of the same type can be connected, auto-all means that all producer channels of the same type will be automatically connected to this consumer channel).
+    \item min and max (integers that specify the minimum and maximum number of producer channels of the same type that can be connected to this consumer channel; only used if count is range).
+\end{itemize}
+
+Prioritization in the consumer is used for both subscribe and request channels. For subscribe channels, if the channel is prioritized, the messages from that channel are processed by a prioritized worker thread. For request channels, if the channel is prioritized, the response is processed by a prioritized worker thread.
+
+Consumer contains the count field which allows for more flexibility in the channel mapping. For example, if we have a scene detection module that can accept input from multiple camera modules, we can set the count to range of 2 to 4 (see \autoref{fig:ch3_channel_mapping}). This means that the scene detection module can be connected to at least 2 and at most 4 camera modules. If we set the count to auto-all, it means that the scene detection module will be automatically connected to all camera modules that produce camera stream. This is required for the auto-created modules, since they cannot receive a specific channel mapping, but they can still have consumer channels that are automatically connected to all producer channels of the same type. For example, the UI module is auto-created and it has a subscribe channel for camera stream that is set to auto-all, which means that the UI will be automatically connected to all camera modules that produce camera stream and so it will receive all the messages from those channels. This combines the advantages of fixed channel-to-channel mapping and full broadcast. 
+
+
+
+\subsection{Message delivery lifecycle} \label{subsec:ch3_message_lifecycle}
+
+
+
+\subsection{BaseModule}
+
 % writing about my system design in latex:
 
 % The system is split into four conceptual parts: modules backbone (the "backbone" of modules, architecture to support messages passing, channels, the idea how modules work, how they receive messages, how they send messages - this is actually all the interfaces for describing how a module works without any dependence on a concrete core implementation (just covered by ICore interface), therefore not yet deciding how core should be implemented (threads vs processes etc.); they implement independent functionality (camera, calibration, pen tracking, scene detection, UI, use case, robot), however that is said later, here we want to describe just the backbone), core (concrete implementation of the core, handles loading modules, how modules are represented (dlls, but not mention yet in overview), how concretely they are called, how are messages passed to the correct modules, how is memory allocated, etc; the modules part describes what we need to do, core how it is done - we can name these differently, actually, but i do want to maintain four conceptual parts), interfaces for various (and their accompying helper classes and wrappers; interfaces fix a certain way of communicating - where modules defined interface and core defined implementation, interfaces define how is the system used, what is built on top of the system, they are more abstract, higher level logic, saying how do messages look, what do they contain, what is the message flow etc. - for example simple interfaces like camera or pen data to more complex like activation interface and its corresponding module wrapper (allowing a module to be activated in the UI, after providing parameters), usecase interface and its wrapper (allowing the module to be used as a usecase from the UI, with providing parameters, confirming teaching, providing visualization data of the taught program and actually running it), scene detection interface (allowing modules to request scan of the scene, request the objects that the scanning module is able to find in the scene etc.), 3d visualization interface and its helper class (allowing modules to provide custom 3d visualization in the UI - again by defining both a pub-sub (scene updates) and req-resp (UI requests full scene or full scene + all objects that can be shown on the scene) messaging) - all of these are *not* UI dependent, they are created indepndent of the UI and UI just implements them) and modules (these actually use the mentioned interfaces, they are built on top of the modules part (with a small wrapper connecting them to the core - they dont actually know about the wrapper, all the logic stays independent of the core) and they implement the actual functionality while using the fixed interfaces to communicate with other modules).
