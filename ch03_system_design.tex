@@ -110,12 +110,24 @@ Prioritization in the consumer is used for both subscribe and request channels. 
 Consumer contains the count field which allows for more flexibility in the channel mapping. For example, if we have a scene detection module that can accept input from multiple camera modules, we can set the count to a range of 2 to 4 (see \autoref{fig:ch3_channel_mapping}). This means that the scene detection module can be connected to at least 2 and at most 4 camera modules. If we set the count to auto-all, it means that the scene detection module will be automatically connected to all camera modules that produce camera stream. This is required for the auto-created modules, since they cannot receive a specific channel mapping, but they can still have consumer channels that are automatically connected to all producer channels of the same type. For example, the UI module is auto-created and it has a subscribe channel for camera stream that is set to auto-all, which means that the UI will be automatically connected to all camera modules that produce camera stream and so it will receive all the messages from those channels. This combines the advantages of fixed channel-to-channel mapping and full broadcast. 
 
 
+\subsection{Message structure: header and optional shared blobs}
+
+The message structure is designed to be efficient for both small control messages and large data payloads. Messages structure is defined in the \type{MessageHeader} structure. This header is used both on the producer side (when sending a message) and on the consumer side (when receiving a message). The header contains the following fields:
+\begin{itemize}
+    \item data pointer and length (this covers the ``header'' of the message and is copied from producer to each consumer; this is enough for most messages, for example pen intent, control messages, etc.),
+    \item array of blobs (via blob pointer and length; this is used for large data payloads, for example camera frames, scene data, etc.)
+    \item id and success flag (only used for request/response messages; the id is used to match requests and responses, while the success flag indicates whether a failure occurred on a transport level; for example wrong channel mapping or unknown request in the receiving module)
+    \item timestamp
+\end{itemize}
+
+The data pointer and length cover the main content of the message, which is typically small and can be copied efficiently. For larger payloads, such as images or point clouds, the message can include an array of blobs. Blobs are designed to avoid repeated copying of large data between modules --- for example, a camera module can capture an image and allocate a blob in shared memory to hold the image data, then it can publish a message with a pointer to that blob. The consumer module (or multiple modules) can then access the blob directly without copying the image data and even forward it as a part of its own message to other modules (camera module -> calibration module -> pen tracking module). Blobs are represented by the \type{SharedDataBlob} class, which contains a reference to the core-allocated data (\type{ISharedData*}) and handles reference counting and deletion of the data. When all modules are done with the blob, it will be automatically deallocated. This design allows for efficient sharing of large data between modules while keeping the main message header small for efficient routing and processing of control messages.
+
+Allocation of \type{SharedDataBlob} is done through \type{IAllocator} objects. Modules can request an allocator from the core via \type{ICore::createDynamicAllocator()} or \type{ICore::createBufferAllocator(slot_size, slot_count)}. The module can then use the allocator to create blobs of the desired size. The allocated blobs are automatically registered with the core and can be shared between modules. The producer module is responsible for allocating the blob and including a pointer to it in the message header, while the consumer modules can access the blob through the pointer in the message header. The blob allocators and therefore the blobs themselves must be handled by the core, because the core defines the runtime environment (e.g., threads or processes) and therefore it is the only component that can ensure that the shared memory is properly managed and accessible to all modules. Modules are required to remove the requested allocators when they are done with them (via \type{ICore::deleteAllocator(allocator)}) to avoid memory leaks --- this is already handled by the \type{BaseModule} class that all modules inherit from (described in \autoref{subsec:ch3_basemodule}), so module implementers do not have to worry about it.
+
 
 \subsection{Message delivery lifecycle} \label{subsec:ch3_message_lifecycle}
 
-
-
-\subsection{BaseModule}
+\subsection{BaseModule} \label{subsec:ch3_basemodule}
 
 \subsection{Module lifecycle and implementer rules}
 
