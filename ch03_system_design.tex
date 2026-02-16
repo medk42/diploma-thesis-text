@@ -134,14 +134,61 @@ Blobs are allocated through core-provided allocators (\type{IAllocator}). A modu
 Allocator and blob lifetime are owned by the core to ensure consistent memory management across modules and to allow safe sharing between independently developed components. Modules are expected to delete allocators they no longer need using \type{ICore::deleteAllocator}. In this thesis, allocator cleanup is handled by the common \type{BaseModule} helper (\autoref{subsec:ch3_basemodule}) so that module implementations do not need to manage allocator lifetimes manually.
 
 
-\subsection{Message delivery lifecycle} \label{subsec:ch3_message_lifecycle}
+\subsection{Communication primitives (semantics only)}
 
-\subsection{BaseModule} \label{subsec:ch3_basemodule}
+This subsection describes the runtime semantics of the two communication primitives. Channel declaration and mapping rules are defined by \type{ModuleInfo} and the channel contract (\autoref{subsec:ch3_channel_contract}). All channels in this sections contain a module identifier and a channel identifier (index into the module's channel list --- publish producer list for publishing message, request consumer list or response producer list for request/response logic), which together uniquely identify the channel endpoint in the system.
+
+\textbf{Publish/subscribe} is used for streams and events. A module publishes a message by calling \type{ICore::sendMessage(source_channel, message)} with \type{source_channel} identifying its producer channel. The core routes the message to all subscribe consumers that are connected to this producer by the current mapping. Delivery is best-effort and may be affected by the receiver's ingress and queueing policy (\autoref{subsec:ch3_message_lifecycle}).
+
+\textbf{Request/response} is used for directed on-demand interactions. The requester calls \type{ICore::sendRequest(source_channel, target_channel, message)} and specifies both its local request consumer channel (\type{source_channel}) and the \emph{concrete} target response producer channel (\type{target_channel}) it is requesting from. The core delivers the request to the receiver by invoking \type{IModule::processRequest(response_producer_id, source_channel, message)}. The receiver returns the response payload as \type{ResponseData}; the core (or the module hosting wrapper) then sends exactly one response back to the requester via \type{ICore::sendResponse(source_channel, target_channel, message)} with the response producer as \type{source_channel} and the original request consumer as \type{target_channel}. This design prevents modules from silently ``forgetting'' a request and ensures a well-defined one-request/one-response flow at the transport level.
+
+\textbf{Synchronous vs asynchronous aspects.} On the receiver side, \type{IModule::processRequest} produces the response data synchronously (as a return value). From the requester perspective, request/response is still asynchronous: the response is delivered later via \type{IModule::processResponse} and must not be assumed to arrive immediately or on the same thread.
+
+\textbf{Success and failure.} The field \type{MessageHeader.success_} represents transport-level outcome (e.g., request dropped or rejected, invalid routing). Domain-level success (e.g., detection failed) is encoded in the payload and is specific to each channel type.
+
+
+\subsection{Message delivery flow} \label{subsec:ch3_message_lifecycle}
+
+Message delivery follows the same contract-level steps for publish/subscribe as well as request/response:
+
+\begin{enumerate}
+    \item The sender calls \type{ICore::sendMessage} / \type{ICore::sendRequest} / \type{ICore::sendResponse} and provides the source channel identifier (and a target identifier for request/response).
+    \item The core determines the destination module(s) and consumer channel(s):
+    \begin{itemize}
+        \item \textbf{Publish/subscribe:} the core resolves routing using the current channel mapping (i.e., the producer is routed to all mapped subscribe consumers).
+        \item \textbf{Request/response:} the destination is given explicitly by \type{target_channel}. The core validates that the target endpoint is compatible with the sender's mapping policy (e.g., within \type{SINGLE}/\type{RANGE}; \type{AUTO_ALL} does not require a specific mapping check).
+    \end{itemize}
+    \item For each destination consumer, the core calls the receiver's ingress decision point \type{IModule::onIngress} and provides the message header and the current queue status.
+    \item If the message is rejected (or must be dropped due to capacity), it is not delivered. For requests, the transport-level failure is reported back to the requester as a failed response (\type{success_ = false}).
+    \item If accepted, the core enqueues the message for processing. The enqueued item includes an owned copy of the small payload buffer and a copied list of \type{SharedDataBlob} handles. The underlying shared payload memory referenced by blobs is not copied.
+    \item The core invokes the corresponding module callback from a core-managed worker thread: \type{IModule::processMessage}, \type{IModule::processRequest}, or \type{IModule::processResponse}.
+    \item For requests, the receiver returns \type{ResponseData} from \type{IModule::processRequest}. The core (or the hosting wrapper) constructs exactly one response message, preserves the request \type{id_}, and sends it back to the requester, where it is delivered by the same process described here via \type{IModule::processResponse}.
+\end{enumerate}
+
+The ingress decision point \type{IModule::onIngress} is a required part of the contract and must be \emph{non-blocking}. It is executed on the core's delivery path and is therefore intended only for a fast admission-control decision under load. The core passes a \type{QueueStatus} describing whether the destination queue has available capacity. The module may then return an \type{IngressDecision} to either accept, drop, or (when allowed) drop/replace queued work (e.g., keep only the latest frame for a video stream). If the queue is already in \type{QUEUE_FULL} (queue is full, processing started on all messages, but did not finish yet), all decisions are effectively treated as drop.
+
+The concrete scheduling mechanism (queues, worker pools, and prioritization) is part of the core implementation and is described in \autoref{sec:ch3_core}.
+
+
+\subsection{Reflection and orchestration contract}
+
+\xxx{or here serialization}
 
 \subsection{Module lifecycle and implementer rules}
 
+\xxx{thread start, stop methods; getModuleInfo; query\_capability; valid }
 \xxx{mention thread requirements; no core calls in ctor / dtor; onIngress non-blocking; processing callbacks may be slow but must be safe under hosting concurrency; do not assume stable module IDs across save/load}
 \xxx{see what is all multi-threaded and what is not}
+\xxx{describe serialization}
+\xxx{what must be provided in instanciation}
+
+\subsection{BaseModule} \label{subsec:ch3_basemodule}
+
+In this thesis, most modules inherit from \type{BaseModule}, a convenience helper that implements common boilerplate on top of \type{IModule}. In particular, it (i) fills required message metadata (\type{timestamp_ns_}, request \type{id_}, and transport \type{success_}), (ii) constructs correct \type{ChannelIdentifier} values using the module's runtime ID, (iii) provides RAII wrappers for core allocators, and (iv) exposes the construction-time parameters provided by the core (data path, logger, and the resolved input channel mapping) through simple helper methods.
+
+\section{Core implementation} \label{sec:ch3_core}
+
+
 
 % writing about my system design in latex:
 
