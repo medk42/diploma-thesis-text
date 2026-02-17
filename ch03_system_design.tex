@@ -170,6 +170,42 @@ The ingress decision point \type{IModule::onIngress} is a required part of the c
 The concrete scheduling mechanism (queues, worker pools, and prioritization) is part of the core implementation and is described in \autoref{sec:ch3_core}.
 
 
+
+\subsection{Reflection and orchestration contract} \label{subsec:ch3_reflection_orchestration}
+
+Besides message passing, the contract exposes a small \emph{reflection and orchestration} API intended mainly for UI and other controller-style modules. Its purpose is to allow a module to (i) discover what module types exist, (ii) inspect which module instances are currently running and how they are wired, and (iii) create, remove, save, and restore module graphs. This functionality is provided through the \type{ICoreControl} part of \type{ICore}.
+
+\textbf{Loaded module catalog (module types).}
+The core exposes a catalog of all module \emph{types} available in the runtime (e.g., discovered plugins). The pair \type{getLoadedModulesCount()} and \type{getLoadedModulesInfo(loaded_module_id)} allows querying each type's immutable \type{ModuleInfo} (declared channels, display metadata, auto-create flag, worker configuration, etc.). UI uses this catalog to present the user with a ``palette'' of modules that can be instantiated.
+
+\textbf{Running module instances (created modules).}
+While the loaded catalog lists available types, the runtime also maintains a set of created \emph{instances}. Each instance is assigned a \emph{monotonically increasing} running module identifier when created; identifiers are never reused. If an instance is later removed, its identifier becomes a tombstone that permanently refers to a non-existing module.
+
+This contract is reflected in \type{RunningModuleInfo}, which contains an \type{exists_} flag and a reference to the instance's \type{ModuleInfo} (\type{module_info_}). The method \type{getRunningModulesCount()} returns the total number of identifiers issued over the lifetime of the core object (not the number of currently alive instances). Callers therefore iterate \type{running_module_id} from \type{0} to \type{getRunningModulesCount()-1} and query each entry via \type{getRunningModulesInfo(running_module_id)}, filtering out non-existing modules using \type{exists_}. Running module identifiers must not be assumed stable across program sessions or save/load.
+
+\textbf{Wiring query (who is connected to whom).}
+For each running module instance, \type{getRunningModulesChannelMap(running_module_id)} returns its current input wiring: for every subscribe and request consumer channel, the core provides the list of bound producer endpoints (\type{ChannelIdentifier} pairs identifying producer module and producer channel). This is the core reflection primitive needed to visualize or debug the module graph and to implement higher-level orchestration logic (e.g., configuration panels that depend on which sources are currently connected).
+
+\textbf{Existing producers by channel type (discovery).}
+For reflection and UI/orchestration, the core provides
+\type{getExistingPublishChannelsByName(channel_type_identifier)} and
+\type{getExistingResponseChannelsByName(channel_type_identifier)}.
+These functions return the set of currently known producer endpoints (module ID + channel ID) for the given channel type identifier.
+
+For \emph{SINGLE} and \emph{RANGE} request consumers, the requester typically does \emph{not} need discovery: the core provides the concrete mapped endpoints as part of \type{InputChannelMapInfo} during module creation, and the module uses those \type{ChannelIdentifier}s as request targets.
+Discovery is primarily needed for \emph{AUTO\_ALL} request consumers, where the target set is not known at instantiation time (and therefore is not enumerated in \type{InputChannelMapInfo}).
+
+\textbf{Mapping state change indicator.}
+Because the running set and its wiring may change over time (modules created/removed), the core exposes \type{getModulesMappingStateId()}. The returned value is a monotonically increasing identifier that changes whenever the mapping topology changes (modules are added or removed). UI modules can use it as a cheap change detector to refresh cached views.
+
+\textbf{Orchestration entry points (create/remove/dependencies).}
+The contract allows a controller to create and remove modules dynamically. A new instance is created using \type{addModule(loaded_module_id, channel_map_info)}. The core validates the provided mapping against the declared channel contract (channel type identifiers and the consumer count policy such as single/range/auto-all) and rejects invalid wiring. Existing modules may be removed via \type{removeModuleById(running_module_id, recursive)}; when recursive removal is requested, the core may also remove dependent modules (as defined by the connection types), and \type{collectDependencies(running_module_id)} can be used to inspect this dependency set in advance.
+
+\textbf{Persistence entry points (save/load).}
+Finally, the contract provides \type{save()} and \type{load(data, size)} to persist and restore the \emph{program state} consisting of created module instances, their wiring, and optional per-module serialized state (as returned by module \type{save()} / \type{load()}). The binary format is owned by the core. Loading reconstructs the module graph from the loaded catalog; running and loaded module identifiers may change, and modules must not rely on ID stability across save/load. Allocators are not persisted; modules are expected to recreate any allocators they need after loading.
+
+
+
 \subsection{Reflection and orchestration contract}
 
 \xxx{or here serialization}
@@ -181,6 +217,10 @@ The concrete scheduling mechanism (queues, worker pools, and prioritization) is 
 \xxx{see what is all multi-threaded and what is not}
 \xxx{describe serialization}
 \xxx{what must be provided in instanciation}
+\xxx{module creation, what is given to the module (data path, module map etc.)}
+\xxx{due to not knowing the runtime, modules are expected to *not* return any exceptions (exceptions crossing a dll/so boundary would be problematic)}
+\xxx{Where do we mention c++, dll/so, windows/linux, etc.? in the core implementation section? Implementaion chapter?}
+\xxx{thinking about it now, it would be much better/cleaner to do: The logic should be constructor (core-thread), initialize(core-requested, but separate thread after core finished creating; only after initialize finishes does it start processing messages?), teardown (core-thread, add-remove locked but general core not locked, modules can finish sending messages but must stop ASAP), destructor(core, full core locked, if modules send now it will cause undefined behavior). }
 
 \subsection{BaseModule} \label{subsec:ch3_basemodule}
 
