@@ -231,15 +231,23 @@ A compliant core follows these steps when creating and running a module instance
     \item \textbf{Stop and destroy.} When removing a module (or shutting down), the core calls \type{IModule::threadStop(timeout)}. After it returns, the core will not invoke further callbacks on that instance and finally destroys it.
 \end{enumerate}
 
-\minihead{Request handling semantics.}
-Request/response follows a one-request/one-response rule at the transport level: the receiver returns \type{ResponseData} from \type{IModule::processRequest}, and the core (or hosting wrapper) constructs and sends exactly one response back to the requester while preserving \type{MessageHeader.id_} (see \autoref{subsec:ch3_comm_primitives} and \autoref{subsec:ch3_message_lifecycle}).
-
 \minihead{Rules for module implementers.}
 \begin{itemize}
     \item \textbf{Restricted core usage during construction and teardown.}
-    During module creation/removal (constructor, destructor, \type{threadStart}, \type{threadStop}), module code must not call any core methods that depend on a stable module graph: in particular \type{ICore::sendMessage}, \type{ICore::sendRequest}, \type{ICore::sendResponse}, or any \type{ICoreControl} reflection/orchestration queries.
-    The only allowed core interaction in these phases is shared-payload allocation management, i.e., \type{ICore::createDynamicAllocator}, \type{ICore::createBufferAllocator}, and \type{ICore::deleteAllocator} (and logging via the provided \type{logging::ILogger}).
-    Message sending and \type{ICoreControl} interaction should be treated as valid only during the module's \emph{active running phase}. In particular, module code must not rely on being able to send messages or query core state during construction/startup (\type{ctor}/\type{threadStart}) or during teardown (\type{threadStop}/\type{dtor}): a compliant core may block these calls (e.g., due to module-graph locks) or discard them as part of removal.
+    In the core implementation used in this thesis, module graph mutations (create/remove/load) are serialized under an exclusive \type{core_mutex_} lock.
+    Because message sending and \type{ICoreControl} queries acquire the same mutex (shared), calling
+    \type{ICore::sendMessage}, \type{ICore::sendRequest}, \type{ICore::sendResponse} or any \type{ICoreControl} method
+    from the core thread during module creation/removal (\type{ctor}, \type{threadStart}, \type{threadStop}, \type{dtor})
+    can deadlock and is therefore forbidden.
+
+    The only core interaction explicitly allowed in these phases is allocator management
+    (\type{createDynamicAllocator}, \type{createBufferAllocator}, \type{deleteAllocator}) and logging via the provided \type{logging::ILogger},
+    because allocator operations are synchronized independently of the module graph.
+
+    Module-owned background threads may still attempt to send during teardown; the current core mitigates this by marking the module as being destroyed
+    (and rejecting sends) and by temporarily releasing the exclusive lock while \type{threadStop} executes.
+    Module code must therefore not rely on successful message sending or core reflection during teardown and must tolerate rejected sends.
+
 
     \item \textbf{\type{threadStart}/\type{threadStop} bound the active lifetime.} Start any internal background work in \type{threadStart}. Stop and join all module-owned background threads in \type{threadStop} before returning. The \type{timeout} parameter is a cooperative shutdown/initialization budget used for diagnostics; modules should keep start/stop bounded and must not block indefinitely, but \type{threadStop} must not return while module-owned threads are still running.
     \item \textbf{\type{onIngress} must be non-blocking.} \type{IModule::onIngress} runs on the core delivery path and must return immediately. It may only make an overload decision using \type{QueueStatus} and return an \type{IngressDecision}. It must not perform heavy work, wait for other threads, or depend on external services.
@@ -257,31 +265,28 @@ Request/response follows a one-request/one-response rule at the transport level:
 \end{itemize}
 
 \minihead{Optional capability discovery.}
-Some wrappers and higher-level infrastructure may require optional module capabilities beyond \type{IModule}. For this purpose, modules may expose additional interfaces through a capability query mechanism (e.g., \type{query_capability(typeid(T))}). This keeps the base contract minimal while enabling optional features; concrete usage is described later where wrappers are introduced.
-
-\minihead{Optional capability discovery.}
 Some functionality is defined as an additional C++ interface on top of the base module contract (e.g., \type{IActivableModule} for activation, \type{IUsecaseModule} for use-case execution). These interfaces are intentionally \emph{not} part of \type{IModule}, because they are higher-level and would make the base contract unnecessarily large and hard to implement. Instead, the system provides \emph{wrappers} that implement \type{IModule} and translate module-level messages (activation requests, status queries, etc.) into direct calls to the optional interface (e.g., \type{ActivationWrapper} $\rightarrow$ \type{IActivableModule}). Wrappers are stackable (e.g., activation wrapper on top of a use-case wrapper), therefore higher-level code sometimes needs to access the underlying optional interface implemented by the wrapped module. For this purpose, modules expose optional capabilities via a query mechanism (e.g., \type{query_capability(typeid(T))}), which allows wrappers to discover that the module they wrap implements \type{IActivableModule}/\type{IUsecaseModule}. Concrete wrapper and protocol contracts are described in \autoref{sec:ch3_interface_contracts}.
 
 \subsection{BaseModule} \label{subsec:ch3_basemodule}
 
 In this thesis, all concrete modules inherit from \type{BaseModule}, a small convenience layer on top of \type{IModule}. It is \emph{not} a part of the minimal module contract, but it standardizes the boilerplate that nearly every module needs (message sending, allocator lifetime, access to construction inputs) and keeps module implementations focused on domain logic.
 
-\textbf{Construction inputs and persistence.}
+\minihead{Construction inputs and persistence.}
 \type{BaseModule} mirrors the core-provided construction inputs described in \autoref{subsec:ch3_module_rules}. It stores references to \type{ICore} and \type{logging::ILogger}, stores the runtime \type{module_id}, stores a pointer to the module's static description \type{ModuleInfo}, and copies the optional \type{data_path} into an internal \type{std::string}. Importantly, it also \emph{copies} the provided \type{InputChannelMapInfo} into internal vectors, because the input mapping passed at creation time is not guaranteed to outlive the constructor. The copied mapping can be queried later via \type{getSubscribeChannelInfo()} and \type{getRequestChannelInfo()}.
 
-\textbf{Message sending helpers.}
+\minihead{Message sending helpers.}
 \type{BaseModule} provides thin wrappers around the three core send functions:
 \begin{itemize}
-    \item \type{sendMessage(publish_producer_id, message)} fills \type{MessageHeader.timestamp_ns_} and sets \type{MessageHeader.success_ = true} (the \type{success_} flag is only meaningful for responses), then calls \type{ICore::sendMessage} with a \type{ChannelIdentifier} constructed from the stored \type{module_id} and the provided producer channel index.
+    \item \type{sendMessage(publish_producer_id, message)} fills \type{MessageHeader.timestamp_ns_} and sets \type{MessageHeader.success_ = true} (the \type{success_} flag is only meaningful for responses), then calls \type{ICore::sendMessage} with a \type{ChannelIdentifier} constructed from the stored \type{module_id} and the provided producer channel id.
     \item \type{sendRequest(request_consumer_id, target_channel, message)} generates a fresh request ID (\type{message.id_ = request_id_++}), fills \type{timestamp_ns_} and \type{success_ = true} (the \type{success_} flag is only meaningful for responses), calls \type{ICore::sendRequest}, and returns the generated ID to the caller.
     \item \type{sendResponse(response_producer_id, target_channel, request_id, message)} fills \type{message.id_} with the provided request ID, fills \type{timestamp_ns_}, and calls \type{ICore::sendResponse}. The \type{success_} flag must be set by the caller to indicate transport-level success or failure of the request processing.
 \end{itemize}
 These helpers are intentionally simple: they only ensure consistent metadata and correct \type{ChannelIdentifier} construction; they do not change routing semantics defined by the core.
 
-\textbf{Allocator RAII wrappers.}
+\minihead{Allocator RAII wrappers.}
 To simplify shared payload allocation (\autoref{subsec:ch3_allocator_contract}), \type{BaseModule} exposes \type{createDynamicAllocator()} and \type{createBufferAllocator(slot_size_bytes, number_of_slots)}. Both return an \type{AllocatorPtr} (\type{std::unique_ptr<IAllocator, deleter>}) whose custom deleter calls \type{ICore::deleteAllocator}. This makes allocator ownership explicit and avoids leaks even when modules exit early. (Allocator operations are independent of message routing and may be used during creation/removal.)
 
-\textbf{Convenience utilities.}
+\minihead{Convenience utilities.}
 \type{BaseModule} also provides:
 \begin{itemize}
     \item \type{log(LogType, ...)} convenience overloads forwarding to the core-provided \type{ILogger},
@@ -289,7 +294,7 @@ To simplify shared payload allocation (\autoref{subsec:ch3_allocator_contract}),
     \item name-to-index helpers \type{getPublishChannelByName}, \type{getResponseChannelByName}, \type{getSubscribeChannelByName}, \type{getRequestChannelByName}, to avoid hardcoding numeric channel indices that may change when the \type{ModuleInfo} arrays are edited.
 \end{itemize}
 
-\textbf{What it does not do.}
+\minihead{What it does not do.}
 \type{BaseModule} does not implement queueing, worker scheduling, ingress decisions, or any threading policy; those remain the responsibility of the core (\autoref{sec:ch3_core}). It also does not guarantee deadlock-freedom or correctness of cross-module interactions. It only encapsulates repeated mechanical steps and provides a consistent module-author API.
 
 Finally, \type{BaseModule} implements \type{IModule::getModuleInfo()} by returning the \type{ModuleInfo} pointer provided at construction. This ensures that higher-level infrastructure can always obtain the module description through the contract entry point, while concrete modules typically delegate the storage of that pointer to \type{BaseModule}.
@@ -328,6 +333,26 @@ Finally, \type{BaseModule} implements \type{IModule::getModuleInfo()} by returni
   \item \xxx{Persistence (save/load) flow at implementation level: remove non-auto modules, recreate, threadStart, load state, rewire; IDs change; allocators not persisted; failure rollback policy.}
   \item \xxx{Where to put platform specifics: DLL/SO loader, filesystem scanning, symbol names, API version checks. (Either a short subsection here or defer to Implementation chapter; but ensure one place covers it.)}
 \end{itemize}
+\begin{itemize}
+  \item \xxx{Restate scope: this section describes the concrete in-process core used in the thesis (threads, in-memory routing), while preserving the abstract module contract.}
+  \item \xxx{Hosting model: how module packages are discovered/loaded (plugin catalog) and how a module instance is created through the hosting mechanism (factory + wrapper concept).}
+  \item \xxx{Loaded vs running sets: data structures for loaded module types vs running instances; monotonic running IDs, tombstones, and why IDs are not reused.}
+  \item \xxx{Data path resolution rule: modules root + data root; how module name maps to optional data folder; when \type{data\_path == nullptr}.}
+  \item \xxx{Channel registration: how \type{ModuleInfo} is registered on start and per-instance (publish/response producers) into the discovery maps used by UI/orchestration.}
+  \item \xxx{Mapping validation: type-compatibility checks + consumer count policy (SINGLE/RANGE/AUTO\_ALL) checks performed by \type{addModule}.}
+  \item \xxx{Routing tables: internal representation of mappings for publish$\rightarrow$subscribe and request$\rightarrow$response; what keys are used (producer channel -> list of consumer endpoints, etc.).}
+  \item \xxx{Queueing + workers: per-module queues, prioritized vs regular worker pools, how channel priority selects worker class.}
+  \item \xxx{Ingress path: where \type{onIngress} is called, what gets copied (small payload) vs shared (blob handles), and where queue capacity is enforced.}
+  \item \xxx{Request/response plumbing: \type{sendRequest} calls \type{processRequest} on the target module; core/hosting wrapper constructs and sends exactly one response preserving \type{id\_}; failure cases where core synthesizes \type{success\_=false}.}
+  \item \xxx{Removal semantics: \type{removeModuleById} flow (dependency collection, recursive removal), \type{destruction\_in\_progress\_} flag, what happens to in-flight sends/requests.}
+  \item \xxx{Locking model (high level): what is protected by the core mutex vs allocator mutex; shared vs exclusive lock; implications (message sending during add/remove may block or be dropped).}
+  \item \xxx{Allocator ownership: core-managed allocator list; create/delete operations; why allocator ops are safe across creation/removal (separate mutex).}
+  \item \xxx{Mapping state ID: when it increments and how UI uses it as a cheap invalidation mechanism.}
+  \item \xxx{Persistence implementation: what is saved (instances, parameters, mapping, optional per-module state), what is NOT saved (allocators), and how \type{load} reconstructs the graph from the loaded catalog.}
+  \item \xxx{Known limitations / intentional simplifications (brief): single-core process model, no cross-process safety, blocking behavior during topology changes, etc.}
+\end{itemize}
+
+\xxx{If you write that section in this order, it will “click” with what you already established: readers will map every contract concept to the concrete mechanism you used (and will understand the quirks like tombstones, locks, and why some calls are discouraged during teardown).}
 
 
 
@@ -368,15 +393,15 @@ This makes activation available to any client module (most importantly the UI) p
 \subsection{Stackable wrappers and capability discovery}
 
 Wrappers are designed to be stackable. A typical module instance may be constructed as a pipeline of layers:
-\[
-    \type{DllModuleWrapper}(
-        \type{ActivationWrapper}(
-            \type{UseCaseWrapper}(
-                \type{ConcreteModule}
-            )
-        )
-    )
-\]
+% \[
+%     \type{DllModuleWrapper}(
+%         \type{ActivationWrapper}(
+%             \type{UseCaseWrapper}(
+%                 \type{ConcreteModule}
+%             )
+%         )
+%     )
+% \]
 Each layer implements \type{IModule} and may intercept a subset of messages while forwarding the rest. In such a composition, a wrapper often needs access to an optional interface implemented by an inner layer (e.g., \type{ActivationWrapper} needs \type{IActivableModule}).
 
 To support this without extending \type{IModule}, modules provide a capability query mechanism. Conceptually, a wrapper asks the wrapped instance whether it supports a given optional interface (e.g., \type{IActivableModule}) and obtains a pointer/reference if available. If the capability is not present, the wrapper fails validation (\type{valid() == false}) and the module instance is not created. This keeps optional contracts explicit and allows wrappers to remain generic and reusable.

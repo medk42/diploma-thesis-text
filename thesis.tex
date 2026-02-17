@@ -87,6 +87,8 @@
 
 % Extra packages for this thesis
 \usepackage[inline]{enumitem}
+\usepackage{xurl}
+\urlstyle{tt}
 
 % Extra macro definitions for this thesis
 \newlist{goals}{enumerate}{1}
@@ -95,12 +97,48 @@
 \newlist{requirements}{enumerate}{1}
 \setlist[requirements]{label=\textbf{R\arabic*:}, ref=R\arabic*, leftmargin=*}
 
-\newcommand{\type}[1]{\texttt{\detokenize{#1}}}
+% \newcommand{\type}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\type}[1]{\nolinkurl{\detokenize{#1}}}
+% Better line breaking for \type{...} (underscores, ::, punctuation, CamelCase)
+\usepackage{xparse}
+
+\ExplSyntaxOn
+\cs_new_protected:Npn \jakub_type:n #1
+  {
+    \tl_set:Nx \l_tmpa_tl { \detokenize{#1} }
+
+    % Break AFTER common separators
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_colon_str\c_colon_str } { \c_colon_str\c_colon_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_underscore_str }        { \c_underscore_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_dot_str }               { \c_dot_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_slash_str }             { \c_slash_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_minus_str }             { \c_minus_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_lparen_str }            { \c_lparen_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_rparen_str }            { \c_rparen_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_comma_str }             { \c_comma_str \c{allowbreak} }
+
+    % Break BETWEEN lower/digit and Upper (CamelCase)
+    \regex_replace_all:nnN
+      { ([a-z0-9])([A-Z]) }
+      { \1 \c{allowbreak} \2 }
+      \l_tmpa_tl
+
+    \texttt{\tl_use:N \l_tmpa_tl}
+  }
+
+% If \type already exists via \newcommand, this is correct:
+\RenewDocumentCommand{\type}{m}{\jakub_type:n{#1}}
+\ExplSyntaxOff
+
 
 % Run-in bold mini-heading with consistent spacing before it.
 % Usage: \minihead{Lifecycle.} Text continues...
 \newcommand{\minihead}[1]{\par\medskip\noindent\textbf{#1}\enspace\ignorespaces}
 
+
+\emergencystretch=2em      % try 1em–4em
+\tolerance=2000            % allow worse spacing before overfull
+\hbadness=2000             % reduce spam in log (optional)
 
 % You might want to use cleveref for references
 % \usepackage{cleveref}
