@@ -37,7 +37,7 @@ In the remainder of this chapter, we describe these parts in the same order: fir
 
 
 
-\section{Module contract}
+\section{Module contract} \label{sec:ch3_module_contract}
 
 This section defines the \emph{module contract}: the core abstractions and communication rules that all modules and the runtime core must follow. The contract is independent of a concrete core implementation and provides a stable interface for developing modules.
 
@@ -54,7 +54,7 @@ On the receiving side, the core enqueues the incoming message and later invokes 
 \begin{figure}
   \centering
   \includegraphics[width=\textwidth]{img/ch3_system_design/channel_mapping.pdf}
-  \caption[Example of a channel mapping]{Example of a channel mapping; \type{Camera A} and \type{Camera B} both produce \type{camera_stream} messages; \type{Pen} consumes \type{camera_stream} messages from \type{Camera A} and produces \type{pen_intent} messages. \type{Scene} consumes \type{camera_stream} messages from both \type{Camera A} and \type{Camera B} and contains a response producer channel for \type{scene_req_resp} messages. \type{Use Case} consumes \type{pen_intent} messages from \type{Pen} and sends \type{scene_req_resp} requests to \type{Scene} and consumes the corresponding responses.}
+  \caption[Example of a channel mapping]{Example of a channel mapping; \type{Camera A} and \type{Camera B} both produce \type{camera\_stream} messages; \type{Pen} consumes \type{camera\_stream} messages from \type{Camera A} and produces \type{pen\_intent} messages. \type{Scene} consumes \type{camera\_stream} messages from both \type{Camera A} and \type{Camera B} and contains a response producer channel for \type{scene\_req\_resp} messages. \type{Use Case} consumes \type{pen\_intent} messages from \type{Pen} and sends \type{scene\_req\_resp} requests to \type{Scene} and consumes the corresponding responses.}
   \label{fig:ch3_channel_mapping}
 \end{figure}
 
@@ -68,7 +68,7 @@ Each module describes itself using a \type{ModuleInfo} structure, which includes
     \item \textbf{Concurrency configuration:} number of worker threads (described below).
 \end{itemize}
 
-Channel declarations specify what the module can produce and what it requires as input. Importantly, communication is not a broadcast by default: connections are \emph{directed} between specific producer and consumer channels. The channel type identifier defines compatibility (message type), but the actual wiring is provided at module instantiation time via a channel mapping. The mapping selects, for each consumer channel, which producer channel(s) it is connected to (by specifying producer module and channel IDs). This enables flexible configurations---for example, in \autoref{fig:ch3_channel_mapping} the \type{Pen} module subscribes only to \type{Camera A} even though multiple cameras publish \type{camera_stream}.
+Channel declarations specify what the module can produce and what it requires as input. Importantly, communication is not a broadcast by default: connections are \emph{directed} between specific producer and consumer channels. The channel type identifier defines compatibility (message type), but the actual wiring is provided at module instantiation time via a channel mapping. The mapping selects, for each consumer channel, which producer channel(s) it is connected to (by specifying producer module and channel IDs). This enables flexible configurations---for example, in \autoref{fig:ch3_channel_mapping} the \type{Pen} module subscribes only to \type{Camera A} even though multiple cameras publish \type{camera\_stream}.
 
 As noted in \autoref{subsec:ch3_roles}, message processing is executed by core-managed worker threads. Each module specifies how many worker threads it requires, allowing it to process multiple messages, requests or responses concurrently. Worker threads are created per module and are divided into two classes: \emph{prioritized} and \emph{regular}. Prioritized workers handle channels marked as prioritized; regular workers handle the remaining channels. This mechanism is crucial for UI responsiveness, because it allows latency-sensitive UI traffic to be processed in parallel with heavy computation (e.g., camera processing for pen tracking).
 
@@ -84,7 +84,7 @@ There are two kinds of channels: producer channels (described by \type{Producer}
 
 A \type{Producer} contains:
 \begin{itemize}
-    \item channel type identifier (e.g., \type{camera_stream}, \type{scene_req_resp}),
+    \item channel type identifier (e.g., \type{camera\_stream}, \type{scene\_req\_resp}),
     \item user-facing channel name and description (used for UI visualization),
     \item prioritized flag,
     \item message queue capacity (maximum number of pending items on the receiver side).
@@ -97,7 +97,7 @@ We define message queue capacity to bound the amount of pending work at the rece
 A \type{Consumer} contains:
 \begin{itemize}
     \item channel type identifier, name, description, prioritized flag, and message queue capacity (same meaning as in \type{Producer}),
-    \item count policy (\type{single}, \type{range} or \type{auto_all}); specifies how many producer endpoints of the same type must be bound to this consumer endpoint when the module is instantiated,
+    \item count policy (\type{single}, \type{range} or \type{auto\_all}); specifies how many producer endpoints of the same type must be bound to this consumer endpoint when the module is instantiated,
     \item min/max bounds (used only for the \type{range} policy).
 \end{itemize}
 
@@ -105,7 +105,7 @@ When \type{ICore::addModule} is called, the core validates that the provided cha
 
 Prioritization on the consumer side applies to both subscribe and request channels. If a subscribe consumer is prioritized, incoming messages are processed by a prioritized worker thread. If a request consumer is prioritized, the corresponding response is processed by a prioritized worker thread.
 
-The count policy expresses wiring requirements. With \type{single}, exactly one producer endpoint of the given type must be connected. With \type{range}, the consumer requires between \type{min} and \type{max} connected producer endpoints (inclusive). With \type{auto_all}, the consumer is wired automatically to all currently available producer endpoints of the given type, which is primarily used for auto-created modules that cannot receive an explicit mapping. For example, the UI module can subscribe to all available \type{camera_stream} producers via an \type{auto_all} subscribe consumer, combining the convenience of broadcast with the explicit wiring model used elsewhere.
+The count policy expresses wiring requirements. With \type{single}, exactly one producer endpoint of the given type must be connected. With \type{range}, the consumer requires between \type{min} and \type{max} connected producer endpoints (inclusive). With \type{auto\_all}, the consumer is wired automatically to all currently available producer endpoints of the given type, which is primarily used for auto-created modules that cannot receive an explicit mapping. For example, the UI module can subscribe to all available \type{camera\_stream} producers via an \type{auto\_all} subscribe consumer, combining the convenience of broadcast with the explicit wiring model used elsewhere.
 
 \subsection{Message structure: header and optional shared blobs}
 
@@ -115,8 +115,8 @@ The header contains:
 \begin{itemize}
     \item \textbf{Small copied payload} given by a data pointer and length. This part is intended for small, trivially copyable control data (e.g., pen intent, state updates) and is copied from the producer to each consumer.
     \item \textbf{Optional blob array} (pointer + count), representing one or more shared payloads used for large data (e.g., images, point clouds, serialized structures) that should not be copied repeatedly.
-    \item \textbf{Request/response metadata:} \type{id_} to match requests with responses and a \type{success_} flag indicating whether the request was processed successfully at the communication layer.
-    \item \textbf{Timestamp} (\type{timestamp_ns_}) for tracing and ordering.
+    \item \textbf{Request/response metadata:} \type{id\_} to match requests with responses and a \type{success\_} flag indicating whether the request was processed successfully at the communication layer.
+    \item \textbf{Timestamp} (\type{timestamp\_ns\_}) for tracing and ordering.
 \end{itemize}
 
 In practice, most messages consist only of the small copied payload. When large data needs to be transmitted, the message includes one or more blobs. A producer allocates a blob, writes the payload into it, and sends a message that references the blob. Consumers can then read the payload directly and may forward the same blob further (e.g., camera $\rightarrow$ calibration $\rightarrow$ pen tracking) without copying the underlying data.
@@ -125,7 +125,7 @@ In practice, most messages consist only of the small copied payload. When large 
 
 Large payloads are represented by \type{SharedDataBlob}, which acts as a handle to core-managed shared data (\type{ISharedData}). Modules never free raw memory directly. Instead, they only copy, store, and pass \type{SharedDataBlob} handles; the underlying shared memory is released automatically once the last handle is destroyed.
 
-Blobs are allocated through core-provided allocators (\type{IAllocator}). A module can request an allocator via \type{ICore::createDynamicAllocator()} or \type{ICore::createBufferAllocator(slot_size, slot_count)} and then allocate blobs using \type{IAllocator::allocate()} (or helper methods such as \type{allocateFromData}). We distinguish two allocator types at the contract level:
+Blobs are allocated through core-provided allocators (\type{IAllocator}). A module can request an allocator via \type{ICore::createDynamicAllocator()} or \type{ICore::createBufferAllocator(slot\_size, slot\_count)} and then allocate blobs using \type{IAllocator::allocate()} (or helper methods such as \type{allocateFromData}). We distinguish two allocator types at the contract level:
 \begin{itemize}
     \item \textbf{Dynamic allocator:} supports variable allocation sizes (suitable for irregular payloads such as scene snapshots) at the cost of relying on system allocations for each request.
     \item \textbf{Buffer allocator:} preallocates a fixed number of equally-sized slots (suitable for streaming payloads with known bounds, such as camera frames), requiring a known maximum size in advance and offering only a limited number of slots.
@@ -138,13 +138,13 @@ Allocator and blob lifetime are owned by the core to ensure consistent memory ma
 
 This subsection describes the runtime semantics of the two communication primitives. Channel declaration and mapping rules are defined by \type{ModuleInfo} and the channel contract (\autoref{subsec:ch3_channel_contract}). All channels in this sections contain a module identifier and a channel identifier (index into the module's channel list --- publish producer list for publishing message, request consumer list or response producer list for request/response logic), which together uniquely identify the channel endpoint in the system.
 
-\minihead{Publish/subscribe} is used for streams and events. A module publishes a message by calling \type{ICore::sendMessage(source_channel, message)} with \type{source_channel} identifying its producer channel. The core routes the message to all subscribe consumers that are connected to this producer by the current mapping. Delivery is best-effort and may be affected by the receiver's ingress and queueing policy (\autoref{subsec:ch3_message_lifecycle}).
+\minihead{Publish/subscribe} is used for streams and events. A module publishes a message by calling \type{ICore::sendMessage(source\_channel, message)} with \type{source\_channel} identifying its producer channel. The core routes the message to all subscribe consumers that are connected to this producer by the current mapping. Delivery is best-effort and may be affected by the receiver's ingress and queueing policy (\autoref{subsec:ch3_message_lifecycle}).
 
-\minihead{Request/response} is used for directed on-demand interactions. The requester calls \type{ICore::sendRequest(source_channel, target_channel, message)} and specifies both its local request consumer channel (\type{source_channel}) and the \emph{concrete} target response producer channel (\type{target_channel}) it is requesting from. The core delivers the request to the receiver by invoking \type{IModule::processRequest(response_producer_id, source_channel, message)}. The receiver returns the response payload as \type{ResponseData}; the core (or the module hosting wrapper) then sends exactly one response back to the requester via \type{ICore::sendResponse(source_channel, target_channel, message)} with the response producer as \type{source_channel} and the original request consumer as \type{target_channel}. This design prevents modules from silently ``forgetting'' a request and ensures a well-defined one-request/one-response flow at the transport level.
+\minihead{Request/response} is used for directed on-demand interactions. The requester calls \type{ICore::sendRequest(source\_channel, target\_channel, message)} and specifies both its local request consumer channel (\type{source\_channel}) and the \emph{concrete} target response producer channel (\type{target\_channel}) it is requesting from. The core delivers the request to the receiver by invoking \type{IModule::processRequest(response\_producer\_id, source\_channel, message)}. The receiver returns the response payload as \type{ResponseData}; the core (or the module hosting wrapper) then sends exactly one response back to the requester via \type{ICore::sendResponse(source\_channel, target\_channel, message)} with the response producer as \type{source\_channel} and the original request consumer as \type{target\_channel}. This design prevents modules from silently ``forgetting'' a request and ensures a well-defined one-request/one-response flow at the transport level.
 
 \minihead{Synchronous vs asynchronous aspects.} On the receiver side, \type{IModule::processRequest} produces the response data synchronously (as a return value). From the requester perspective, request/response is still asynchronous: the response is delivered later via \type{IModule::processResponse} and must not be assumed to arrive immediately or on the same thread.
 
-\minihead{Success and failure.} The field \type{MessageHeader.success_} represents transport-level outcome (e.g., request dropped or rejected, invalid routing). Domain-level success (e.g., detection failed) is encoded in the payload and is specific to each channel type.
+\minihead{Success and failure.} The field \type{MessageHeader.success\_} represents transport-level outcome (e.g., request dropped or rejected, invalid routing). Domain-level success (e.g., detection failed) is encoded in the payload and is specific to each channel type.
 
 
 \subsection{Message delivery flow} \label{subsec:ch3_message_lifecycle}
@@ -156,16 +156,16 @@ Message delivery follows the same contract-level steps for publish/subscribe as 
     \item The core determines the destination module(s) and consumer channel(s):
     \begin{itemize}
         \item \textbf{Publish/subscribe:} the core resolves routing using the current channel mapping (i.e., the producer is routed to all mapped subscribe consumers).
-        \item \textbf{Request/response:} the destination is given explicitly by \type{target_channel}. The core validates that the target endpoint is compatible with the sender's mapping policy (e.g., within \type{SINGLE}/\type{RANGE}; \type{AUTO_ALL} does not require a specific mapping check).
+        \item \textbf{Request/response:} the destination is given explicitly by \type{target\_channel}. The core validates that the target endpoint is compatible with the sender's mapping policy (e.g., within \type{SINGLE}/\type{RANGE}; \type{AUTO\_ALL} does not require a specific mapping check).
     \end{itemize}
     \item For each destination consumer, the core calls the receiver's ingress decision point \type{IModule::onIngress} and provides the message header and the current queue status.
-    \item If the message is rejected (or must be dropped due to capacity), it is not delivered. For requests, the transport-level failure is reported back to the requester as a failed response (\type{success_ = false}).
+    \item If the message is rejected (or must be dropped due to capacity), it is not delivered. For requests, the transport-level failure is reported back to the requester as a failed response (\type{success\_ = false}).
     \item If accepted, the core enqueues the message for processing. The enqueued item includes an owned copy of the small payload buffer and a copied list of \type{SharedDataBlob} handles. The underlying shared payload memory referenced by blobs is not copied.
     \item The core invokes the corresponding module callback from a core-managed worker thread: \type{IModule::processMessage}, \type{IModule::processRequest}, or \type{IModule::processResponse}.
-    \item For requests, the receiver returns \type{ResponseData} from \type{IModule::processRequest}. The core (or the hosting wrapper) constructs exactly one response message, preserves the request \type{id_}, and sends it back to the requester, where it is delivered by the same process described here via \type{IModule::processResponse}.
+    \item For requests, the receiver returns \type{ResponseData} from \type{IModule::processRequest}. The core (or the hosting wrapper) constructs exactly one response message, preserves the request \type{id\_}, and sends it back to the requester, where it is delivered by the same process described here via \type{IModule::processResponse}.
 \end{enumerate}
 
-The ingress decision point \type{IModule::onIngress} is a required part of the contract and must be \emph{non-blocking}. It is executed on the core's delivery path and is therefore intended only for a fast admission-control decision under load. The core passes a \type{QueueStatus} describing whether the destination queue has available capacity. The module may then return an \type{IngressDecision} to either accept, drop, or (when allowed) drop/replace queued work (e.g., keep only the latest frame for a video stream). If the queue is already in \type{QUEUE_FULL} (queue is full, processing started on all messages, but did not finish yet), all decisions are effectively treated as drop.
+The ingress decision point \type{IModule::onIngress} is a required part of the contract and must be \emph{non-blocking}. It is executed on the core's delivery path and is therefore intended only for a fast admission-control decision under load. The core passes a \type{QueueStatus} describing whether the destination queue has available capacity. The module may then return an \type{IngressDecision} to either accept, drop, or (when allowed) drop/replace queued work (e.g., keep only the latest frame for a video stream). If the queue is already in \type{QUEUE\_FULL} (queue is full, processing started on all messages, but did not finish yet), all decisions are effectively treated as drop.
 
 The concrete scheduling mechanism (queues, worker pools, and prioritization) is part of the core implementation and is described in \autoref{sec:ch3_core}.
 
@@ -176,20 +176,20 @@ The concrete scheduling mechanism (queues, worker pools, and prioritization) is 
 Besides message passing, the contract exposes a small \emph{reflection and orchestration} API intended mainly for UI and other controller-style modules. Its purpose is to allow a module to (i) discover what module types exist, (ii) inspect which module instances are currently running and how they are wired, and (iii) create, remove, save, and restore module graphs. This functionality is provided through the \type{ICoreControl} part of \type{ICore}.
 
 \minihead{Loaded module catalog (module types).}
-The core exposes a catalog of all module \emph{types} available in the runtime (e.g., discovered plugins). The pair \type{getLoadedModulesCount()} and \type{getLoadedModulesInfo(loaded_module_id)} allows querying each type's immutable \type{ModuleInfo} (declared channels, display metadata, auto-create flag, worker configuration, etc.). UI uses this catalog to present the user with a ``palette'' of modules that can be instantiated.
+The core exposes a catalog of all module \emph{types} available in the runtime (e.g., discovered plugins). The pair \type{getLoadedModulesCount()} and \type{getLoadedModulesInfo(loaded\_module\_id)} allows querying each type's immutable \type{ModuleInfo} (declared channels, display metadata, auto-create flag, worker configuration, etc.). UI uses this catalog to present the user with a ``palette'' of modules that can be instantiated.
 
 \minihead{Running module instances (created modules).}
 While the loaded catalog lists available types, the runtime also maintains a set of created \emph{instances}. Each instance is assigned a \emph{monotonically increasing} running module identifier when created; identifiers are never reused. If an instance is later removed, its identifier becomes a tombstone that permanently refers to a non-existing module.
 
-This contract is reflected in \type{RunningModuleInfo}, which contains an \type{exists_} flag and a reference to the instance's \type{ModuleInfo} (\type{module_info_}). The method \type{getRunningModulesCount()} returns the total number of identifiers issued over the lifetime of the core object (not the number of currently alive instances). Callers therefore iterate \type{running_module_id} from \type{0} to \type{getRunningModulesCount()-1} and query each entry via \type{getRunningModulesInfo(running_module_id)}, filtering out non-existing modules using \type{exists_}. Running module identifiers must not be assumed stable across program sessions or save/load.
+This contract is reflected in \type{RunningModuleInfo}, which contains an \type{exists\_} flag and a reference to the instance's \type{ModuleInfo} (\type{module\_info\_}). The method \type{getRunningModulesCount()} returns the total number of identifiers issued over the lifetime of the core object (not the number of currently alive instances). Callers therefore iterate \type{running\_module\_id} from \type{0} to \type{getRunningModulesCount()-1} and query each entry via \type{getRunningModulesInfo(running\_module\_id)}, filtering out non-existing modules using \type{exists\_}. Running module identifiers must not be assumed stable across program sessions or save/load.
 
 \minihead{Wiring query (who is connected to whom).}
-For each running module instance, \type{getRunningModulesChannelMap(running_module_id)} returns its current input wiring: for every subscribe and request consumer channel, the core provides the list of bound producer endpoints (\type{ChannelIdentifier} pairs identifying producer module and producer channel). This is the core reflection primitive needed to visualize or debug the module graph and to implement higher-level orchestration logic (e.g., configuration panels that depend on which sources are currently connected).
+For each running module instance, \type{getRunningModulesChannelMap(running\_module\_id)} returns its current input wiring: for every subscribe and request consumer channel, the core provides the list of bound producer endpoints (\type{ChannelIdentifier} pairs identifying producer module and producer channel). This is the core reflection primitive needed to visualize or debug the module graph and to implement higher-level orchestration logic (e.g., configuration panels that depend on which sources are currently connected).
 
 \minihead{Existing producers by channel type (discovery).}
 For reflection and UI/orchestration, the core provides
-\type{getExistingPublishChannelsByName(channel_type_identifier)} and
-\type{getExistingResponseChannelsByName(channel_type_identifier)}.
+\type{getExistingPublishChannelsByName(channel\_type\_identifier)} and
+\type{getExistingResponseChannelsByName(channel\_type\_identifier)}.
 These functions return the set of currently known producer endpoints (module ID + channel ID) for the given channel type identifier.
 
 For \emph{SINGLE} and \emph{RANGE} request consumers, the requester typically does \emph{not} need discovery: the core provides the concrete mapped endpoints as part of \type{InputChannelMapInfo} during module creation, and the module uses those \type{ChannelIdentifier}s as request targets.
@@ -199,7 +199,7 @@ Discovery is primarily needed for \emph{AUTO\_ALL} request consumers, where the 
 Because the running set and its wiring may change over time (modules created/removed), the core exposes \type{getModulesMappingStateId()}. The returned value is a monotonically increasing identifier that changes whenever the mapping topology changes (modules are added or removed). UI modules can use it as a cheap change detector to refresh cached views.
 
 \minihead{Orchestration entry points (create/remove/dependencies).}
-The contract allows a controller to create and remove modules dynamically. A new instance is created using \type{addModule(loaded_module_id, channel_map_info)}. The core validates the provided mapping against the declared channel contract (channel type identifiers and the consumer count policy such as single/range/auto-all) and rejects invalid wiring. Existing modules may be removed via \type{removeModuleById(running_module_id, recursive)}; when recursive removal is requested, the core may also remove dependent modules (as defined by the connection types), and \type{collectDependencies(running_module_id)} can be used to inspect this dependency set in advance.
+The contract allows a controller to create and remove modules dynamically. A new instance is created using \type{addModule(loaded\_module\_id, channel\_map\_info)}. The core validates the provided mapping against the declared channel contract (channel type identifiers and the consumer count policy such as single/range/auto-all) and rejects invalid wiring. Existing modules may be removed via \type{removeModuleById(running\_module\_id, recursive)}; when recursive removal is requested, the core may also remove dependent modules (as defined by the connection types), and \type{collectDependencies(running\_module\_id)} can be used to inspect this dependency set in advance.
 
 \minihead{Persistence entry points (save/load).}
 Finally, the contract provides \type{save()} and \type{load(data, size)} to persist and restore the \emph{program state} consisting of created module instances, their wiring, and optional per-module serialized state (as returned by module \type{save()} / \type{load()}). The binary format is owned by the core. Loading reconstructs the module graph from the loaded catalog; running and loaded module identifiers may change, and modules must not rely on ID stability across save/load. Allocators are not persisted; modules are expected to recreate any allocators they need after loading.
@@ -213,11 +213,11 @@ This subsection summarizes (i) what runtime inputs the core provides to a newly 
 \minihead{Construction inputs.}
 A module instance is created through the core's hosting mechanism (e.g., a factory provided by the module package). The module-facing contract assumes the following runtime inputs are provided at creation time:
 \begin{itemize}
-    \item \textbf{Data path (\type{const char* data_path}).} Optional filesystem location for module resources; may be \type{nullptr} if no user-provided data directory is available for the module. If the module needs to access this path after construction, it must copy the string into its own storage.
+    \item \textbf{Data path (\type{const char* data\_path}).} Optional filesystem location for module resources; may be \type{nullptr} if no user-provided data directory is available for the module. If the module needs to access this path after construction, it must copy the string into its own storage.
     \item \textbf{Core interface (\type{ICore* core}).} Used to send messages/requests, allocate shared payloads, and for reflection and orchestration services.
-    \item \textbf{Input mapping (\type{InputChannelMapInfo channel_map_info}).} Mapping of this module's input channels (subscribe/request) to concrete producer endpoints. The module may use it to learn what it is wired to (especially request targets). The passed arrays are not owned by the module; if the module needs this information after construction, it must copy it into its own storage.
+    \item \textbf{Input mapping (\type{InputChannelMapInfo channel\_map\_info}).} Mapping of this module's input channels (subscribe/request) to concrete producer endpoints. The module may use it to learn what it is wired to (especially request targets). The passed arrays are not owned by the module; if the module needs this information after construction, it must copy it into its own storage.
     \item \textbf{Logger (\type{logging::ILogger* logger}).} Core-provided logging sink for diagnostics.
-    \item \textbf{Module identifier (\type{uint64_t module_id}).} Runtime ID assigned by the core. It is required to form \type{ChannelIdentifier} values (module + channel) when sending via \type{ICore}. Helper layers (e.g., \type{BaseModule}) may encapsulate this, but the ID is still part of the API.
+    \item \textbf{Module identifier (\type{uint64\_t module\_id}).} Runtime ID assigned by the core. It is required to form \type{ChannelIdentifier} values (module + channel) when sending via \type{ICore}. Helper layers (e.g., \type{BaseModule}) may encapsulate this, but the ID is still part of the API.
 \end{itemize}
 Each module must expose its static description via \type{IModule::getModuleInfo()}, which must not return \type{nullptr}. In the typical implementation used in this thesis, the description is defined as a static \type{ModuleInfo} in the module package and a \type{const ModuleInfo*} is passed to the module instance during construction so that \type{getModuleInfo()} can return it. A common helper (\type{BaseModule}, \autoref{subsec:ch3_basemodule}) implements this boilerplate for module authors.
 
@@ -234,7 +234,7 @@ A compliant core follows these steps when creating and running a module instance
 \minihead{Rules for module implementers.}
 \begin{itemize}
     \item \textbf{Restricted core usage during construction and teardown.}
-    In the core implementation used in this thesis, module graph mutations (create/remove/load) are serialized under an exclusive \type{core_mutex_} lock.
+    In the core implementation used in this thesis, module graph mutations (create/remove/load) are serialized under an exclusive \type{core\_mutex\_} lock.
     Because message sending and \type{ICoreControl} queries acquire the same mutex (shared), calling
     \type{ICore::sendMessage}, \type{ICore::sendRequest}, \type{ICore::sendResponse} or any \type{ICoreControl} method
     from the core thread during module creation/removal (\type{ctor}, \type{threadStart}, \type{threadStop}, \type{dtor})
@@ -257,34 +257,34 @@ A compliant core follows these steps when creating and running a module instance
     If all available workers of the relevant priority class are blocked waiting, responses will remain queued and the system can deadlock (e.g., one regular worker blocks waiting for a response that is queued and requires a regular worker to run \type{processResponse}).
     As a practical rule: if a callback may block waiting for a response delivered through the same worker class, allocate at least two workers in that class, or ensure the response is handled by a different priority class with at least one unblocked worker.
 
-    \item \textbf{Do not keep raw message pointers.} The copied payload (\type{MessageHeader.data_}) and blob pointer array are only valid for the duration of the callback. If a module needs to retain either, it must copy the payload or retain the corresponding \type{SharedDataBlob} handles rather than storing raw pointers.
-    \item \textbf{Be robust to transport-level failures.} Message delivery is best-effort; modules must tolerate drops/rejections and request failures reported via \type{MessageHeader.success_ = false} (e.g., invalid routing or module removal).
-    \item \textbf{Do not assume stable IDs.} Loaded module identifiers and running module identifiers (including \type{module_id}) are runtime artifacts. They may change across program sessions and after \type{load()}, and removed modules may leave gaps. Persistent state must not rely on ID stability.
+    \item \textbf{Do not keep raw message pointers.} The copied payload (\type{MessageHeader.data\_}) and blob pointer array are only valid for the duration of the callback. If a module needs to retain either, it must copy the payload or retain the corresponding \type{SharedDataBlob} handles rather than storing raw pointers.
+    \item \textbf{Be robust to transport-level failures.} Message delivery is best-effort; modules must tolerate drops/rejections and request failures reported via \type{MessageHeader.success\_ = false} (e.g., invalid routing or module removal).
+    \item \textbf{Do not assume stable IDs.} Loaded module identifiers and running module identifiers (including \type{module\_id}) are runtime artifacts. They may change across program sessions and after \type{load()}, and removed modules may leave gaps. Persistent state must not rely on ID stability.
     \item \textbf{Allocator discipline.} Shared payloads must be allocated only through core-provided \type{IAllocator} instances, and allocator lifetimes must be managed to avoid leaks. In this thesis, common helper utilities (e.g., \type{BaseModule}, \autoref{subsec:ch3_basemodule}) encapsulate allocator creation/deletion and message metadata setup.
     \item \textbf{No exceptions across the boundary.} All contract callbacks are \type{noexcept}; module code must not let exceptions escape these entry points.
 \end{itemize}
 
 \minihead{Optional capability discovery.}
-Some functionality is defined as an additional C++ interface on top of the base module contract (e.g., \type{IActivableModule} for activation, \type{IUsecaseModule} for use-case execution). These interfaces are intentionally \emph{not} part of \type{IModule}, because they are higher-level and would make the base contract unnecessarily large and hard to implement. Instead, the system provides \emph{wrappers} that implement \type{IModule} and translate module-level messages (activation requests, status queries, etc.) into direct calls to the optional interface (e.g., \type{ActivationWrapper} $\rightarrow$ \type{IActivableModule}). Wrappers are stackable (e.g., activation wrapper on top of a use-case wrapper), therefore higher-level code sometimes needs to access the underlying optional interface implemented by the wrapped module. For this purpose, modules expose optional capabilities via a query mechanism (e.g., \type{query_capability(typeid(T))}), which allows wrappers to discover that the module they wrap implements \type{IActivableModule}/\type{IUsecaseModule}. Concrete wrapper and protocol contracts are described in \autoref{sec:ch3_interface_contracts}.
+Some functionality is defined as an additional C++ interface on top of the base module contract (e.g., \type{IActivableModule} for activation, \type{IUsecaseModule} for use-case execution). These interfaces are intentionally \emph{not} part of \type{IModule}, because they are higher-level and would make the base contract unnecessarily large and hard to implement. Instead, the system provides \emph{wrappers} that implement \type{IModule} and translate module-level messages (activation requests, status queries, etc.) into direct calls to the optional interface (e.g., \type{ActivationWrapper} $\rightarrow$ \type{IActivableModule}). Wrappers are stackable (e.g., activation wrapper on top of a use-case wrapper), therefore higher-level code sometimes needs to access the underlying optional interface implemented by the wrapped module. For this purpose, modules expose optional capabilities via a query mechanism (e.g., \type{query\_capability(typeid(T))}), which allows wrappers to discover that the module they wrap implements \type{IActivableModule}/\type{IUsecaseModule}. Concrete wrapper and protocol contracts are described in \autoref{sec:ch3_interface_contracts}.
 
 \subsection{BaseModule} \label{subsec:ch3_basemodule}
 
 In this thesis, all concrete modules inherit from \type{BaseModule}, a small convenience layer on top of \type{IModule}. It is \emph{not} a part of the minimal module contract, but it standardizes the boilerplate that nearly every module needs (message sending, allocator lifetime, access to construction inputs) and keeps module implementations focused on domain logic.
 
 \minihead{Construction inputs and persistence.}
-\type{BaseModule} mirrors the core-provided construction inputs described in \autoref{subsec:ch3_module_rules}. It stores references to \type{ICore} and \type{logging::ILogger}, stores the runtime \type{module_id}, stores a pointer to the module's static description \type{ModuleInfo}, and copies the optional \type{data_path} into an internal \type{std::string}. Importantly, it also \emph{copies} the provided \type{InputChannelMapInfo} into internal vectors, because the input mapping passed at creation time is not guaranteed to outlive the constructor. The copied mapping can be queried later via \type{getSubscribeChannelInfo()} and \type{getRequestChannelInfo()}.
+\type{BaseModule} mirrors the core-provided construction inputs described in \autoref{subsec:ch3_module_rules}. It stores references to \type{ICore} and \type{logging::ILogger}, stores the runtime \type{module\_id}, stores a pointer to the module's static description \type{ModuleInfo}, and copies the optional \type{data\_path} into an internal \type{std::string}. Importantly, it also \emph{copies} the provided \type{InputChannelMapInfo} into internal vectors, because the input mapping passed at creation time is not guaranteed to outlive the constructor. The copied mapping can be queried later via \type{getSubscribeChannelInfo()} and \type{getRequestChannelInfo()}.
 
 \minihead{Message sending helpers.}
 \type{BaseModule} provides thin wrappers around the three core send functions:
 \begin{itemize}
-    \item \type{sendMessage(publish_producer_id, message)} fills \type{MessageHeader.timestamp_ns_} and sets \type{MessageHeader.success_ = true} (the \type{success_} flag is only meaningful for responses), then calls \type{ICore::sendMessage} with a \type{ChannelIdentifier} constructed from the stored \type{module_id} and the provided producer channel id.
-    \item \type{sendRequest(request_consumer_id, target_channel, message)} generates a fresh request ID (\type{message.id_ = request_id_++}), fills \type{timestamp_ns_} and \type{success_ = true} (the \type{success_} flag is only meaningful for responses), calls \type{ICore::sendRequest}, and returns the generated ID to the caller.
-    \item \type{sendResponse(response_producer_id, target_channel, request_id, message)} fills \type{message.id_} with the provided request ID, fills \type{timestamp_ns_}, and calls \type{ICore::sendResponse}. The \type{success_} flag must be set by the caller to indicate transport-level success or failure of the request processing.
+    \item \type{sendMessage(publish\_producer\_id, message)} fills \type{MessageHeader.timestamp\_ns\_} and sets \type{MessageHeader.success\_ = true} (the \type{success\_} flag is only meaningful for responses), then calls \type{ICore::sendMessage} with a \type{ChannelIdentifier} constructed from the stored \type{module\_id} and the provided producer channel id.
+    \item \type{sendRequest(request\_consumer\_id, target\_channel, message)} generates a fresh request ID (\type{message.id\_ = request\_id\_++}), fills \type{timestamp\_ns\_} and \type{success\_ = true} (the \type{success\_} flag is only meaningful for responses), calls \type{ICore::sendRequest}, and returns the generated ID to the caller.
+    \item \type{sendResponse(response\_producer\_id, target\_channel, request\_id, message)} fills \type{message.id\_} with the provided request ID, fills \type{timestamp\_ns\_}, and calls \type{ICore::sendResponse}. The \type{success\_} flag must be set by the caller to indicate transport-level success or failure of the request processing.
 \end{itemize}
 These helpers are intentionally simple: they only ensure consistent metadata and correct \type{ChannelIdentifier} construction; they do not change routing semantics defined by the core.
 
 \minihead{Allocator RAII wrappers.}
-To simplify shared payload allocation (\autoref{subsec:ch3_allocator_contract}), \type{BaseModule} exposes \type{createDynamicAllocator()} and \type{createBufferAllocator(slot_size_bytes, number_of_slots)}. Both return an \type{AllocatorPtr} (\type{std::unique_ptr<IAllocator, deleter>}) whose custom deleter calls \type{ICore::deleteAllocator}. This makes allocator ownership explicit and avoids leaks even when modules exit early. (Allocator operations are independent of message routing and may be used during creation/removal.)
+To simplify shared payload allocation (\autoref{subsec:ch3_allocator_contract}), \type{BaseModule} exposes \type{createDynamicAllocator()} and \type{createBufferAllocator(slot\_size\_bytes, number\_of\_slots)}. Both return an \type{AllocatorPtr} (\type{std::unique\_ptr<IAllocator, deleter>}) whose custom deleter calls \type{ICore::deleteAllocator}. This makes allocator ownership explicit and avoids leaks even when modules exit early. (Allocator operations are independent of message routing and may be used during creation/removal.)
 
 \minihead{Convenience utilities.}
 \type{BaseModule} also provides:
@@ -298,7 +298,6 @@ To simplify shared payload allocation (\autoref{subsec:ch3_allocator_contract}),
 \type{BaseModule} does not implement queueing, worker scheduling, ingress decisions, or any threading policy; those remain the responsibility of the core (\autoref{sec:ch3_core}). It also does not guarantee deadlock-freedom or correctness of cross-module interactions. It only encapsulates repeated mechanical steps and provides a consistent module-author API.
 
 Finally, \type{BaseModule} implements \type{IModule::getModuleInfo()} by returning the \type{ModuleInfo} pointer provided at construction. This ensures that higher-level infrastructure can always obtain the module description through the contract entry point, while concrete modules typically delegate the storage of that pointer to \type{BaseModule}.
-
 
 
 \section{Core implementation used in this thesis} \label{sec:ch3_core}
@@ -320,11 +319,75 @@ This section describes how modules are discovered and loaded, how module instanc
 It does \emph{not} describe domain logic of individual modules (\autoref{chapter:ch4_implementation}), UI workflow details (\autoref{sec:ch3_ui}), interface-level wrappers such as activation/use-case logic (\autoref{sec:ch3_interface_contracts}), or the full binary serialization format; it also does not attempt a formal proof of the locking strategy, but documents the observable behavior and the practical constraints it imposes on module authors.
 
 
+\subsection{Module packaging and hosting boundary (DLL/SO)} \label{sec:ch3_core_dll_boundary}
+
+This is the first point where the operating system matters. Each module is packaged as a shared library: \type{.dll} on Windows and \type{.so} on Linux. At startup, the core scans a user-provided \type{[modules\_dir]} folder, attempts to load each library, and treats the successfully loaded ones as the set of \emph{available module types}.
+
+\minihead{Discovery and OS loading.}
+On Windows the loader uses \type{LoadLibraryA}/\type{GetProcAddress}; on Linux it uses \type{dlopen}/\type{dlsym}. The filename stem is also used to derive the module's data folder. For \type{module\_a.dll} we look for \type{[data\_dir]/module\_a}. On Linux we additionally strip the conventional \type{lib} prefix, so \type{libmodule\_a.so} maps to \type{[data\_dir]/module\_a}. If the folder does not exist, the module receives \type{data\_path = nullptr}.
+
+\minihead{Required C-style exports.}
+Each module library must export a small fixed API with stable symbol names (no C++ name mangling). The core resolves these symbols and rejects the library if any are missing:
+\begin{itemize}
+  \item \type{readPluginApiVersion()} --- compatibility check against \type{CORE\_API\_VERSION}.
+  \item \type{readModuleInfo()} --- returns a pointer to a statically allocated \type{ModuleInfo}.
+  \item \type{createModule(data\_path, core, channel\_map\_info, logger, module\_id)} --- creates one running module instance.
+  \item \type{destroyModule(instance)} --- destroys the instance created by \type{createModule}.
+\end{itemize}
+This API is the only thing the core assumes about a module library when loading it.
+
+\minihead{Why \type{IDllModule} exists (and what it represents).}
+\type{createModule(...)} does not return a pointer to \type{IModule}. Instead, it returns a pointer to an object implementing \type{dll::IDllModule}. This is the core-facing instance interface: it is intentionally small and matches exactly what the core needs to drive a running module:
+\begin{itemize}
+  \item three entry points for incoming traffic: \type{processMessage}/\type{processRequest}/\type{processResponse},
+  \item lifecycle of module-owned worker threads: \type{threadStart}/\type{threadStop},
+  \item persistence hooks: \type{save}/\type{load} (as byte blobs).
+\end{itemize}
+Inside the library, the returned object is typically a hosting wrapper (e.g., \type{DllModuleWrapper}) that owns an instantiated \type{IModule} and implements the queueing/worker-thread machinery required by the contract. The core never needs to know the concrete \type{IModule} type (nor link against it); it only stores and calls \type{IDllModule}.
+
+\minihead{Ownership rules across the library boundary.}
+The instance returned by \type{createModule} is allocated inside the module library and must also be destroyed inside that same library. The core therefore never calls \type{delete} on the returned pointer; it always destroys it via \type{destroyModule}. This avoids allocator/runtime mismatches across the boundary (especially on Windows) and keeps ownership explicit.
+
+The same rule motivates how variable-sized data is handled. Anything with non-trivial ownership (e.g., \type{std::string}, \type{std::vector}, dynamically allocated arrays) is not passed across the boundary as an owned object. Instead, variable-sized results are transferred as \type{message::SharedDataBlob} allocated by a core-owned \type{IAllocator}. This is why persistence is exposed on \type{IDllModule} as \type{save(allocator)\,$\rightarrow$\,SharedDataBlob} and \type{load(data,size)}: within the library we can work with the higher-level \type{ISerializableModule::SaveData} representation (JSON header + optional named binary blobs), but the boundary itself stays in terms of raw bytes.
+
+\minihead{What \emph{is} passed directly.}
+Small POD-like structures (\type{ChannelIdentifier}, \type{MessageHeader}, \type{InputChannelMapInfo}) are passed directly. This relies on a practical build assumption of this thesis: core and modules are built against the same headers and compatible compiler settings. To transfer data of variable size, either a pointer and size (for method parameters) or a handle to a shared blob (for the return value) is used.
+
+\minihead{Where this leads next.}
+With the packaging boundary defined (how module libraries are found, validated, and how instances are created/destroyed), \autoref{subsec:ch3_core_startup} can describe the startup sequence: how the core builds the loaded-module catalog from \type{readModuleInfo()} and how it performs the auto-create pass.
+
+\subsection{Startup sequence: from filesystem to loaded module catalog} \label{subsec:ch3_core_startup}
+
+Core initialization is performed once via \type{Core::initialize(modules\_dir, data\_dir)}. The method builds the \emph{loaded module catalog} (all available module \emph{types}) and then performs an auto-create pass that instantiates selected module \emph{instances}.
+
+\minihead{Step 1 --- Discover and load module libraries.}
+The core iterates over \type{modules\_dir} and attempts to load each entry as a shared library. For each successfully loaded library it:
+\begin{enumerate}
+    \item resolves the required exported symbols (plugin API),
+    \item checks \type{readPluginApiVersion() == CORE\_API\_VERSION} (otherwise the module is rejected),
+    \item reads and stores metadata via \type{readModuleInfo()}.
+\end{enumerate}
+Loaded modules are stored in \type{loaded\_modules\_}: this catalog is constant for the lifetime of the core instance (modules are not unloaded).
+
+\minihead{Step 2 --- Resolve per-module data path.}
+Each loaded module is assigned an optional \type{data\_path} derived from the module filename:
+\begin{itemize}
+    \item the library stem name is used as the module folder name (for \type{.so}, an initial \type{lib} prefix is stripped),
+    \item the data directory is \type{data\_dir/<module\_name>},
+    \item if that directory does not exist, \type{data\_path == nullptr} is passed to \type{createModule}.
+\end{itemize}
+
+\minihead{Step 3 --- Auto-create pass.}
+After all libraries are loaded (so \type{getLoadedModulesInfo/count} is fully valid), the core instantiates all modules with \type{ModuleInfo.auto\_create\_ = true}. In this thesis runtime, auto-created modules are restricted to using only \type{AUTO\_ALL} subscribe/request consumers; therefore they can be instantiated with an empty explicit mapping and then connected automatically based on currently existing producers.
+
+If an auto-created module fails to create or start, \type{initialize} reports failure; failures of unrelated libraries during scanning are logged and ignored.
+
 
 
 
 \xxx{DOUBLE CHECK - what is covered here!}
 
+\xxx{mention zip/json serialization}
 
 \xxx{allocation in brief}
 
@@ -333,7 +396,7 @@ It does \emph{not} describe domain logic of individual modules (\autoref{chapter
     shared library loading (\type{.dll}/\type{.so})
     symbol discovery (\type{readModuleInfo}, \type{createModule}, \type{destroyModule})
     API version check
-    how \type{data_path} is derived (module filename → basename → lookup in core data directory)
+    how \type{data\_path} is derived (module filename → basename → lookup in core data directory)
     If you have a separate Implementation chapter, you can repeat/expand there, but 3.2 is the “right” first mention, because it’s your concrete core.
 }
 
@@ -341,17 +404,17 @@ It does \emph{not} describe domain logic of individual modules (\autoref{chapter
 \begin{itemize}
   \item \xxx{Purpose: one concrete hosting + routing implementation of the contract; separate from the contract text. State explicitly what is contract-required vs this implementation choice.}
   \item \xxx{Core responsibilities recap: module creation/removal, mapping validation, routing, queueing/scheduling, shared payload allocator ownership, reflection/orchestration API.}
-  \item \xxx{Module hosting flow (high level): call module factory with \type{data_path, ICore*, InputChannelMapInfo, ILogger*, module_id}; check \type{valid()}; \type{threadStart}; register channels + mapping; failure handling.}
+  \item \xxx{Module hosting flow (high level): call module factory with \type{data\_path, ICore*, InputChannelMapInfo, ILogger*, module\_id}; check \type{valid()}; \type{threadStart}; register channels + mapping; failure handling.}
   \item \xxx{Data path resolution policy (implementation): module package name -> optional folder under core data root; \type{nullptr} if missing. (Put OS-specific DLL/SO details either here or in implementation chapter, but mention policy here.)}
-  \item \xxx{Running module IDs: monotonically increasing, never reused; removed modules leave gaps; \type{getRunningModulesCount()} returns lifetime-created count; \type{RunningModuleInfo.exists_} validity check; tie to UI iteration pattern.}
+  \item \xxx{Running module IDs: monotonically increasing, never reused; removed modules leave gaps; \type{getRunningModulesCount()} returns lifetime-created count; \type{RunningModuleInfo.exists\_} validity check; tie to UI iteration pattern.}
   \item \xxx{Loaded module catalog vs running instances: \type{getLoadedModulesInfo/count} vs \type{getRunningModulesInfo/count}; why UI needs both.}
   \item \xxx{Channel mapping validation on addModule: enforce subscribe/request consumer count policies (SINGLE/RANGE constraints), required-min/max, type match; AUTO\_ALL treated differently (no explicit target list).}
-  \item \xxx{Routing differences: publish/subscribe uses stored mapping; request/response uses explicit \type{target_channel} but still validates channel ids and (optionally) that target is allowed by mapping policy.}
+  \item \xxx{Routing differences: publish/subscribe uses stored mapping; request/response uses explicit \type{target\_channel} but still validates channel ids and (optionally) that target is allowed by mapping policy.}
   \item \xxx{Ingress + queue policy implementation: per-consumer queues, capacity tracking, \type{QueueStatus} computation, applying \type{IngressDecision} (drop, drop-oldest, replace-queue).}
   \item \xxx{Worker model: per-module workers; prioritized vs regular; how channels are classified; why (UI responsiveness); note that concurrency means callbacks can overlap.}
   \item \xxx{Deadlock pitfall note (important): if modules synchronously wait inside callbacks for other responses, worker counts matter; document guideline (avoid waiting in worker thread; or allocate enough workers / use background threads).}
-  \item \xxx{Request handling mechanics: core (or wrapper) calls \type{processRequest} and sends exactly one response using returned \type{ResponseData}; preserves \type{id_}; sets transport \type{success_} on routing/drop failures.}
-  \item \xxx{Failure behavior: missing module/channel, destruction\_in\_progress, invalid mapping -> dropped message; for requests generate failure response (\type{success_=false}); log warnings.}
+  \item \xxx{Request handling mechanics: core (or wrapper) calls \type{processRequest} and sends exactly one response using returned \type{ResponseData}; preserves \type{id\_}; sets transport \type{success\_} on routing/drop failures.}
+  \item \xxx{Failure behavior: missing module/channel, destruction\_in\_progress, invalid mapping -> dropped message; for requests generate failure response (\type{success\_=false}); log warnings.}
   \item \xxx{Thread-safety/locking strategy (implementation): core mutex shared for send/reflection, unique for add/remove/load; allocator mutex separate; destruction\_in\_progress flag; note limitations (messages may block on locks).}
   \item \xxx{Removal semantics: dependency collection, recursive removal, stop order, then mapping unregistration; mapping state id bump; AUTO\_ALL dependency rules (not considered).}
   \item \xxx{Reflection API semantics: mapping state id usage for UI refresh; getRunningModulesChannelMap blob format; existing producer discovery maps (publish/response) and AUTO\_ALL helpers.}
@@ -436,8 +499,8 @@ To support this without extending \type{IModule}, modules provide a capability q
 In addition to wrapper-level control protocols, the system defines \emph{domain message contracts} for common data exchanged between modules. These contracts specify:
 \begin{itemize}
     \item the channel type identifier (string) used for wiring,
-    \item the payload format stored in \type{MessageHeader.data_} and/or shared blobs,
-    \item request/response pairing rules when applicable (use of \type{id_} and interpretation of \type{success_}),
+    \item the payload format stored in \type{MessageHeader.data\_} and/or shared blobs,
+    \item request/response pairing rules when applicable (use of \type{id\_} and interpretation of \type{success\_}),
     \item and any ordering or rate assumptions (e.g., stream vs event semantics).
 \end{itemize}
 

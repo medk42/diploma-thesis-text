@@ -105,7 +105,7 @@
 \ExplSyntaxOn
 \cs_new_protected:Npn \jakub_type:n #1
   {
-    \tl_set:Nx \l_tmpa_tl { \detokenize{#1} }
+    \tl_set:Nx \l_tmpa_tl { #1 }
 
     % Break AFTER common separators
     \tl_replace_all:Nnn \l_tmpa_tl { \c_colon_str\c_colon_str } { \c_colon_str\c_colon_str \c{allowbreak} }
