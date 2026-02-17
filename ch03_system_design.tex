@@ -303,18 +303,21 @@ Finally, \type{BaseModule} implements \type{IModule::getModuleInfo()} by returni
 
 \section{Core implementation used in this thesis} \label{sec:ch3_core}
 
-The previous section defined the module contract in an implementation-independent way: what a module is, how it declares channels, how messages are represented, and what the core must provide through \type{ICore}. In this section, we describe the concrete runtime core used in this thesis, which implements that contract in a single process using threads and in-memory routing.
+The previous section defined the module contract in an implementation-independent way: what a module is, how it declares channels, how messages are represented, and what services the runtime must provide through \type{ICore}. In this section, we describe the concrete runtime core used in this thesis, which implements that contract in a single process using threads and in-memory routing.
 
 \minihead{Scope and key design choices.}
-This core is an \emph{in-process} host: modules run as dynamically loaded shared libraries (\type{.dll} on Windows, \type{.so} on Linux) and communicate only through the core. Message delivery is asynchronous and uses per-module queues and core-managed worker threads. Large payloads are passed through core-managed shared blobs allocated via \type{IAllocator} instances; the core owns allocator objects and shared payload lifetime, so independently developed modules can safely share large data without copying and without cross-dynamic-library memory ownership issues.
+The runtime is an \emph{in-process} host: modules run as dynamically loaded shared libraries (\type{.dll} on Windows, \type{.so} on Linux) and communicate only through the core.
+Message delivery is asynchronous and uses per-module queues and worker threads.
+Large payloads are passed via core-managed shared blobs allocated through \type{IAllocator} instances; the core owns allocator objects and shared payload lifetime so independently developed modules can share large data without copying and without cross-library memory ownership issues.
 
 \minihead{Core split.}
-The core implementation is split into two cooperating parts:
-(i) the \emph{central core} that maintains global runtime state (loaded module catalog, running module instances, channel mappings/routing tables, reflection/orchestration API, and persistence), and
-(ii) a \emph{per-module hosting wrapper} running inside of each module dynamic library that owns a single instantiated \type{IModule} and implements the queueing and worker-thread machinery required by the contract (ingress decisions, message copying, scheduling, and invoking \type{processMessage}/\type{processRequest}/\type{processResponse}).
+The implementation is split into two cooperating parts:
+(i) the \emph{central core}, which maintains global runtime state (loaded module catalog, running module instances, channel mappings/routing tables, reflection/orchestration API, and persistence), and
+(ii) a \emph{per-module hosting wrapper}, which owns a single instantiated \type{IModule} and implements the concrete delivery machinery required by the contract (ingress decisions, payload/blob-handle copying into queues, worker threads, and invoking \type{processMessage}/\type{processRequest}/\type{processResponse}).
 
 \minihead{What is covered here (and what is not).}
-This section describes how modules are discovered and loaded, how module instances are created/removed and wired, how message routing is implemented, how shared payload allocation is managed in the core, how reflection/orchestration queries are served, and how the module graph is persisted and reconstructed. It does \emph{not} describe domain logic of individual modules (\autoref{chapter:ch4_implementation}), UI workflow details (\autoref{sec:ch3_ui}), or the full binary serialization format; it also does not attempt a formal proof of the locking strategy, but documents the observed behavior and the practical constraints it imposes on module authors.
+This section describes how modules are discovered and loaded, how module instances are created/removed and wired, how routing and delivery are implemented, how shared payload allocation is managed, how reflection/orchestration queries are served, and how the module graph is persisted and reconstructed.
+It does \emph{not} describe domain logic of individual modules (\autoref{chapter:ch4_implementation}), UI workflow details (\autoref{sec:ch3_ui}), interface-level wrappers such as activation/use-case logic (\autoref{sec:ch3_interface_contracts}), or the full binary serialization format; it also does not attempt a formal proof of the locking strategy, but documents the observable behavior and the practical constraints it imposes on module authors.
 
 
 
