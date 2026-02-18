@@ -368,9 +368,8 @@ The core iterates over \type{modules\_dir} and attempts to load each entry as a 
 \begin{enumerate}
     \item resolves the required exported symbols (plugin API),
     \item checks \type{readPluginApiVersion() == CORE\_API\_VERSION} (otherwise the module is rejected),
-    \item reads and stores metadata via \type{readModuleInfo()}.
+    \item stores the loaded module in \type{loaded\_modules\_}: this catalog is constant for the lifetime of the core instance (modules are not unloaded).
 \end{enumerate}
-Loaded modules are stored in \type{loaded\_modules\_}: this catalog is constant for the lifetime of the core instance (modules are not unloaded).
 
 \minihead{Step 2 --- Resolve per-module data path.}
 Each loaded module is assigned an optional \type{data\_path} derived from the module filename:
@@ -381,9 +380,9 @@ Each loaded module is assigned an optional \type{data\_path} derived from the mo
 \end{itemize}
 
 \minihead{Step 3 --- Auto-create pass.}
-After all libraries are loaded (so \type{getLoadedModulesInfo/count} is fully valid), the core instantiates all modules with \type{ModuleInfo.auto\_create\_ = true}. In this thesis runtime, auto-created modules are restricted to using only \type{AUTO\_ALL} subscribe/request consumers; therefore they can be instantiated with an empty explicit mapping and then connected automatically based on currently existing producers.
+After all libraries are loaded, the core instantiates all modules that declare \type{ModuleInfo.auto\_create\_ = true} (single instance, created by the core directly). Auto-created modules are restricted to using only \type{AUTO\_ALL} subscribe/request consumers; therefore they can be instantiated with an empty explicit mapping.
 
-If an auto-created module fails to create or start, \type{initialize} reports failure; failures of unrelated libraries during scanning are logged and ignored.
+If an auto-created module fails to create or start, \type{initialize} reports failure; library loading failures are logged and ignored.
 
 
 
