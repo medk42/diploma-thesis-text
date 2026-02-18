@@ -100,22 +100,59 @@
 % \newcommand{\type}[1]{\texttt{\detokenize{#1}}}
 \newcommand{\type}[1]{\nolinkurl{\detokenize{#1}}}
 % Better line breaking for \type{...} (underscores, ::, punctuation, CamelCase)
+% \usepackage{xparse}
+
+% \ExplSyntaxOn
+% \cs_new_protected:Npn \jakub_type:n #1
+%   {
+%     \tl_set:Nx \l_tmpa_tl { #1 }
+
+%     % Break AFTER common separators
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_colon_str\c_colon_str } { \c_colon_str\c_colon_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_underscore_str }        { \c_underscore_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_dot_str }               { \c_dot_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_slash_str }             { \c_slash_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_minus_str }             { \c_minus_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_lparen_str }            { \c_lparen_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_rparen_str }            { \c_rparen_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_comma_str }             { \c_comma_str \c{allowbreak} }
+
+%     % Break BETWEEN lower/digit and Upper (CamelCase)
+%     \regex_replace_all:nnN
+%       { ([a-z0-9])([A-Z]) }
+%       { \1 \c{allowbreak} \2 }
+%       \l_tmpa_tl
+
+%     \texttt{\tl_use:N \l_tmpa_tl}
+%   }
+
+% % If \type already exists via \newcommand, this is correct:
+% \RenewDocumentCommand{\type}{m}{\jakub_type:n{#1}}
+% \ExplSyntaxOff
+
+
 \usepackage{xparse}
 
 \ExplSyntaxOn
 \cs_new_protected:Npn \jakub_type:n #1
   {
-    \tl_set:Nx \l_tmpa_tl { #1 }
+    % KEEP Nx, but do NOT expand #1 (preserve tokens like \rightarrow)
+    \tl_set:Nx \l_tmpa_tl { \exp_not:n { #1 } }
 
     % Break AFTER common separators
     \tl_replace_all:Nnn \l_tmpa_tl { \c_colon_str\c_colon_str } { \c_colon_str\c_colon_str \c{allowbreak} }
-    \tl_replace_all:Nnn \l_tmpa_tl { \c_underscore_str }        { \c_underscore_str \c{allowbreak} }
-    \tl_replace_all:Nnn \l_tmpa_tl { \c_dot_str }               { \c_dot_str \c{allowbreak} }
-    \tl_replace_all:Nnn \l_tmpa_tl { \c_slash_str }             { \c_slash_str \c{allowbreak} }
-    \tl_replace_all:Nnn \l_tmpa_tl { \c_minus_str }             { \c_minus_str \c{allowbreak} }
-    \tl_replace_all:Nnn \l_tmpa_tl { \c_lparen_str }            { \c_lparen_str \c{allowbreak} }
-    \tl_replace_all:Nnn \l_tmpa_tl { \c_rparen_str }            { \c_rparen_str \c{allowbreak} }
-    \tl_replace_all:Nnn \l_tmpa_tl { \c_comma_str }             { \c_comma_str \c{allowbreak} }
+
+    % If user writes "_" literally
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_underscore_str } { \c_underscore_str \c{allowbreak} }
+    % If user writes "\_" (common in LaTeX code-ish text)
+    \tl_replace_all:Nnn \l_tmpa_tl { \_ } { \_ \allowbreak }
+
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_dot_str }    { \c_dot_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_slash_str }  { \c_slash_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_minus_str }  { \c_minus_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_lparen_str } { \c_lparen_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_rparen_str } { \c_rparen_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_comma_str }  { \c_comma_str \c{allowbreak} }
 
     % Break BETWEEN lower/digit and Upper (CamelCase)
     \regex_replace_all:nnN
@@ -126,7 +163,6 @@
     \texttt{\tl_use:N \l_tmpa_tl}
   }
 
-% If \type already exists via \newcommand, this is correct:
 \RenewDocumentCommand{\type}{m}{\jakub_type:n{#1}}
 \ExplSyntaxOff
 
