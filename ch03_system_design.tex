@@ -506,13 +506,74 @@ The per-instance consumer-side tables (\type{mapping\_subscribe\_}/\type{mapping
 They are used to expose the current mapping (\type{getRunningModulesChannelMap}) and to persist/restore the wiring as part of core state saving/loading.
 
 
+\subsection{Message routing and failure behavior} \label{subsec:ch3_core_routing}
+
+All message delivery enters the runtime through \type{ICore} (\type{sendMessage}, \type{sendRequest}, \type{sendResponse}).
+Each call takes a shared lock on the core state, validates the source/target identifiers against \type{running\_modules\_} and the per-instance mapping tables, and then forwards the message to the destination module via the \type{dll::IDllModule} entry points.
+The core does not implement queueing or worker threads itself; it only decides \emph{where} to forward, while \type{IDllModule} decides \emph{how} to host and process the work.
+
+\minihead{Publish/subscribe: \type{sendMessage}.}
+A module publishes by calling \type{ICore::sendMessage(source\_channel, message)}. The core performs:
+\begin{enumerate}
+    \item \textbf{Validate source:} check that \type{source\_channel.module\_id\_} exists, the module is not destroyed, and that \type{source\_channel.local\_channel\_id\_} is a valid publish producer index (bounds-check against \type{mapping\_publish\_}).
+    \item \textbf{Resolve routing:} read the producer-side list \type{mapping\_publish\_[source\_producer\_id]}.
+    This list already contains both explicit and \type{AUTO\_ALL} connections; routing does not distinguish them.
+    \item \textbf{Forward to each consumer:} for every consumer endpoint \type{(target\_module\_id, target\_subscribe\_consumer\_id)}:
+    validate that the target module still exists and that the consumer ID is in range (bounds-check against \type{mapping\_subscribe\_}),
+    then call
+    \begin{quote}
+      \type{target->module\_->processMessage(target\_subscribe\_consumer\_id, source\_channel, message)}.
+    \end{quote}
+\end{enumerate}
+This call is the hand-off into the per-module hosting wrapper: \type{processMessage} is the core-to-module boundary for delivery, and it is where queueing/threads happen (described in \autoref{subsec:ch3_core_per_module_wrapper}).
+
+\minihead{Request/response: \type{sendRequest} and \type{sendResponse}.}
+Requests are directed: \type{sendRequest} always names one explicit target response channel.
+The core still uses mapping tables for validation and for dependency bookkeeping, but not for choosing a target.
+
+\begin{itemize}
+    \item \textbf{\type{sendRequest(source, target, msg)}:}
+    validate that both modules exist and that \type{source.local\_channel\_id\_} is a valid \emph{request consumer} index (\type{mapping\_request\_} bounds-check),
+    while \type{target.local\_channel\_id\_} is a valid \emph{response producer} index (\type{mapping\_response\_} bounds-check).
+    On success, forward directly to the target:
+    \begin{quote}
+      \type{target->module\_->processRequest(target\_response\_producer\_id, source\_channel, msg)}.
+    \end{quote}
+
+    \item \textbf{\type{sendResponse(source, target, msg)}:}
+    validate that both modules exist and that \type{source.local\_channel\_id\_} is a valid \emph{response producer} index (\type{mapping\_response\_}),
+    while \type{target.local\_channel\_id\_} is a valid \emph{request consumer} index (\type{mapping\_request\_}).
+    On success, forward directly to the target:
+    \begin{quote}
+      \type{target->module\_->processResponse(target\_request\_consumer\_id, source\_channel, msg)}.
+    \end{quote}
+\end{itemize}
+
+\minihead{Failure behavior.}
+If a referenced module/channel does not exist, or the instance is already being destroyed (\type{destruction\_in\_progress\_}), publish delivery is dropped:
+\type{sendMessage} returns without forwarding to that endpoint (and continues with other endpoints if possible).
+
+For requests, the core additionally synthesizes a failure response if it cannot deliver the request:
+it immediately calls \type{sendResponse} back to the caller with the same request \type{id\_}, an empty payload, and \type{success\_=false} (timestamped at send time).
+This guarantees that a failed request still produces a terminal response, instead of silently disappearing.
+
+The next subsection describes what happens inside \type{dll::IDllModule::processMessage/processRequest/processResponse}: the hosting wrapper, its queues, ingress decisions, and worker threads.
 
 
+\subsection{Per-module wrapper} \label{subsec:ch3_core_per_module_wrapper}
+
+\subsection{Module removal}
+
+\subsection{Locking model limitation}
+
+\subsection{Allocation and shared payload management}
 
 \subsection{Persistence} \label{subsec:ch3_core_persistence}
 
 
 \xxx{DOUBLE CHECK - what is covered here!}
+
+\xxx{No producer\_module\_id, producer\_channel\_id!}
 
 \xxx{mention zip/json serialization}
 
@@ -608,7 +669,7 @@ This makes activation available to any client module (most importantly the UI) p
 \subsection{Stackable wrappers and capability discovery}
 
 Wrappers are designed to be stackable. A typical module instance may be constructed as a pipeline of layers:
-% \[
+% \begin{quote}
 %     \type{DllModuleWrapper}(
 %         \type{ActivationWrapper}(
 %             \type{UseCaseWrapper}(
@@ -616,7 +677,7 @@ Wrappers are designed to be stackable. A typical module instance may be construc
 %             )
 %         )
 %     )
-% \]
+% \end{quote}
 Each layer implements \type{IModule} and may intercept a subset of messages while forwarding the rest. In such a composition, a wrapper often needs access to an optional interface implemented by an inner layer (e.g., \type{ActivationWrapper} needs \type{IActivableModule}).
 
 To support this without extending \type{IModule}, modules provide a capability query mechanism. Conceptually, a wrapper asks the wrapped instance whether it supports a given optional interface (e.g., \type{IActivableModule}) and obtains a pointer/reference if available. If the capability is not present, the wrapper fails validation (\type{valid() == false}) and the module instance is not created. This keeps optional contracts explicit and allows wrappers to remain generic and reusable.
