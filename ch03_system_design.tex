@@ -694,7 +694,7 @@ This keeps the runtime from leaving partially removed modules wired into the gra
 
 \subsection{Locking model and core usage constraints} \label{subsec:ch3_core_locking}
 
-The core is entered concurrently from multiple module threads (delivery, requests, reflection calls), so it uses three mutexes with fixed responsibilities.
+The core is entered concurrently from multiple module threads (delivery, requests, reflection calls), so it uses three mutexes with fixed responsibilities and a simple lock ordering.
 
 \minihead{\type{core\_mutex\_}: protects the live graph and routing tables.}
 \type{core\_mutex\_} (a \type{std::shared\_mutex}) guards the mutable runtime state:
@@ -706,7 +706,6 @@ Read-mostly operations take a \emph{shared} lock (routing and reflection), while
     \item \textbf{unique lock:} operations that create, destroy, or rewire modules, i.e., \type{initialize}, \type{addModule}, \type{removeModule}, \type{load}, and their internal helpers that mutate mapping tables.
 \end{itemize}
 This ensures that routing observes a consistent snapshot while the mapping tables are being mutated under the unique lock.
-During removal, the core temporarily releases \type{core\_mutex\_} around \type{IDllModule::threadStop} and the module's destruction; in that window, \type{destruction\_in\_progress\_} prevents routing into the stopping instance (other mappings are cleaned up only after the lock is reacquired).
 
 \minihead{Non-reentrant routing calls.}
 Routing entry points take a shared lock on \type{core\_mutex\_}.
@@ -715,9 +714,10 @@ Because \type{std::shared\_mutex} is not re-entrant, such transitive calls must 
 either route through internal helpers that assume the lock is already held, or emit the failure response without attempting to re-lock \type{core\_mutex\_}.
 
 \minihead{\type{add\_remove\_mutex\_}: serializes graph edits.}
-Graph mutations are serialized by \type{add\_remove\_mutex\_}: \type{addModule}, \type{removeModule}, and \type{load} take it first and only then take the unique \type{core\_mutex\_}.
+Graph mutations are additionally serialized by \type{add\_remove\_mutex\_}.
+All entry points that can change the module graph (\type{addModule}, \type{removeModule}, \type{load}) take \type{add\_remove\_mutex\_} first and only then take the unique \type{core\_mutex\_}.
 During removal, \type{core\_mutex\_} is temporarily released around \type{IDllModule::threadStop} (to avoid deadlocking with module threads that may still call into the core), but \type{add\_remove\_mutex\_} remains held so no other add/remove/load can interleave with this partially-updated state.
-A practical constraint follows: module threads must not attempt graph edits (\type{addModule}/\type{removeModule}/\type{load}), especially during \type{threadStop}, because \type{add\_remove\_mutex\_} is held for the duration of the removal operation.
+A practical implication is that module threads should not attempt graph edits (\type{addModule}/\type{removeModule}/\type{load}), especially during \type{threadStop}, because \type{add\_remove\_mutex\_} is held for the duration of the removal operation.
 
 \minihead{\type{allocator\_mutex\_}: allocator lifetime only.}
 Allocator creation/deletion (\type{createDynamicAllocator/createBufferAllocator/deleteAllocator}) is protected by \type{allocator\_mutex\_} and is intentionally independent from \type{core\_mutex\_}.
@@ -727,6 +727,7 @@ This keeps allocator lifetime management orthogonal to graph mutations and avoid
 Each running module has a \type{destruction\_in\_progress\_} flag used by routing as a fast “do not deliver” gate.
 When the flag is set, the core treats the instance as non-existent for routing purposes: messages/responses are dropped and requests are completed via synthesized failure responses (as described in \autoref{subsec:ch3_core_routing}).
 This is used during removal to prevent deliveries from entering an instance that is already stopping.
+
 
 
 
