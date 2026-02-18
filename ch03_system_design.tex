@@ -635,8 +635,63 @@ During \type{threadStop}, the wrapper also clears any queued-but-unprocessed wor
 
 
 
+\subsection{Module removal and cascade deletion} \label{subsec:ch3_core_removal}
 
-\subsection{Module removal}
+Module instances can be removed explicitly via \type{removeModule} (e.g., from the UI) and implicitly during state load (to clear the current runtime before reconstructing a saved graph).
+Removal is implemented by \type{removeModule/removeModuleImpl} and mirrors creation: it first stops per-module worker threads (wrapper side), then removes routing edges and discovery entries (core side).
+
+\minihead{Locking and the ``stable graph'' requirement.}
+Removal takes \type{add\_remove\_mutex\_} and then a \emph{unique} lock on \type{core\_mutex\_}.
+This prevents concurrent graph edits (add/remove/load) and prevents concurrent sends/reflection from observing partially updated mapping tables while edges are being removed.
+
+\minihead{Which modules must be removed (dependencies).}
+Because each module's input mapping is fixed at creation time, removing a producer can invalidate modules that explicitly depend on it.
+The core therefore computes a cascade set via \type{collectDependentModulesImpl(id)}:
+it performs a graph walk starting from \type{id} using producer-side tables \type{mapping\_publish\_} (publish$\rightarrow$subscribe edges) and \type{mapping\_response\_} (response$\rightarrow$request edges).
+For each reached consumer endpoint, the core checks the consumer declaration in the destination module's \type{ModuleInfo} and:
+\begin{itemize}
+    \item treats \type{SINGLE}/\type{RANGE} consumers as \emph{hard dependencies} (the destination module is added to the removal set),
+    \item ignores \type{AUTO\_ALL} consumers for cascade removal (they are runtime-expanded, non-binding wiring).
+\end{itemize}
+If the computed set contains more than the requested module and \type{recursive=false}, removal fails with \type{HAS\_DEPENDENCIES}.
+
+\minihead{Removal order (reverse dependency order).}
+If recursive removal is allowed, the core removes all modules in the computed set \emph{from the back}.
+Intuitively, this destroys the most dependent modules first, so modules are not left running while their explicit inputs disappear.
+
+\minihead{Stopping threads: why the core temporarily unlocks.}
+For each module being removed, the core first marks \type{destruction\_in\_progress\_ = true} and then temporarily releases \type{core\_mutex\_} to call \type{IDllModule::threadStop(timeout)}.
+This unlock is necessary to avoid deadlocks: \type{threadStop} waits for the wrapper's and module's worker threads to exit, but those threads may currently be calling into the core via the \type{ICore} API (e.g., to send messages or query reflection) and would be blocked on \type{core\_mutex\_} while doing so.
+The \type{destruction\_in\_progress\_} flag ensures that concurrent deliveries see the instance as non-routable and are dropped (or turned into failure responses for requests, as described in \autoref{subsec:ch3_core_routing}).
+After \type{threadStop} returns, the core clears the instance pointer (\type{module\_ = nullptr}) thus calling the custom deleter and the API's \type{destroyModule} method and reacquires \type{core\_mutex\_} to continue with table updates.
+
+\minihead{Detaching routing edges.}
+Once the instance is stopped, the core removes all edges involving it, in both directions:
+\begin{itemize}
+    \item \textbf{Remove outgoing edges (\type{removeMappingProducers}).}
+    The core iterates this module's \type{mapping\_publish\_}/\type{mapping\_response\_} and, for each connected consumer endpoint, removes ``our channel'' from the destination module's consumer-side table (\type{mapping\_subscribe\_}/\type{mapping\_request\_}).
+    Because removal proceeds in reverse dependency order, any remaining outgoing edges at this point are expected to be \type{AUTO\_ALL} edges; the implementation enforces this invariant (terminates if a non-\type{AUTO\_ALL} consumer is found).
+    \item \textbf{Remove incoming edges (\type{removeMappingSubscribers}).}
+    The core iterates this module's \type{mapping\_subscribe\_}/\type{mapping\_request\_} and removes ``our channel'' from the producer modules' producer-side tables (\type{mapping\_publish\_}/\type{mapping\_response\_}).
+\end{itemize}
+After these steps, the removed module is disconnected from the routing graph in both producer and consumer views.
+
+\minihead{Removing discovery entries.}
+Finally, the core removes the module from the global discovery maps via \type{removeFromExistingMap}:
+\type{existing\_publish\_channels\_}, \type{existing\_response\_channels\_}, and (when applicable) \type{existing\_subscribe\_auto\_all\_channels\_}/\type{existing\_request\_auto\_all\_channels\_}.
+This keeps reflection queries and future \type{AUTO\_ALL} wiring consistent with the current set of running modules.
+
+\minihead{Graph-change notification.}
+After the removal loop finishes, the core increments \type{module\_mapping\_state\_id\_}.
+The UI can use \type{
+    getModulesMappingStateId()} to detect that the module graph changed and refresh any cached views of running instances and their mappings.
+
+\minihead{Failure reporting.}
+If any \type{threadStop} call fails to stop within the timeout, the core still proceeds with removal (with a warning) and returns \type{FAILED\_TO\_STOP\_THREADS}.
+This keeps the runtime from leaving partially removed modules wired into the graph, but may imply undefined behavior if the module truly failed to stop its threads.
+
+
+
 
 \subsection{Locking model limitation}
 
@@ -648,6 +703,8 @@ During \type{threadStop}, the wrapper also clears any queued-but-unprocessed wor
 \xxx{DOUBLE CHECK - what is covered here!}
 
 \xxx{No producer\_module\_id, producer\_channel\_id!}
+
+\xxx{mention the module mapping state id}
 
 \xxx{mention zip/json serialization}
 
