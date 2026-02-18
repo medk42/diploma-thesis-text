@@ -580,7 +580,7 @@ This is why the core never sees \type{IModule} directly: it only stores an \type
 A \type{DllModuleWrapper} owns exactly one \type{IModule} instance and uses its \type{ModuleInfo} to preallocate the delivery infrastructure:
 \begin{itemize}
     \item it reads the inbound channel counts (subscribe consumers, response producers, request consumers) to size internal structures,
-    \item for each channel it allocates fixed-capacity ring buffers sized by \type{message\_queue\_capacity\_} and pre-fills a reusable \type{ProcessingData} pool (avoids allocating on every message); channels are marked as prioritized using \type{prioritized\_}.
+    \item for each inbound channel it allocates fixed-capacity ring buffers sized by \type{message\_queue\_capacity\_} and pre-fills a reusable \type{ProcessingData} pool (avoids allocating on every message); channels are marked as prioritized using \type{prioritized\_}.
 \end{itemize}
 
 \minihead{Thread lifecycle.}
@@ -608,7 +608,7 @@ The ingress logic is:
     and (ii) the blob handles into \type{ProcessingData::blobs\_}.
     Then it patches \type{MessageHeader} to point to these owned buffers and pushes the work item to the channel’s processing queue.
 \end{enumerate}
-Copying into \type{ProcessingData} makes the queued work self-contained. The core forwards \type{MessageHeader} with borrowed pointers, but the wrapper processes messages asynchronously, so it must copy \type{data\_} and the blob-handle array to the enqueued \type{ProcessingData} before returning. Storing the copied \type{SharedDataBlob} handles also keeps the referenced shared payloads alive until the worker-called \type{IModule} method finishes, after which the slot is returned to the pool and reused.
+Copying into \type{ProcessingData} makes the queued work self-contained. The core forwards \type{MessageHeader} with pointers that are only meant to be used during the delivery call, but the wrapper processes messages later on worker threads, so it must copy \type{data\_} and the blob-handle array into the enqueued \type{ProcessingData} before returning. The pool then reuses the same \type{ProcessingData} slots, so the internal vectors keep their capacity over time and most ingress operations avoid repeated allocations. The copied \type{SharedDataBlob} handles must be stored with the work item as well (to reconstruct \type{MessageHeader} for deferred processing); keeping these handles until processing finishes also keeps the referenced shared payloads alive for the duration of the call into \type{IModule}.
 
 \minihead{Worker execution model.}
 Workers sleep on condition variables and wake when there is work in any queue of their class (regular/prioritized).
@@ -631,7 +631,7 @@ This guarantees a single completion path: every accepted request produces one re
 \minihead{Dropping and failure responses.}
 If the wrapper is stopping, or ingress decides to drop a work item due to queue pressure, the item is not enqueued.
 For requests, the wrapper additionally synthesizes a failure response (empty payload, \type{success\_=false}) so callers do not wait indefinitely.
-During \type{threadStop}, the wrapper also drains any queued-but-unprocessed requests and emits failure responses for them before releasing queued blob references.
+During \type{threadStop}, the wrapper also clears any queued-but-unprocessed work and releases stored blob handles; for queued requests, it emits failure responses before discarding them.
 
 
 
