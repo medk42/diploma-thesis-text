@@ -160,6 +160,9 @@
       { \1 \c{allowbreak} \2 }
       \l_tmpa_tl
 
+    % IMPORTANT: never end with \allowbreak (fixes dataType_. / dataType_.")
+    \regex_replace_once:nnN { \c{allowbreak}\Z } { } \l_tmpa_tl
+
     \texttt{\tl_use:N \l_tmpa_tl}
   }
 
