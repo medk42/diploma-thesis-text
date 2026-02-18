@@ -386,6 +386,134 @@ If an auto-created module fails to create or start, \type{initialize} reports fa
 
 
 
+\subsection{Creating a module instance} \label{subsec:ch3_core_create_instance}
+
+Module instances are created in three places: during the startup auto-create pass, via \type{addModule} (e.g., from the UI module), and during core state load (persistence is covered later in \autoref{subsec:ch3_core_persistence}).
+All three end up executing the same core procedure: choose a new runtime \type{module\_id}, call the module library's \type{createModule}, start the module threads, and then register the module into the core's routing tables.
+
+\minihead{Inputs to creation.}
+Creating an instance requires:
+\begin{itemize}
+    \item the module \emph{type} to instantiate (index into the loaded module catalog, \type{loaded\_module\_id}),
+    \item a concrete input mapping \type{InputChannelMapInfo} that selects which existing channels the module consumes (subscribe/request).
+\end{itemize}
+
+\minihead{Mapping pre-check (\type{addModule} only).}
+For \type{addModule}, the core first validates the provided \type{InputChannelMapInfo} against the module's \type{ModuleInfo} definition (see \autoref{subsec:ch3_core_mapping_validation}).
+Invalid mappings are rejected before any instance is created.
+For the auto-create pass this check is bypassed: auto-created modules are expected to use only \type{AUTO\_ALL} consumers and can therefore be instantiated with an empty explicit mapping.
+
+\minihead{Create-and-start procedure.}
+The actual creation is performed by \type{createAndStartModule(loaded\_module\_id, channel\_map\_info, timeout)} and follows these steps:
+\begin{enumerate}
+    \item Resolve \type{data\_path}: if the per-module folder exists under \type{data\_dir}, pass its path, otherwise pass \type{nullptr}.
+    \item Allocate a fresh runtime \type{module\_id}. Runtime IDs are monotonic and are not reused (the ID is effectively the index into \type{running\_modules\_}).
+    \item Create a per-instance logger (\type{ModuleLogger}) bound to the module type name and \type{module\_id}.
+    \item Call the module library export \type{createModule(data\_path, this, channel\_map\_info, \&module\_logger, module\_id)}.
+    The returned pointer is immediately wrapped into a smart pointer with a custom deleter that calls \type{destroyModule} (so the instance is always destroyed inside the same library).
+    \item If creation succeeded, start the module-owned worker threads by calling \type{IDllModule::threadStart(timeout)}.
+\end{enumerate}
+
+\minihead{Failure behavior.}
+If \type{createModule} returns \type{nullptr}, creation fails immediately.
+If \type{threadStart} fails, the core attempts \type{threadStop(timeout)} and the instance is destroyed (via the wrapper/deleter), then creation fails.
+In both cases the failure is logged and the core state remains unchanged.
+
+\minihead{Success behavior.}
+On success the instance is inserted into \type{running\_modules\_} and the core integrates it into its global view:
+\begin{itemize}
+    \item register the module's channels for discovery,
+    \item update routing/dependency tables by registering the instance's input mapping.
+\end{itemize}
+
+For \type{addModule}, a successful creation also increments \type{module\_mapping\_state\_id\_} so the UI can detect that the module graph changed.
+
+The next subsection describes the validation rules and the internal mapping tables that these registration steps populate.
+
+
+\subsection{Mapping validation and internal mapping tables} \label{subsec:ch3_core_mapping_validation}
+
+The core stores the current module graph explicitly. For each producer channel it keeps a list of connected consumers, and for each consumer channel it keeps the list of producers it is connected to.
+These tables drive publish/subscribe routing and are also used to answer “who depends on whom?” when removing modules.
+
+\minihead{Validation against \type{ModuleInfo}.}
+When creating an instance via \type{addModule}, the core first checks that the provided \type{InputChannelMapInfo} matches the target module's \type{ModuleInfo} (\type{checkChannelMapValidity}):
+\begin{itemize}
+    \item \textbf{Consumer entry counts match:} the mapping must provide exactly as many subscribe/request consumer entries as the module declares.
+    \item \textbf{Cardinality rules per consumer:}
+    \begin{itemize}
+        \item \type{SINGLE}: exactly one \type{ChannelIdentifier} must be provided,
+        \item \type{RANGE(min,max)}: the number of provided identifiers must be within \type{[min,max]},
+        \item \type{AUTO\_ALL}: no identifiers are provided (count must be zero).
+    \end{itemize}
+    \item \textbf{Referenced producers exist:} every provided \type{ChannelIdentifier} must point to an existing running module (not destroyed) and a valid producer channel index (publish producer for subscribe mappings, response producer for request mappings).
+    \item \textbf{Type identifiers match:} for each referenced producer channel, the producer's \type{channel\_type\_identifier\_} must equal the consumer's expected \type{channel\_type\_identifier\_} from \type{ModuleInfo}.
+\end{itemize}
+Auto-created modules bypass this explicit mapping check: they are instantiated with an empty mapping and are restricted to \type{AUTO\_ALL} consumers.
+
+\minihead{Per-instance mapping tables.}
+For every running instance, the core keeps four per-module tables inside \type{structures::ModuleData}:
+\begin{itemize}
+    \item \type{mapping\_publish\_} and \type{mapping\_response\_}:
+    for each producer channel ID, a list of connected consumer endpoints \type{(module\_id, consumer\_channel\_id)}. This is used for cascade removal (to find dependent modules) and for publish routing (method \type{sendMessage} iterates over the producer \type{mapping\_publish\_} entry)
+    \item \type{mapping\_subscribe\_} and \type{mapping\_request\_}:
+    for each consumer channel ID, the list of producer \type{ChannelIdentifier}s this consumer is currently connected to.
+    This reverse view is used mainly for inspection, and for saving/restoring mappings.
+\end{itemize}
+Note that \type{ChannelIdentifier} is reused for both directions as a compact \type{(module\_id, channel\_id)} pair (producer in one context, consumer endpoint in the other).
+
+\minihead{Global channel indexes.}
+In addition to per-module tables, the core maintains global maps keyed by \type{channel\_type\_identifier\_}:
+\begin{itemize}
+    \item \type{existing\_publish\_channels\_}: all currently available publish producers (used for reflection and for wiring new \type{AUTO\_ALL} subscribe consumers),
+    \item \type{existing\_response\_channels\_}: all currently available response producers (used similarly),
+    \item \type{existing\_subscribe\_auto\_all\_channels\_}: all subscribe consumers declared as \type{AUTO\_ALL} (used only for wiring new producers to existing \type{AUTO\_ALL} inputs),
+    \item \type{existing\_request\_auto\_all\_channels\_}: same for request consumers.
+\end{itemize}
+These are updated on creation in \type{registerModuleChannelNames} and on removal via \type{removeFromExistingMap}.
+
+\minihead{Connection registration.}
+After a new instance is created, started, and inserted into \type{running\_modules\_}, the core finalizes its visibility and wiring in two stages:
+\begin{enumerate}
+    \item \textbf{Register channel types for discovery (\type{registerModuleChannelNames}):}
+    publish/response producers are added into \type{existing\_publish\_channels\_}/\type{existing\_response\_channels\_}, and any \type{AUTO\_ALL} subscribe/request consumers are recorded in \type{existing\_subscribe\_auto\_all\_channels\_}/\type{existing\_request\_auto\_all\_channels\_}.
+    We do this immediately after inserting the instance into \type{running\_modules\_} because these maps are the core's global ``who exists right now'' indexes:
+    (1) they power reflection queries (``give me all publish/response channels of type X''),
+    and (2) they are the input for incremental \type{AUTO\_ALL} wiring when new modules appear later (both directions: new \type{AUTO\_ALL} \emph{consumers} need all existing matching \emph{producers}, and new \emph{producers} need all existing matching \type{AUTO\_ALL} \emph{consumers}).
+    The same indexes are also updated on removal (\type{removeFromExistingMap}) to keep discovery consistent.
+
+    \item \textbf{Register routing/dependency edges (\type{registerModuleConnections}):}
+    \begin{itemize}
+        \item Write all explicit (that is \type{SINGLE} or \type{RANGE}, not \type{AUTO\_ALL}) connections from \type{InputChannelMapInfo} (\type{registerConsumers}). For each subscribe/request consumer, connect the referenced producer channels to this consumer.
+        Concretely, the core writes the edge into both views:
+        producer-side \type{mapping\_publish\_}/\type{mapping\_response\_} and consumer-side \type{mapping\_subscribe\_}/\type{mapping\_request\_} (\type{registerConsumers}).
+        \item Connect this module's \type{AUTO\_ALL} consumers to all already-existing matching producers (\type{registerToProducersAutoAll}).
+        \item Connect this module's producers to all already-existing \type{AUTO\_ALL} consumers of the same type (\type{registerToConsumersAutoAll}).
+    \end{itemize}
+\end{enumerate}
+This makes \type{AUTO\_ALL} wiring incremental: whenever a new instance appears, the mapping is “caught up” in both directions.
+
+\minihead{\type{AUTO\_ALL}, directed requests, and dependencies.}
+The core uses the same mapping tables for both publish/subscribe and request/response, so the bookkeeping and removal logic stays uniform.
+Requests are still \emph{directed}: \type{sendRequest} names one explicit target response channel, so \type{AUTO\_ALL} does not mean “broadcast a request”.
+What \type{AUTO\_ALL} buys you is that the module can be created without a pre-filled mapping; if it needs to send a request, it can first ask the core what response channels of a given type currently exist and then choose a target.
+
+Because the input mapping is fixed at instance creation time, removing a module can invalidate other modules that are explicitly wired to it.
+The core therefore treats explicit connections as \emph{hard dependencies} and uses \type{mapping\_publish\_}/\type{mapping\_response\_} to find dependents for cascade removal (\type{collectDependentModules}).
+\type{AUTO\_ALL} edges are treated as \emph{non-binding} here and ignored: they are runtime-expanded wiring and can be rebuilt as modules appear/disappear, so they do not create a hard “must-remove” dependency.
+(In valid configurations we expect the explicit dependency graph to be acyclic; \type{AUTO\_ALL} can add extra runtime edges without making removals unpredictable.)
+
+\minihead{Reflection, inspection, and persistence use the same data.}
+The global producer indexes (\type{existing\_publish\_channels\_}/\type{existing\_response\_channels\_}) back the “what channels exist?” queries used by modules and the UI.
+The per-instance consumer-side tables (\type{mapping\_subscribe\_}/\type{mapping\_request\_}) capture the instance's \emph{current} input wiring, including any \type{AUTO\_ALL} connections that were expanded at runtime.
+They are used to expose the effective mapping (\type{getRunningModulesChannelMap}) and to persist/restore the runtime wiring as part of core state saving/loading.
+
+
+
+
+
+\subsection{Persistence} \label{subsec:ch3_core_persistence}
+
 
 \xxx{DOUBLE CHECK - what is covered here!}
 
