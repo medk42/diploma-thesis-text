@@ -319,7 +319,7 @@ This section describes how modules are discovered and loaded, how module instanc
 It does \emph{not} describe domain logic of individual modules (\autoref{chapter:ch4_implementation}), UI workflow details (\autoref{sec:ch3_ui}), interface-level wrappers such as activation/use-case logic (\autoref{sec:ch3_interface_contracts}), or the full binary serialization format; it also does not attempt a formal proof of the locking strategy, but documents the observable behavior and the practical constraints it imposes on module authors.
 
 
-\subsection{Module packaging and hosting boundary (DLL/SO)} \label{subsec:ch3_core_dll_boundary}
+\subsection{Module packaging and hosting boundary} \label{subsec:ch3_core_dll_boundary}
 
 Modules are packaged as dynamically loaded shared libraries: \type{.dll} on Windows and \type{.so} on Linux. The runtime core discovers available modules by scanning a user-provided \type{modules\_dir} directory and attempting to load each file as a shared library.
 
@@ -557,10 +557,84 @@ For requests, the core additionally synthesizes a failure response if it cannot 
 it immediately calls \type{sendResponse} back to the caller with the same request \type{id\_}, an empty payload, and \type{success\_=false} (timestamped at send time).
 This guarantees that a failed request still produces a terminal response, instead of silently disappearing.
 
-The next subsection describes what happens inside \type{dll::IDllModule::processMessage/processRequest/processResponse}: the hosting wrapper, its queues, ingress decisions, and worker threads.
+The next subsection describes the \type{dll::IDllModule} implementation returned by \type{createModule}: the per-instance \type{DllModuleWrapper} that performs ingress decisions, queueing, worker scheduling, and (for requests) response dispatch.
 
 
-\subsection{Per-module wrapper} \label{subsec:ch3_core_per_module_wrapper}
+
+
+\subsection{Per-module hosting wrapper} \label{subsec:ch3_core_per_module_wrapper}
+
+The previous subsection showed that the core only decides \emph{where} to forward a message: it resolves the destination endpoints and calls one of
+\type{IDllModule::processMessage/processRequest/processResponse}.
+Everything about \emph{how} the work is queued, scheduled, and executed lives on the module side of the DLL boundary in a per-instance hosting wrapper.
+
+\minihead{Instance creation inside the module library.}
+Each library implements \type{createModule(...)} by constructing the concrete \type{IModule} (usually via \type{std::make\_unique}), checking \type{valid()}, and then returning a heap-allocated wrapper that implements \type{dll::IDllModule}:
+\begin{itemize}
+    \item if the module (or an internal decorator) is not valid, \type{createModule} returns \type{nullptr} and the core treats creation as failed,
+    \item otherwise the library returns \type{new DllModuleWrapper(std::move(module), core, module\_id, logger)}.
+\end{itemize}
+This is why the core never sees \type{IModule} directly: it only stores an \type{IDllModule*} and later destroys it through \type{destroyModule}, i.e., in the same library that allocated it.
+
+\minihead{What \type{DllModuleWrapper} owns.}
+A \type{DllModuleWrapper} owns exactly one \type{IModule} instance and uses its \type{ModuleInfo} to preallocate the delivery infrastructure:
+\begin{itemize}
+    \item it reads the inbound channel counts (subscribe consumers, response producers, request consumers) to size internal structures,
+    \item for each channel it allocates fixed-capacity ring buffers sized by \type{message\_queue\_capacity\_} and pre-fills a reusable \type{ProcessingData} pool (avoids allocating on every message); channels are marked as prioritized using \type{prioritized\_}.
+\end{itemize}
+
+\minihead{Thread lifecycle.}
+When the core calls \type{IDllModule::threadStart(timeout)}, the wrapper spawns two worker pools:
+\begin{itemize}
+    \item \textbf{regular workers} for non-prioritized channels,
+    \item \textbf{prioritized workers} for prioritized channels.
+\end{itemize}
+The wrapper waits until all its worker threads report as running (via counters) and then calls \type{IModule::threadStart(remaining\_timeout)} to let the module start any internal threads it may have.
+Stopping is symmetric: \type{threadStop} marks the instance as stopping, wakes all workers, waits for them to exit, prints wrapper-side metrics, and then calls \type{IModule::threadStop(remaining\_timeout)}.
+
+\minihead{Ingress: fast hand-off and copying into queues.}
+All three delivery entry points (\type{processMessage/processRequest/processResponse}) are thin wrappers that call \type{pushProcessingData(type, local\_channel\_id, source, header)}.
+The ingress logic is:
+\begin{enumerate}
+    \item \textbf{Select the per-channel queue.}
+    The wrapper maps \type{(type, local\_channel\_id)} to one internal queue index (messages, then requests, then responses).
+    If the ID is out of range, the message is dropped.
+    \item \textbf{Ask the module what to do.}
+    Under the wrapper mutex, it computes a \type{QueueStatus} (\type{NORMAL} if the queue has space, \type{QUEUE\_FULL\_CAN\_DROP} if the queue is full but there is a message that has not started processing yet and can be dropped, or \type{QUEUE\_FULL} if the queue is full and all messages are being processed.) and calls \type{IModule::onIngress(...)}.
+    This gives the module a single place to express policies like “drop if overloaded” or “keep only the latest”.
+    \item \textbf{Enqueue a self-contained work item.}
+    If accepted, the wrapper takes one \type{ProcessingData} from the preallocated pool, copies:
+    (i) the raw payload bytes into \type{ProcessingData::data\_},
+    and (ii) the blob handles into \type{ProcessingData::blobs\_}.
+    Then it patches \type{MessageHeader} to point to these owned buffers and pushes the work item to the channel’s processing queue.
+\end{enumerate}
+Copying into \type{ProcessingData} makes the queued work self-contained. The core forwards \type{MessageHeader} with borrowed pointers, but the wrapper processes messages asynchronously, so it must copy \type{data\_} and the blob-handle array to the enqueued \type{ProcessingData} before returning. Storing the copied \type{SharedDataBlob} handles also keeps the referenced shared payloads alive until the worker-called \type{IModule} method finishes, after which the slot is returned to the pool and reused.
+
+\minihead{Worker execution model.}
+Workers sleep on condition variables and wake when there is work in any queue of their class (regular/prioritized).
+When awakened, a worker picks a non-empty queue (round-robin across channels) and processes exactly one work item:
+\begin{itemize}
+    \item \textbf{MESSAGE:} calls \type{IModule::processMessage(local\_channel\_id, source, header)}.
+    \item \textbf{RESPONSE:} calls \type{IModule::processResponse(local\_channel\_id, source, header)}.
+    \item \textbf{REQUEST:} calls \type{IModule::processRequest(local\_channel\_id, source, header)} and immediately sends exactly one response back via the core (see below).
+\end{itemize}
+After processing, the wrapper clears stored blob handles (releasing shared payload references) and returns the \type{ProcessingData} object back into the per-channel pool.
+
+\minihead{Request/response completion.}
+From the module's and core's perspectives, \type{sendRequest} is asynchronous: it forwards the request into the target \type{IDllModule} and returns immediately.
+Inside the target module, request handling is synchronous \emph{at the processing point}: the wrapper executes \type{IModule::processRequest} on a worker thread, obtains a \type{ResponseData}, and sends a matching response via:
+\begin{quote}
+\type{core->sendResponse(\{module\_id\_, local\_channel\_id\_\}, source\_channel, response\_header)}.
+\end{quote}
+This guarantees a single completion path: every accepted request produces one response message (success or failure) with the same request \type{id\_}.
+
+\minihead{Dropping and failure responses.}
+If the wrapper is stopping, or ingress decides to drop a work item due to queue pressure, the item is not enqueued.
+For requests, the wrapper additionally synthesizes a failure response (empty payload, \type{success\_=false}) so callers do not wait indefinitely.
+During \type{threadStop}, the wrapper also drains any queued-but-unprocessed requests and emits failure responses for them before releasing queued blob references.
+
+
+
 
 \subsection{Module removal}
 
