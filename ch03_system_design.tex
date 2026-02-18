@@ -123,7 +123,10 @@ In practice, most messages consist only of the small copied payload. When large 
 
 \subsection{Shared payload ownership and allocator contract} \label{subsec:ch3_allocator_contract}
 
-Large payloads are represented by \type{SharedDataBlob}, which acts as a handle to core-managed shared data (\type{ISharedData}). Modules never free raw memory directly. Instead, they only copy, store, and pass \type{SharedDataBlob} handles; the underlying shared memory is released automatically once the last handle is destroyed.
+Large payloads are represented by \type{SharedDataBlob}, which acts as an RAII handle to core-managed shared data (\type{ISharedData}). Modules never free raw memory directly. Instead, they only copy, store, and pass \type{SharedDataBlob} handles.
+
+A \type{SharedDataBlob} stores a pair \type{(ISharedData*, IAllocator*)}. On construction and on copy, it calls \type{IAllocator::addOwner(data)}; on destruction (and when overwritten by a different assignment), it calls \type{IAllocator::removeOwner(data)}.
+This makes shared payload ownership effectively reference-counted at the contract level: the underlying shared memory is released by the core allocator once the last \type{SharedDataBlob} handle is destroyed.
 
 Blobs are allocated through core-provided allocators (\type{IAllocator}). A module can request an allocator via \type{ICore::createDynamicAllocator()} or \type{ICore::createBufferAllocator(slot\_size, slot\_count)} and then allocate blobs using \type{IAllocator::allocate()} (or helper methods such as \type{allocateFromData}). We distinguish two allocator types at the contract level:
 \begin{itemize}
