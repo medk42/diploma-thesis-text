@@ -663,7 +663,9 @@ Intuitively, this destroys the most dependent modules first, so modules are not 
 For each module being removed, the core first marks \type{destruction\_in\_progress\_ = true} and then temporarily releases \type{core\_mutex\_} to call \type{IDllModule::threadStop(timeout)}.
 This unlock is necessary to avoid deadlocks: \type{threadStop} waits for the wrapper's and module's worker threads to exit, but those threads may currently be calling into the core via the \type{ICore} API (e.g., to send messages or query reflection) and would be blocked on \type{core\_mutex\_} while doing so.
 The \type{destruction\_in\_progress\_} flag ensures that concurrent deliveries see the instance as non-routable and are dropped (or turned into failure responses for requests, as described in \autoref{subsec:ch3_core_routing}).
-After \type{threadStop} returns, the core clears the instance pointer (\type{module\_ = nullptr}) thus calling the custom deleter and the API's \type{destroyModule} method and reacquires \type{core\_mutex\_} to continue with table updates.
+After \type{threadStop} returns, the core clears the instance pointer (\type{module\_ = nullptr}) thus calling the custom deleter and the API's \type{destroyModule} method and reacquires \type{core\_mutex\_} to continue with table updates. 
+
+This temporary unlock is the reason for using the second \type{add\_remove\_mutex\_}: it prevents concurrent graph edits while the core is temporarily unlocked during thread stopping.
 
 \minihead{Detaching routing edges.}
 Once the instance is stopped, the core removes all edges involving it, in both directions:
