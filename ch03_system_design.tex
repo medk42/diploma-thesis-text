@@ -324,7 +324,7 @@ It does \emph{not} describe domain logic of individual modules (\autoref{chapter
 Modules are packaged as dynamically loaded shared libraries: \type{.dll} on Windows and \type{.so} on Linux. The runtime core discovers available modules by scanning a user-provided \type{modules\_dir} directory and attempting to load each file as a shared library.
 
 \minihead{Discovery and OS loading.}
-On Windows the loader uses \type{LoadLibraryA}/\type{GetProcAddress}; on Linux it uses \type{dlopen}/\type{dlsym}. The filename stem is also used to derive the module's data folder. For \type{module\_a.dll} we look for \type{[data\_dir]/module\_a}. On Linux we additionally strip the conventional \type{lib} prefix, so \type{libmodule\_a.so} maps to \type{[data\_dir]/module\_a}. If the folder does not exist, the module receives \type{data\_path = nullptr}.
+On Windows the loader uses \type{LoadLibraryA}/\type{GetProcAddress}; on Linux it uses \type{dlopen}/\type{dlsym}. The filename stem is also used to derive the module's data folder. For \type{module\_a.dll} we look for \type{data\_dir/module\_a}. On Linux we additionally strip the conventional \type{lib} prefix, so \type{libmodule\_a.so} maps to \type{data\_dir/module\_a}. If the folder does not exist, the module receives \type{data\_path = nullptr}.
 
 \minihead{Required C-style exports.}
 Each module library must export a small fixed API with stable symbol names (i.e., exported with \type{extern "C"}). The core resolves these symbols and rejects the library if any are missing:
@@ -336,7 +336,7 @@ Each module library must export a small fixed API with stable symbol names (i.e.
 \end{itemize}
 This API is the only thing the core assumes about a module library when loading it.
 
-\minihead{Why \type{IDllModule} exists (and what it represents).}
+\minihead{\type{IDllModule} interface.}
 \type{createModule(...)} does not return a pointer to \type{IModule}. Instead, it returns a pointer to an object implementing \type{dll::IDllModule}. This is the core-facing instance interface: it is intentionally small and matches exactly what the core needs to drive a running module:
 \begin{itemize}
   \item three entry points for incoming traffic: \type{processMessage}/\type{processRequest}/\type{processResponse},
@@ -348,10 +348,10 @@ Inside the library, the returned object is typically a hosting wrapper (e.g., \t
 \minihead{Ownership rules across the library boundary.}
 The instance returned by \type{createModule} is allocated inside the module library and must also be destroyed inside that same library. The core therefore never calls \type{delete} on the returned pointer; it always destroys it via \type{destroyModule}. This avoids allocator/runtime mismatches across the boundary (especially on Windows) and keeps ownership explicit.
 
-The same rule motivates how variable-sized data is handled. Anything with non-trivial ownership (e.g., \type{std::string}, \type{std::vector}, dynamically allocated arrays) is not passed across the boundary as an owned object. Instead, variable-sized results are transferred as \type{message::SharedDataBlob} allocated by a core-owned \type{IAllocator}. This is why persistence is exposed on \type{IDllModule} as \type{save(allocator)\,$\rightarrow$\,SharedDataBlob} and \type{load(data,size)}: within the library we can work with the higher-level \type{ISerializableModule::SaveData} representation (JSON header + optional named binary blobs), but the boundary itself stays in terms of raw bytes.
+The same rule motivates how variable-sized data is handled. Anything with non-trivial ownership (e.g., \type{std::string}, \type{std::vector}) is not transferred across the boundary as an owned C++ object. Variable-sized \emph{outputs} are returned as \type{message::SharedDataBlob} allocated by an \type{IAllocator}. This is why persistence is exposed on \type{IDllModule} as \type{save(allocator)\,$\rightarrow$\,SharedDataBlob} and \type{load(data,size)}: inside the library we can work with the higher-level \type{ISerializableModule::SaveData} representation, but the boundary itself stays in terms of raw bytes.
 
 \minihead{What \emph{is} passed directly.}
-Small POD-like structures (\type{ChannelIdentifier}, \type{MessageHeader}, \type{InputChannelMapInfo}) are passed directly. This relies on a practical build assumption of this thesis: core and modules are built against the same headers and compatible compiler settings. To transfer data of variable size, either a pointer and size (for method parameters) or a handle to a shared blob (for the return value) is used. Pointers are borrowed for the duration of the call; if the callee needs the data later, it must copy it.
+Small POD-like structures (\type{ChannelIdentifier}, \type{MessageHeader}, \type{InputChannelMapInfo}) are passed directly. For variable-sized \emph{inputs}, a pointer and size is used; the pointer is borrowed for the duration of the call, so if the callee needs the data later, it must copy it.
 
 \minihead{Where this leads next.}
 With the packaging boundary defined (how module libraries are found, validated, and how instances are created/destroyed), the next subsection describes the startup sequence that builds the loaded module catalog and performs the initial auto-create pass.
