@@ -737,8 +737,47 @@ A process-isolated design would keep the same message-level contract, but would 
 
 
 
+\subsection{Persistence (save/load)} \label{subsec:ch3_core_persistence}
 
-\subsection{Persistence} \label{subsec:ch3_core_persistence}
+The persistence API (\type{ICore::save}/\type{ICore::load}) stores and reconstructs the \emph{runtime module graph} together with \emph{optional per-module state}. Concretely, the save captures: 
+
+\begin{enumerate}[label=(\roman*)]
+    \item the set of created module instances (split into auto-created and manually created),
+    \item the effective channel mapping for each instance (explicit producer lists for non-\type{AUTO\_ALL} consumers, and an \type{auto\_all} flag otherwise),
+    \item a list of \type{expected\_modules} that were available in the core at save time, and
+    \item optional module-owned state via \type{ISerializableModule}. Allocators and transient runtime resources (module IDs, queues, in-flight messages, request IDs, etc.) are not persisted.
+\end{enumerate}
+
+\minihead{Save file structure (JSON + binary blobs).}
+The core serializes the state into a single container blob returned as \type{SharedDataBlob}.
+The container starts with a JSON header that captures the graph on a high level (instances, expected modules, and mappings) and the per-module JSON state returned by \type{ISerializableModule::save()}.
+Any per-module \emph{named binary blobs} returned by \type{ISerializableModule::save()} are stored as separate binary sections alongside the JSON (identified by name), so the JSON stays purely descriptive and human-readable while modules can still persist arbitrary binary data as needed.
+
+\minihead{Saving steps.}
+\begin{enumerate}
+    \item The core takes a shared lock on \type{core\_mutex\_} to snapshot the current graph.
+    \item It assigns each running instance a stable textual name of the form \type{<loaded\_name>\#<index>} (per-module counter) and uses these names inside the JSON for mapping, instead of raw runtime IDs.
+    \item For each running instance it stores the instance metadata and the consumer-side mapping:
+    \begin{itemize}
+        \item for \type{SINGLE}/\type{RANGE} consumers, the list of producer endpoints (\type{producer\_module} by instance name and \type{producer\_channel\_id}),
+        \item for \type{AUTO\_ALL} consumers, only \type{auto\_all=true} (explicit producer lists are omitted because they are derived at runtime).
+    \end{itemize}
+    \item For per-module state, the core calls \type{IDllModule::save()} on each instance, passing a core allocator. The DLL wrapper serializes the returned \type{ISerializableModule::SaveData}: a small JSON state header and an optional list of named binary blobs. The core incorporates the JSON fragment into the overall JSON header of the save file and stores any blobs as separate named payload records in the same container, alongside the JSON header.
+\end{enumerate}
+
+\minihead{Loading: reconstruction steps and guarantees.}
+Loading is a destructive operation: it replaces the current manually-created graph with the one from the save.
+\begin{enumerate}
+    \item The core takes \type{add\_remove\_mutex\_} and a unique lock on \type{core\_mutex\_}, then removes all \emph{non-auto-created} running modules (recursively), keeping auto-created ones (created during \type{initialize}). The internal state is therefore reset to an ``only auto-created instances remain'' baseline.
+    \item The container is unpacked into the JSON header and a list of per-module binary blobs. The core validates the save-file format version and the module API version (hard failure on mismatch). It also compares the saved core version against the current one, but only emits a warning, because newer builds may still be able to load older saves.
+    \item The core verifies \type{expected\_modules}: every module listed in the save must exist among currently loaded modules (the current installation may contain additional modules, but it must not be missing any that the save expects).
+    \item Auto-created instances are \emph{not recreated}. For each saved auto-created entry, the core finds the corresponding already-running instance by \type{loaded\_name}, then restores its module state by calling \type{IDllModule::load()} with the saved \type{SaveData} (JSON + any attached binary blobs).
+    \item Manually created instances are recreated from the saved description. For each instance, the core resolves producer references using the saved instance names, builds \type{InputChannelMapInfo}, calls \type{addModule} (which creates the module and starts its threads), and then calls \type{load} to restore the module state.
+\end{enumerate}
+
+This procedure guarantees that the \emph{mapping topology and per-module configuration} are restored (including \type{AUTO\_ALL} behavior via re-registration at creation time). It does \emph{not} guarantee stable numeric runtime IDs: IDs are reassigned during reconstruction, and the save format therefore uses instance names for mapping instead of persisting raw IDs. The expected lifecycle for persisted modules is: \emph{create instance} $\rightarrow$ \emph{threadStart} $\rightarrow$ \emph{load state} (auto-created instances skip the creation step because they already exist).
+
+
 
 
 \xxx{DOUBLE CHECK - what is covered here!}
