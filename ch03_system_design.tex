@@ -749,8 +749,8 @@ The persistence API (\type{ICore::save}/\type{ICore::load}) stores and reconstru
 \end{enumerate}
 
 \minihead{Save file structure (JSON + binary blobs).}
-The core serializes the state into a single container blob returned as \type{SharedDataBlob}.
-The container starts with a JSON header that captures the graph on a high level (instances, expected modules, and mappings) and the per-module JSON state returned by \type{ISerializableModule::save()}.
+The core serializes the state into a single container returned as \type{SharedDataBlob}.
+It starts with a JSON header that describes the module graph on a high level (instances, expected modules, and mappings) and includes per-module JSON state returned by \type{ISerializableModule::save()}.
 Any per-module \emph{named binary blobs} returned by \type{ISerializableModule::save()} are stored as separate binary sections alongside the JSON (identified by name), so the JSON stays purely descriptive and human-readable while modules can still persist arbitrary binary data as needed.
 
 \minihead{Saving steps.}
@@ -765,7 +765,7 @@ Any per-module \emph{named binary blobs} returned by \type{ISerializableModule::
     \item For per-module state, the core calls \type{IDllModule::save()} on each instance, passing a core allocator. The DLL wrapper serializes the returned \type{ISerializableModule::SaveData}: a small JSON state header and an optional list of named binary blobs. The core incorporates the JSON fragment into the overall JSON header of the save file and stores any blobs as separate named payload records in the same container, alongside the JSON header.
 \end{enumerate}
 
-\minihead{Loading: reconstruction steps and guarantees.}
+\minihead{Loading steps.}
 Loading is a destructive operation: it replaces the current manually-created graph with the one from the save.
 \begin{enumerate}
     \item The core takes \type{add\_remove\_mutex\_} and a unique lock on \type{core\_mutex\_}, then removes all \emph{non-auto-created} running modules (recursively), keeping auto-created ones (created during \type{initialize}). The internal state is therefore reset to an ``only auto-created instances remain'' baseline.
