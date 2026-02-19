@@ -137,7 +137,7 @@ Blobs are allocated through core-provided allocators (\type{IAllocator}). A modu
 Allocator and blob lifetime are owned by the core to ensure consistent memory management across modules and to allow safe sharing between independently developed components. Modules are expected to delete allocators they no longer need using \type{ICore::deleteAllocator}. In this thesis, allocator cleanup is handled by the common \type{BaseModule} helper (\autoref{subsec:ch3_basemodule}) so that module implementations do not need to manage allocator lifetimes manually.
 
 
-\subsection{Communication primitives (semantics only)} \label{subsec:ch3_comm_primitives}
+\subsection{Communication primitives} \label{subsec:ch3_comm_primitives}
 
 This subsection describes the runtime semantics of the two communication primitives. Channel declaration and mapping rules are defined by \type{ModuleInfo} and the channel contract (\autoref{subsec:ch3_channel_contract}). All channels in this sections contain a module identifier and a channel identifier (index into the module's channel list --- publish producer list for publishing message, request consumer list or response producer list for request/response logic), which together uniquely identify the channel endpoint in the system.
 
@@ -153,6 +153,11 @@ This subsection describes the runtime semantics of the two communication primiti
 \subsection{Message delivery flow} \label{subsec:ch3_message_lifecycle}
 
 Message delivery follows the same contract-level steps for publish/subscribe as well as request/response:
+
+\xxx{req: Add two small sequence diagrams (stacked) for the message delivery flow.
+(1) Publish/subscribe: Sender module calls \type{sendMessage} $\rightarrow$ Core resolves mapped subscribers $\rightarrow$ Target wrapper calls \type{onIngress} $\rightarrow$ enqueue (copy small payload + blob handles) $\rightarrow$ worker calls \type{processMessage}.
+(2) Request/response: Requester calls \type{sendRequest(source, target)} $\rightarrow$ Core forwards to target wrapper $\rightarrow$ \type{onIngress} + enqueue $\rightarrow$ worker runs \type{processRequest} and returns \type{ResponseData} $\rightarrow$ wrapper   /core emits exactly one \type{sendResponse} preserving \type{id\_} $\rightarrow$ requester receives via \type{processResponse}.
+Include dashed failure path: if request cannot be delivered or is dropped, synthesize response with \type{success\_=false}. (replace the list later if you have time)}
 
 \begin{enumerate}
     \item The sender calls \type{ICore::sendMessage} / \type{ICore::sendRequest} / \type{ICore::sendResponse} and provides the source channel identifier (and a target identifier for request/response).
@@ -307,6 +312,10 @@ Finally, \type{BaseModule} implements \type{IModule::getModuleInfo()} by returni
 
 The previous section defined the module contract in an implementation-independent way: what a module is, how it declares channels, how messages are represented, and what services the runtime must provide through \type{ICore}. In this section, we describe the concrete runtime core used in this thesis, which implements that contract in a single process using threads and in-memory routing.
 
+\minihead{Reading note.}
+This section is intentionally more implementation-oriented than the preceding contract: it documents one concrete in-process core that hosts modules and routes messages.
+To keep the description traceable, we occasionally mention key C++ interfaces and internal structures; readers interested mainly in the higher-level design can skim such identifiers and focus on the described mechanisms.
+
 \minihead{Scope and key design choices.}
 The runtime is an \emph{in-process} host: modules run as dynamically loaded shared libraries (\type{.dll} on Windows, \type{.so} on Linux) and communicate only through the core.
 Message delivery is asynchronous and uses per-module queues and worker threads.
@@ -316,6 +325,13 @@ Large payloads are passed via core-managed shared blobs allocated through \type{
 The implementation is split into two cooperating parts:
 (i) the \emph{central core}, which maintains global runtime state (loaded module catalog, running module instances, channel mappings/routing tables, reflection/orchestration API, and persistence), and
 (ii) a \emph{per-module hosting wrapper}, which owns a single instantiated \type{IModule} and implements the concrete delivery machinery required by the contract (ingress decisions, payload/blob-handle copying into queues, worker threads, and invoking \type{processMessage}/\type{processRequest}/\type{processResponse}).
+
+\xxx{req: Add a schematic ``runtime anatomy'' figure here.
+Show: (1) Central core (loaded module catalog, running instances, mapping/routing tables, discovery maps, persistence, locks);
+(2) Per-module hosting wrapper (ingress, per-channel queues, worker pools, calls into \type{IModule}, request completion via response dispatch);
+(3) Concrete module inside wrapper.
+Add arrows: module \type{sendMessage/sendRequest/sendResponse} $\rightarrow$ core routing $\rightarrow$ wrapper ingress $\rightarrow$ queue $\rightarrow$ worker $\rightarrow$ \type{process*}.
+Caption should emphasize: core decides \emph{where} to deliver; wrapper decides \emph{how} (queueing + threading).}
 
 \minihead{What is covered here (and what is not).}
 This section describes how modules are discovered and loaded, how module instances are created/removed and wired, how routing and delivery are implemented, how shared payload allocation is managed, how reflection/orchestration queries are served, and how the module graph is persisted and reconstructed.
@@ -362,7 +378,7 @@ With the packaging boundary defined (how module libraries are found, validated, 
 
 
 
-\subsection{Startup sequence: from filesystem to loaded module catalog} \label{subsec:ch3_core_startup}
+\subsection{Startup sequence} \label{subsec:ch3_core_startup}
 
 Core initialization is performed once via \type{Core::initialize(modules\_dir, data\_dir)}. The method builds the \emph{loaded module catalog} (all available module \emph{types}) and then performs an auto-create pass that instantiates selected module \emph{instances}.
 
@@ -457,6 +473,16 @@ For every running instance, the core keeps four per-module tables inside \type{s
 \end{itemize}
 Note that \type{ChannelIdentifier} is reused for both directions as a compact \type{(module\_id, channel\_id)} pair (producer in one context, consumer endpoint in the other).
 
+\xxx{req: Add a data-structure diagram for mapping storage.
+For a single instance, show the four per-module tables:
+\type{mapping\_publish\_} and \type{mapping\_response\_}: producer channel id $\rightarrow$ list of consumer endpoints (module id + consumer id);
+\type{mapping\_subscribe\_} and \type{mapping\_request\_}: consumer channel id $\rightarrow$ list of producer \type{ChannelIdentifier}s.
+Next to it, show the global indexes keyed by channel type identifier:
+existing publish producers, existing response producers, AUTO\_ALL subscribe consumers, AUTO\_ALL request consumers.
+Add a small callout: AUTO\_ALL ``catch-up'' wiring uses the global indexes.
+immediately after minihead Per-instance mapping tables. (or right after the four-table list).
+}
+
 \minihead{Global channel indexes.}
 In addition to per-module tables, the core maintains global maps keyed by \type{channel\_type\_identifier\_}:
 \begin{itemize}
@@ -502,6 +528,11 @@ Because the input mapping is fixed at instance creation time, removing a module 
 The core therefore treats explicit edges as \emph{hard dependencies} and uses \type{mapping\_publish\_}/\type{mapping\_response\_} to find dependents for cascade removal (\type{collectDependentModules}).
 \type{AUTO\_ALL} edges are treated as \emph{non-binding} and ignored there: they are runtime-expanded wiring that can shrink/grow as modules appear and disappear, so they do not create a ``must-remove'' dependency.
 (In valid configurations we expect the explicit dependency graph to be acyclic; \type{AUTO\_ALL} can add extra runtime edges without making removals unpredictable.)
+
+\xxx{req OPTIONAL: Add a small 2-panel figure clarifying AUTO\_ALL semantics.
+Panel 1: publish mapping fan-out (producer $\rightarrow$ many subscribers via mapping).
+Panel 2: request is directed (requester chooses one concrete target response channel; AUTO\_ALL only affects how candidate targets are discovered/wired, not that a request is broadcast).
+Goal: prevent interpreting AUTO\_ALL as request broadcast.}
 
 \minihead{Reflection and persistence.}
 The global producer indexes (\type{existing\_publish\_channels\_}/\type{existing\_response\_channels\_}) are what backs the ``what channels exist?'' queries used by modules and the UI.
@@ -670,6 +701,11 @@ After \type{threadStop} returns, the core clears the instance pointer (\type{mod
 
 This temporary unlock is the reason for using the second \type{add\_remove\_mutex\_}: it prevents concurrent graph edits while the core is temporarily unlocked during thread stopping.
 
+\xxx{req: Add a lock/timeline diagram explaining removal.
+Two lanes: (A) Core removal thread, (B) Module worker thread.
+Core lane: lock \type{add\_remove\_mutex\_} $\rightarrow$ lock \type{core\_mutex\_} (unique) $\rightarrow$ set \type{destruction\_in\_progress\_} $\rightarrow$ unlock \type{core\_mutex\_} $\rightarrow$ call \type{threadStop} (wait) $\rightarrow$ relock \type{core\_mutex\_} $\rightarrow$ detach edges + update discovery maps $\rightarrow$ bump mapping state id.
+Worker lane: potential concurrent \type{send*}/reflection calls that need \type{core\_mutex\_} (shared), illustrating the deadlock avoided by the temporary unlock.}
+
 \minihead{Detaching routing edges.}
 Once the instance is stopped, the core removes all edges involving it, in both directions:
 \begin{itemize}
@@ -737,7 +773,7 @@ A process-isolated design would keep the same message-level contract, but would 
 
 
 
-\subsection{Persistence (save/load)} \label{subsec:ch3_core_persistence}
+\subsection{Persistence} \label{subsec:ch3_core_persistence}
 
 The persistence API (\type{ICore::save}/\type{ICore::load}) stores and reconstructs the \emph{runtime module graph} together with \emph{optional per-module state}. Concretely, the save captures: 
 
@@ -843,7 +879,7 @@ This procedure guarantees that the \emph{mapping topology and per-module configu
 
 
 
-\section{Interface contracts (wrappers + domain protocols)} \label{sec:ch3_interface_contracts}
+\section{Interface contracts} \label{sec:ch3_interface_contracts}
 
 The base module contract (\autoref{sec:ch3_module_contract}) defines how modules are hosted, how they exchange messages through channels, and what the core guarantees about delivery and concurrency. On top of this base contract, the system defines a set of \emph{interface contracts} for higher-level functionality (activation, use-case orchestration, domain message semantics). These contracts are expressed in two complementary ways:
 (i) as additional C++ interfaces implemented by selected modules (e.g., \type{IActivableModule}), and
