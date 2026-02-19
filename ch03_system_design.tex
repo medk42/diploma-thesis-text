@@ -130,8 +130,8 @@ This makes shared payload ownership effectively reference-counted at the contrac
 
 Blobs are allocated through core-provided allocators (\type{IAllocator}). A module can request an allocator via \type{ICore::createDynamicAllocator()} or \type{ICore::createBufferAllocator(slot\_size, slot\_count)} and then allocate blobs using \type{IAllocator::allocate()} (or helper methods such as \type{allocateFromData}). We distinguish two allocator types at the contract level:
 \begin{itemize}
-    \item \textbf{Dynamic allocator:} supports variable allocation sizes (suitable for irregular payloads such as scene snapshots) at the cost of relying on system allocations for each request.
-    \item \textbf{Buffer allocator:} preallocates a fixed number of equally-sized slots (suitable for streaming payloads with known bounds, such as camera frames), requiring a known maximum size in advance and offering only a limited number of slots.
+    \item \textbf{Dynamic allocator:} supports variable allocation sizes (suitable for irregular payloads such as scene snapshots) at the cost of relying on system allocations for each request. Dynamic allocator returns invalid blobs when the underlying system allocation fails.
+    \item \textbf{Buffer allocator:} preallocates a fixed number of equally-sized slots (suitable for streaming payloads with known bounds, such as camera frames), requiring a known maximum size in advance and offering only a limited number of slots. Buffer allocator returns invalid blobs when it is out of free slots.
 \end{itemize}
 
 Allocator and blob lifetime are owned by the core to ensure consistent memory management across modules and to allow safe sharing between independently developed components. Modules are expected to delete allocators they no longer need using \type{ICore::deleteAllocator}. In this thesis, allocator cleanup is handled by the common \type{BaseModule} helper (\autoref{subsec:ch3_basemodule}) so that module implementations do not need to manage allocator lifetimes manually.
@@ -617,9 +617,9 @@ Copying into \type{ProcessingData} makes the queued work self-contained. The cor
 Workers sleep on condition variables and wake when there is work in any queue of their class (regular/prioritized).
 When awakened, a worker picks a non-empty queue (round-robin across channels) and processes exactly one work item:
 \begin{itemize}
-    \item \textbf{MESSAGE:} calls \type{IModule::processMessage(local\_channel\_id, source, header)}.
-    \item \textbf{RESPONSE:} calls \type{IModule::processResponse(local\_channel\_id, source, header)}.
-    \item \textbf{REQUEST:} calls \type{IModule::processRequest(local\_channel\_id, source, header)} and immediately sends exactly one response back via the core (see below).
+    \item \textbf{Message:} calls \type{IModule::processMessage(local\_channel\_id, source, header)}.
+    \item \textbf{Response:} calls \type{IModule::processResponse(local\_channel\_id, source, header)}.
+    \item \textbf{Request:} calls \type{IModule::processRequest(local\_channel\_id, source, header)} and immediately sends exactly one response back via the core (see below).
 \end{itemize}
 After processing, the wrapper clears stored blob handles (releasing shared payload references) and returns the \type{ProcessingData} object back into the per-channel pool.
 
@@ -720,6 +720,23 @@ Allocator bookkeeping therefore does not couple to routing or graph edits.
 \minihead{\type{destruction\_in\_progress\_}: making instances non-routable.}
 Each running module instance has a \type{destruction\_in\_progress\_} flag used as a fast “do not deliver” gate.
 When set, the core treats the instance as non-existent for routing: messages/responses are dropped and requests are completed via synthesized failure responses (as described in \autoref{subsec:ch3_core_routing}).
+
+
+
+\subsection{Allocation and shared payload management} \label{subsec:ch3_core_allocation}
+
+The contract in \autoref{subsec:ch3_allocator_contract} exposes shared payload allocation through \type{IAllocator} and shared payload access through \type{ISharedData}.
+In this core implementation (in-process DLL modules), both the allocator objects and the allocated shared payload objects live entirely on the core side.
+When a module calls \type{createDynamicAllocator} or \type{createBufferAllocator}, the core constructs a concrete allocator instance, stores it in \type{allocators\_}, and returns a raw \type{IAllocator*} handle to the module.
+The \type{allocators\_} container is guarded by \type{allocator\_mutex\_} (only for creating/removing allocators); \type{deleteAllocator} removes the corresponding allocator from \type{allocators\_}.
+
+Allocation itself happens inside the selected allocator backend and returns core-owned \type{ISharedData} objects (concretely, \type{SharedDataCore}) that provide \type{data()} and \type{size()} for direct access.
+The \textbf{dynamic allocator} performs real heap allocation for each request and frees the block again when the payload is released.
+The \textbf{buffer allocator} preallocates a fixed pool of equally-sized slots upfront; allocating a blob means taking a free slot from the pool (or failing if none are available), and releasing returns the slot back to the free list for reuse.
+A process-isolated design would keep the same message-level contract, but would replace this pointer-based \type{ISharedData} representation with an inter-process form (e.g., shared-memory handles/offsets).
+
+
+
 
 \subsection{Persistence} \label{subsec:ch3_core_persistence}
 
