@@ -816,6 +816,31 @@ This procedure guarantees that the \emph{mapping topology and per-module configu
 
 
 
+\section{Interface contracts} \label{sec:ch3_interface_contracts}
+
+The module contract from \autoref{sec:ch3_module_contract} defines how modules exchange messages through the core, but it intentionally stays application-agnostic: it does not define what a particular message means. As the concrete modules for this thesis were implemented, we therefore introduced a set of \emph{interface contracts}: small, shared definitions that assign structure and semantics to selected message channels (camera frames, pen poses, robot commands, activation control, \dots). Their role is pragmatic: to ensure that modules remain interchangeable and independent, as long as they implement the same externally defined communication protocol.
+
+\subsection{Overview: protocols on top of core messaging} \label{subsec:ch3_interface_contracts_overview}
+
+\minihead{Interface contracts as application-level protocols.}
+An interface contract can be seen as an application-level protocol layered on top of the generic core transport:
+it specifies (i) which channel types exist and who publishes/subscribes or requests/responds, (ii) the concrete payload layout (POD header and optional binary blobs), and (iii) the expected interaction pattern (ordering, acknowledgements, best-effort streams, cancellation rules, \dots).
+This makes the communication boundary explicit and keeps modules replaceable as long as they implement the same contract.
+
+\minihead{Header-only schemas and channel identifiers.}
+Concretely, contracts are implemented as C++ header-only definitions shared by the participating modules. Each contract provides matching \type{communication\_channel::Producer} and \type{communication\_channel::Consumer} descriptors with a \type{channel\_type\_identifier\_} string. The identifier acts as a compatibility key for binding channels in the core and also includes a compact schema hint and a version tag (e.g., \type{/v1}). In this thesis, these definitions are located under \path{backend/module_helpers/} (e.g., camera and pen message headers, activation wrapper messages, robot interface messages). For details of the exact binary layouts, the corresponding header files are the source of truth.
+
+\minihead{Wrappers for higher-level protocols.}
+Some interface protocols involve a larger state machine than a single message exchange, typically because they need many related operations and well-defined ordering (e.g., parameter enumeration, value edits, list operations, progress reporting, cancellation, and only then activation). To keep such logic consistent and to reduce burden on individual modules, the system uses \emph{wrappers}: \type{IModule} implementations that encapsulate another module instance and implement the protocol on its behalf. For example, the activation wrapper owns the parameter-management protocol (including request/response handling and serialization of parameter values), collects and validates the effective parameter set, and only then invokes a small capability interface on the wrapped module (e.g., \type{IActivableModule::activate}/\type{deactivate}). Traffic outside the wrapper's scope is forwarded, while protocol-specific ingress is intercepted and handled by the wrapper.
+
+\minihead{Capability queries for wrapper stacking.}
+To support stacking multiple wrappers, modules expose optional capabilities via \type{IModule::query\_capability}. Each wrapper forwards the query to the wrapped object, and the bottom-most module returns a pointer to the requested interface if supported (or \type{nullptr} otherwise). This allows extending the system's functionality (e.g., module activation) using messaging and wrappers without changing the base module contract.
+
+\xxx{Fig (OPTIONAL): Transport vs. interface contract. Core transports \type{MessageHeader} (+ blobs) between channels; an interface contract defines how the payload is interpreted as a domain message, request/response pair, or status/update stream.}
+
+
+
+
 
 
 \section{Interface contracts} \label{sec:ch3_interface_contracts}
