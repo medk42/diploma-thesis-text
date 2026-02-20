@@ -839,74 +839,71 @@ To support stacking multiple wrappers, modules expose optional capabilities via 
 \xxx{Fig (OPTIONAL): Transport vs. interface contract. Core transports \type{MessageHeader} (+ blobs) between channels; an interface contract defines how the payload is interpreted as a domain message, request/response pair, or status/update stream.}
 
 
+\subsection{Activation interface} \label{subsec:ch3_activation_interface}
 
+\minihead{Purpose.}
+Many modules cannot start producing meaningful outputs immediately: they first need user-provided configuration (e.g., selecting a concrete device instance) or they must derive internal state from incoming data (e.g., computing calibration from a short image sequence). These steps can take tens of seconds and must run as a cancellable task. The activation interface standardizes this interaction so the UI can configure and (de)activate modules without requiring module-specific UI logic.
 
-
-
-\section{Interface contracts} \label{sec:ch3_interface_contracts}
-
-The base module contract (\autoref{sec:ch3_module_contract}) defines how modules are hosted, how they exchange messages through channels, and what the core guarantees about delivery and concurrency. On top of this base contract, the system defines a set of \emph{interface contracts} for higher-level functionality (activation, use-case orchestration, domain message semantics). These contracts are expressed in two complementary ways:
-(i) as additional C++ interfaces implemented by selected modules (e.g., \type{IActivableModule}), and
-(ii) as \type{IModule}-level wrappers that translate the contract into ordinary messages and responses so that the functionality remains composable inside the same runtime.
-
-\subsection{Why wrappers exist}
-
-Higher-level features such as module activation are most naturally implemented as direct C++ calls (start/stop, progress reporting, cancellation, parameter handling). However, exposing such features directly in \type{IModule} would enlarge the base contract and force every module to implement functionality it does not need. Instead, the system keeps \type{IModule} minimal and implements higher-level behavior in wrappers:
-a wrapper is itself a module (\type{ActivationWrapper : public IModule}) that forwards ordinary data traffic to an inner module while intercepting a specific control protocol (activation requests, parameter queries, progress polling) and translating it into calls on an optional interface implemented by the inner module (\type{IActivableModule}).
-
-\subsection{Activation contract}
-
-\minihead{Goal.}
-Activation provides a uniform way to configure and start/stop modules that own long-running resources (camera capture, robot connection, tracking pipeline), while keeping UI logic independent of module-specific details.
-
-\minihead{Optional interface.}
-Modules that support activation implement \type{IActivableModule}. Conceptually, the interface provides:
-(i) \type{activate(...)} and \type{deactivate(...)} with cancellation,
-(ii) a way to report progress (\type{getActivationProgress()}),
-(iii) access to current state (\type{isActivated()}), and
-(iv) optional custom parameter loading support (requesting parameter values and interpreting incoming messages/responses).
-
-\minihead{Wrapper behavior.}
-\type{ActivationWrapper} implements \type{IModule} and exposes an activation \emph{message-level protocol} to the rest of the system. It:
+\minihead{What the contract provides.}
+A module declares a \emph{fixed list} of activation parameters (see \path{parameter_description.h} in \path{module_helpers/parameter_description}). Each parameter specifies:
 \begin{itemize}
-    \item intercepts activation control messages addressed to the wrapped module (requests such as ``activate'', ``deactivate'', ``get status'', ``load parameters''),
-    \item calls the corresponding \type{IActivableModule} function on the wrapped module,
-    \item manages cancellation and progress reporting,
-    \item returns responses using the module's declared response producer channel(s),
-    \item and forwards all unrelated publish/subscribe traffic to the wrapped module unchanged.
+    \item a type (\type{BOOL}, \type{LONG}, \type{DOUBLE}, \type{STRING}, \type{ENUM}, \type{CUSTOM}),
+    \item an optional default value and optional limits / enum options,
+    \item and a cardinality (single value or a list with min/max size).
 \end{itemize}
-This makes activation available to any client module (most importantly the UI) purely through channels, without requiring the client to know the concrete module type.
+This enables both lightweight configuration (e.g., numeric settings, selecting a mode via \type{ENUM}) and data-driven activation via \type{CUSTOM}: the parameter value is obtained from an existing input consumer channel (either \emph{subscribe} or \emph{request/response}). In practice, this is used to pass module-specific payloads required for activation (e.g., a pen pose, list of images, or robot configuration), while keeping the wrapper protocol generic.
 
-\subsection{Stackable wrappers and capability discovery}
+Once parameters are filled, the UI triggers \type{ACTIVATE}. At that point, the wrapped module receives the complete parameter set and performs the module-specific activation procedure asynchronously (e.g., probing a device that matches the requested properties, or running calibration on the provided data). The same protocol also supports \type{DEACTIVATE} and cancellation of long-running operations.
 
-Wrappers are designed to be stackable. A typical module instance may be constructed as a pipeline of layers:
-% \begin{quote}
-%     \type{DllModuleWrapper}(
-%         \type{ActivationWrapper}(
-%             \type{UseCaseWrapper}(
-%                 \type{ConcreteModule}
-%             )
-%         )
-%     )
-% \end{quote}
-Each layer implements \type{IModule} and may intercept a subset of messages while forwarding the rest. In such a composition, a wrapper often needs access to an optional interface implemented by an inner layer (e.g., \type{ActivationWrapper} needs \type{IActivableModule}).
+\minihead{Implementation structure.}
+The protocol is implemented by \type{ActivationWrapper} in \path{backend/module_helpers/activation_wrapper/}. The wrapper owns the parameter storage, implements parameter editing/validation, and exposes a small capability interface \type{IActivableModule} (\path{activable_module.h}). The wrapped module only needs to implement the activation-specific callbacks:
+\type{activate()}, \type{deactivate()}, progress reporting, and (for \type{CUSTOM}) optional request/capture handling (\type{sendRequestFromActivation()}, \type{processCustomMessageOrResponse()}).
 
-To support this without extending \type{IModule}, modules provide a capability query mechanism. Conceptually, a wrapper asks the wrapped instance whether it supports a given optional interface (e.g., \type{IActivableModule}) and obtains a pointer/reference if available. If the capability is not present, the wrapper fails validation (\type{valid() == false}) and the module instance is not created. This keeps optional contracts explicit and allows wrappers to remain generic and reusable.
-
-\subsection{Domain protocols}
-
-In addition to wrapper-level control protocols, the system defines \emph{domain message contracts} for common data exchanged between modules. These contracts specify:
+\minihead{Channels.}
+The contract itself is a prioritized request/response pair between the UI and the wrapper (definitions in \path{message_types.h}):
 \begin{itemize}
-    \item the channel type identifier (string) used for wiring,
-    \item the payload format stored in \type{MessageHeader.data\_} and/or shared blobs,
-    \item request/response pairing rules when applicable (use of \type{id\_} and interpretation of \type{success\_}),
-    \item and any ordering or rate assumptions (e.g., stream vs event semantics).
+    \item \textbf{UI $\rightarrow$ ActivationWrapper:} request channel for parameter edits and activation control.
+    \item \textbf{ActivationWrapper $\rightarrow$ UI:} response channel with result, \type{activated} flag and progress.
+\end{itemize}
+All \emph{other} channels of the wrapped module are gated: while deactivated, non-activation ingress is rejected (not buffered). The only exception is an input channel that is temporarily allowed when the wrapper is waiting for a pending \type{CUSTOM} value.
+
+\minihead{Message shapes.}
+Requests carry a small fixed header (request kind + parameter addressing) and optionally attach a single blob:
+\begin{itemize}
+    \item \type{SET\_VALUE}: one blob containing the new value.
+    \item \type{LIST\_ADD}/\type{LIST\_REMOVE}: edits list cardinality without providing a value.
+    \item \type{READ\_ACTIVATION\_PARAMETERS}: response returns a textual description of the parameter list (generated from \type{ParameterList::toString()}).
+    \item \type{READ\_VALUES}: response returns a compact binary snapshot of all current values; \type{CUSTOM} items are represented only as present/absent markers.
+\end{itemize}
+For \type{CUSTOM} parameters, the wrapper still does not interpret the domain payload, but it also does not blindly serialize the packet.
+When a candidate message/response arrives on the configured input (subscribe channel, or a matching response identified by the stored request ID), the wrapper forwards it to \type{IActivableModule::processCustomMessageOrResponse()}.
+The module can then (i) \emph{DROP} the packet (e.g., unrelated message on a shared channel) and keep waiting, (ii) \emph{ACCEPT} it, in which case the wrapper serializes the incoming \type{MessageHeader} (+ blobs) into a canonical opaque byte array, or (iii) \emph{ACCEPT\_REPLACE}, where the module supplies its own serialized representation (e.g., reduced/normalized data) to be stored instead.
+The resulting byte array is stored in \type{parameter\_values} and later passed unchanged to \type{IActivableModule::activate()}.
+
+\minihead{Flow.}
+A typical UI-driven interaction is:
+\begin{enumerate}
+    \item UI requests the parameter schema (\type{READ\_ACTIVATION\_PARAMETERS}) and shows it in a generic activation panel.
+    \item UI edits values (\type{SET\_VALUE}, \type{LIST\_ADD}/\type{LIST\_REMOVE}); the wrapper stores the values and validates basic constraints (type, ranges, enum domain, list bounds).
+    \item For \type{CUSTOM}, UI triggers a capture via \type{SET\_VALUE}; the wrapper either waits for an incoming message on a configured subscribe channel, or asks the module to issue a request (\type{sendRequestFromActivation()}) and then waits for the corresponding response. The module may filter/transform the captured payload via \type{processCustomMessageOrResponse()}.
+    \item UI sends \type{ACTIVATE}; the wrapper starts an async activation task and calls \type{IActivableModule::activate(parameter\_values,\ cancel\_flag,\ cancelled)}.
+    \item UI polls \type{GET\_STATUS} to display progress (\type{getActivationProgress()}); \type{CANCEL\_TASK} aborts waiting for \type{CUSTOM} or cancels a running activation/deactivation task.
+    \item On successful completion, the wrapper flips the gating state and normal ingress is allowed. \type{DEACTIVATE} mirrors the same pattern.
+\end{enumerate}
+
+\xxx{Fig (OPTIONAL): ActivationWrapper state machine. Deactivated $\rightarrow$ (editing) $\rightarrow$ WaitingForCustomValue / Activating $\rightarrow$ Activated, with symmetric deactivation and \type{CANCEL\_TASK} transitions.}
+
+\minihead{Guarantees and limitations.}
+\begin{itemize}
+    \item The wrapper centralizes parameter handling: modules do not implement the UI protocol, only \type{activate()/deactivate()}, progress/status checks, and two hooks for custom parameter processing.
+    \item Basic parameter validation is enforced before activation (type checks, numeric bounds, enum options, list size constraints).
+    \item Parameter edits are blocked while activated, while waiting for a \type{CUSTOM} value, or while an activation/deactivation task is running (to keep activation inputs consistent).
+    \item \type{CUSTOM} payloads are treated as opaque; their semantics and internal structure are module-defined.
+    \item Non-activation traffic is not buffered while deactivated; senders must tolerate dropped messages until activation completes.
 \end{itemize}
 
-Examples used in this thesis include camera stream delivery, pen intent events, scene detection request/response, and UI control messages. These protocols are referenced by channel type identifiers in \type{ModuleInfo} and are therefore discoverable and composable through the mapping mechanism described earlier.
-
-\section{UI and use-case orchestration} \label{sec:ch3_ui}
-
+\minihead{Persistence boundary.}
+On save/load, the wrapper persists \emph{parameter values} (including stored \type{CUSTOM} payloads as named binary blobs) together with the wrapped module state (the wrapper nests the inner module's save data). The wrapper itself cannot reconstruct the meaning of ``activated''; after load it restores parameters, loads the inner module, and queries \type{IActivableModule::isActivated()} to decide whether to open the ingress gate. This is done, because calling \type{activate()} after load could result in tens of seconds of work (e.g. calibration), therefore it is the responsibility of the modules to save their activation state and parameters required to maintain it (e.g. requested camera parameters, calibration results).
 
 
 % writing about my system design in latex:
