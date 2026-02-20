@@ -831,7 +831,7 @@ This makes the communication boundary explicit and keeps modules replaceable as 
 Concretely, contracts are implemented as C++ header-only definitions shared by the participating modules. Each contract provides matching \type{communication\_channel::Producer} and \type{communication\_channel::Consumer} descriptors with a \type{channel\_type\_identifier\_} string. The identifier acts as a compatibility key for binding channels in the core and also includes a compact schema hint and a version tag (e.g., \type{/v1}). In this thesis, these definitions are located under \path{backend/module_helpers/} (e.g., camera and pen message headers, activation wrapper messages, robot interface messages). For details of the exact binary layouts, the corresponding header files are the source of truth.
 
 \minihead{Wrappers for higher-level protocols.}
-Some interface protocols involve a larger state machine than a single message exchange, typically because they need many related operations and well-defined ordering (e.g., parameter enumeration, value edits, list operations, progress reporting, cancellation, and only then activation). To keep such logic consistent and to reduce burden on individual modules, the system uses \emph{wrappers}: \type{IModule} implementations that encapsulate another module instance and implement the protocol on its behalf. For example, the activation wrapper owns the parameter-management protocol (including request/response handling and serialization of parameter values), collects and validates the effective parameter set, and only then invokes a small capability interface on the wrapped module (e.g., \type{IActivableModule::activate}/\type{deactivate}). Traffic outside the wrapper's scope is forwarded, while protocol-specific ingress is intercepted and handled by the wrapper.
+Some interface protocols involve a larger state machine than a single message exchange, typically because they need many related operations and well-defined ordering (e.g., parameter enumeration, value edits, list operations, progress reporting, cancellation, and only then activation). To keep such logic consistent and to reduce burden on individual modules, the system uses \emph{wrappers}: \type{IModule} implementations that encapsulate another module instance and implement the protocol on its behalf. For example, the activation wrapper owns the parameter-management protocol (including request/response handling and serialization of parameter values), collects and validates the effective parameter set, and only then invokes a small capability interface on the wrapped module (e.g., \type{IActivableModule::activate}/\type{deactivate}). Traffic outside the wrapper's scope is forwarded when the wrapper allows normal ingress, while protocol-specific ingress is intercepted and handled by the wrapper.
 
 \minihead{Capability queries for wrapper stacking.}
 To support stacking multiple wrappers, modules expose optional capabilities via \type{IModule::query\_capability}. Each wrapper forwards the query to the wrapped object, and the bottom-most module returns a pointer to the requested interface if supported (or \type{nullptr} otherwise). This allows extending the system's functionality (e.g., module activation) using messaging and wrappers without changing the base module contract.
@@ -903,7 +903,7 @@ A typical UI-driven interaction is:
 \end{itemize}
 
 \minihead{Persistence boundary.}
-On save/load, the wrapper persists \emph{parameter values} (including stored \type{CUSTOM} payloads as named binary blobs) together with the wrapped module state (the wrapper nests the inner module's save data). The wrapper itself cannot reconstruct the meaning of ``activated''; after load it restores parameters, loads the inner module, and queries \type{IActivableModule::isActivated()} to decide whether to open the ingress gate. This is done, because calling \type{activate()} after load could result in tens of seconds of work (e.g. calibration), therefore it is the responsibility of the modules to save their activation state and parameters required to maintain it (e.g. requested camera parameters, calibration results).
+On save/load, the wrapper persists \emph{parameter values} (including stored \type{CUSTOM} payloads as named binary blobs) together with the wrapped module state (the wrapper nests the inner module's save data). The wrapper itself cannot reconstruct the meaning of ``activated''; after load it restores parameters, loads the inner module, and queries \type{IActivableModule::isActivated()} to decide whether to open the ingress gate. This is done because calling \type{activate()} after load could result in tens of seconds of work (e.g., calibration); therefore, it is the responsibility of modules to save their activation state and any artifacts required to maintain it (e.g., requested camera parameters, calibration results).
 
 
 \subsection{Use case interface} \label{sec:ch3_usecase_wrapper}
@@ -936,7 +936,6 @@ The contract is implemented in three layers:
     \item \textbf{\type{BaseUsecase} (\path{base_usecase}).} Convenience base class for use case authors. It provides default implementations for most unrelated \type{IModule} boilerplate and implements the \emph{execution} part of \type{IUsecaseModule} (the program lifecycle: \type{programStart}/\type{programStatus}/\type{programPause}/\dots) by tracking \type{task\_id}s and running programs in worker threads. The use case still implements the \emph{construction} and \emph{domain} logic (most importantly \type{createCommandFromParameters(...)}, plus \type{validateParameters(...)} and \type{runProgram(...)}), and can override normal message/response handlers when it needs to orchestrate other modules.
 \end{itemize}
 
-
 \minihead{Channels.}
 The contract itself is a prioritized request/response pair between the UI and the wrapper:
 \begin{itemize}
@@ -946,7 +945,6 @@ The contract itself is a prioritized request/response pair between the UI and th
 
 \minihead{Message families.}
 The UI--use case protocol can be viewed as four request groups; most requests optionally attach a single blob payload.
-
 \begin{itemize}
     \item \textbf{Parameter schema acquisition.}
     \begin{itemize}
@@ -982,12 +980,10 @@ A typical UI-driven interaction is:
     \item \type{CREATE\_COMMAND}: submit all filled parameter values; the use case returns an opaque command representation (JSON) and optionally a lightweight preview/visualization blob.
     \item \type{PROGRAM\_START\_REAL} or \type{PROGRAM\_START\_SIMULATED}: provide back the command JSON to start execution and obtain a \type{task\_id}.
     \item While running: poll \type{PROGRAM\_STATUS} and optionally issue \type{PROGRAM\_PAUSE}/\type{PROGRAM\_RESUME}/\type{PROGRAM\_STOP} (if supported).
-    \item After a terminal status: \type{PROGRAM\_REMOVE} to deterministically release per-task resources.
+    \item After a terminal status: call \type{PROGRAM\_REMOVE} (once per \type{task\_id}) to deterministically release per-task resources.
 \end{enumerate}
 
 \xxx{Fig (OPTIONAL): Use case request sequence: READ\_COMMAND\_PARAMETERS $\rightarrow$ (CUSTOM reads) $\rightarrow$ CREATE\_COMMAND $\rightarrow$ PROGRAM\_START\_* $\rightarrow$ STATUS/CONTROL $\rightarrow$ PROGRAM\_REMOVE.}
-
-\xxx{Fig (OPTIONAL): Use case request sequence: schema query $\rightarrow$ (\type{CUSTOM} acquisition) $\rightarrow$ command creation $\rightarrow$ start $\rightarrow$ status/control $\rightarrow$ remove.}
 
 \minihead{BaseUsecase: what authors implement.}
 \type{BaseUsecase} is a convenience base for use case modules. It mainly removes two categories of boilerplate:
@@ -1005,7 +1001,7 @@ For interactive use cases, it is common to also override:
 \begin{itemize}
     \item \type{processCustomMessageOrResponse(...)} to filter/normalize captured inputs,
     \item optionally \type{sendRequestFromUsecase(...)} when \type{CUSTOM} acquisition uses request/response, and
-    \item \type{valid()}, \type{onIngress()}, \type{processMessage()}, \type{processResponse()} to orchestrate other modules during execution (e.g., robot control, detect scene).
+    \item \type{valid()}, \type{onIngress()}, \type{processMessage()}, \type{processResponse()} to orchestrate other modules during execution (e.g., robot control, scene detection).
 \end{itemize}
 
 Pause/stop can be implemented cooperatively by periodically calling \type{checkControlRequests()} or \type{handleControlRequests(...)} inside long-running loops.
@@ -1017,7 +1013,7 @@ Pause/stop can be implemented cooperatively by periodically calling \type{checkC
     \item \textbf{Validation boundary:} the wrapper enforces type/limits/list bounds according to \type{ParameterDescription}; the module focuses on semantic validation and execution.
     \item \textbf{Task identity and control:} all running programs are addressed by \type{task\_id}; invalid IDs return \type{ID\_INVALID}. Pause/resume/stop are optional capabilities (fail fast if unsupported).
     \item \textbf{Multiple concurrent use case instances:} the interface supports multiple concurrent tasks. Whether a specific use case allows this is module-defined (in \type{BaseUsecase} via \type{supports\_multi\_program\_}).
-    \item \textbf{Explicit cleanup:} finished tasks should be removed via \type{PROGRAM\_REMOVE} to avoid accumulating per-task state (and to join program threads in \type{BaseUsecase}).
+    \item \textbf{Explicit cleanup:} finished tasks should be removed via \type{PROGRAM\_REMOVE} to avoid accumulating per-task state (and to join program threads in \type{BaseUsecase}). Calling \type{PROGRAM\_REMOVE} while a task is still running will fail (task will continue running, request will return failure); calling it again for an already removed \type{task\_id} returns an invalid-ID result. If, after task completion, the call is omitted, thread resources and task states will leak.
     \item \textbf{CUSTOM payload opacity:} captured messages/responses are stored as opaque byte arrays (after module-side filtering/serialization). Their internal meaning is strictly module-defined.
     \item \textbf{Stateless command construction:} unlike activation, the wrapper does not own a persistent ``current parameter set'' for a use case.
     Parameter editing state lives in the caller (typically the UI): each command-creation request carries a complete snapshot of all parameter values.
