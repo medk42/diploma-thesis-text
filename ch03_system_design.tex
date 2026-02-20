@@ -816,67 +816,6 @@ This procedure guarantees that the \emph{mapping topology and per-module configu
 
 
 
-\xxx{DOUBLE CHECK - what is covered here!}
-
-\xxx{No producer\_module\_id, producer\_channel\_id!}
-
-\xxx{mention the module mapping state id}
-
-\xxx{mention zip/json serialization}
-
-\xxx{allocation in brief}
-
-\xxx{Where do we mention c++, dll/so, windows/linux, etc.? in the core implementation section? Implementaion chapter?
-    3.2 Core implementation: subsection like Module loading and hosting mechanism:
-    shared library loading (\type{.dll}/\type{.so})
-    symbol discovery (\type{readModuleInfo}, \type{createModule}, \type{destroyModule})
-    API version check
-    how \type{data\_path} is derived (module filename → basename → lookup in core data directory)
-    If you have a separate Implementation chapter, you can repeat/expand there, but 3.2 is the “right” first mention, because it’s your concrete core.
-}
-
-\xxx{Core section: what to cover (and what not to forget)}
-\begin{itemize}
-  \item \xxx{Purpose: one concrete hosting + routing implementation of the contract; separate from the contract text. State explicitly what is contract-required vs this implementation choice.}
-  \item \xxx{Core responsibilities recap: module creation/removal, mapping validation, routing, queueing/scheduling, shared payload allocator ownership, reflection/orchestration API.}
-  \item \xxx{Module hosting flow (high level): call module factory with \type{data\_path, ICore*, InputChannelMapInfo, ILogger*, module\_id}; check \type{valid()}; \type{threadStart}; register channels + mapping; failure handling.}
-  \item \xxx{Data path resolution policy (implementation): module package name -> optional folder under core data root; \type{nullptr} if missing. (Put OS-specific DLL/SO details either here or in implementation chapter, but mention policy here.)}
-  \item \xxx{Running module IDs: monotonically increasing, never reused; removed modules leave gaps; \type{getRunningModulesCount()} returns lifetime-created count; \type{RunningModuleInfo.exists\_} validity check; tie to UI iteration pattern.}
-  \item \xxx{Loaded module catalog vs running instances: \type{getLoadedModulesInfo/count} vs \type{getRunningModulesInfo/count}; why UI needs both.}
-  \item \xxx{Channel mapping validation on addModule: enforce subscribe/request consumer count policies (SINGLE/RANGE constraints), required-min/max, type match; AUTO\_ALL treated differently (no explicit target list).}
-  \item \xxx{Routing differences: publish/subscribe uses stored mapping; request/response uses explicit \type{target\_channel} but still validates channel ids and (optionally) that target is allowed by mapping policy.}
-  \item \xxx{Ingress + queue policy implementation: per-consumer queues, capacity tracking, \type{QueueStatus} computation, applying \type{IngressDecision} (drop, drop-oldest, replace-queue).}
-  \item \xxx{Worker model: per-module workers; prioritized vs regular; how channels are classified; why (UI responsiveness); note that concurrency means callbacks can overlap.}
-  \item \xxx{Deadlock pitfall note (important): if modules synchronously wait inside callbacks for other responses, worker counts matter; document guideline (avoid waiting in worker thread; or allocate enough workers / use background threads).}
-  \item \xxx{Request handling mechanics: core (or wrapper) calls \type{processRequest} and sends exactly one response using returned \type{ResponseData}; preserves \type{id\_}; sets transport \type{success\_} on routing/drop failures.}
-  \item \xxx{Failure behavior: missing module/channel, destruction\_in\_progress, invalid mapping -> dropped message; for requests generate failure response (\type{success\_=false}); log warnings.}
-  \item \xxx{Thread-safety/locking strategy (implementation): core mutex shared for send/reflection, unique for add/remove/load; allocator mutex separate; destruction\_in\_progress flag; note limitations (messages may block on locks).}
-  \item \xxx{Removal semantics: dependency collection, recursive removal, stop order, then mapping unregistration; mapping state id bump; AUTO\_ALL dependency rules (not considered).}
-  \item \xxx{Reflection API semantics: mapping state id usage for UI refresh; getRunningModulesChannelMap blob format; existing producer discovery maps (publish/response) and AUTO\_ALL helpers.}
-  \item \xxx{Persistence (save/load) flow at implementation level: remove non-auto modules, recreate, threadStart, load state, rewire; IDs change; allocators not persisted; failure rollback policy.}
-  \item \xxx{Where to put platform specifics: DLL/SO loader, filesystem scanning, symbol names, API version checks. (Either a short subsection here or defer to Implementation chapter; but ensure one place covers it.)}
-\end{itemize}
-\begin{itemize}
-  \item \xxx{Restate scope: this section describes the concrete in-process core used in the thesis (threads, in-memory routing), while preserving the abstract module contract.}
-  \item \xxx{Hosting model: how module packages are discovered/loaded (plugin catalog) and how a module instance is created through the hosting mechanism (factory + wrapper concept).}
-  \item \xxx{Loaded vs running sets: data structures for loaded module types vs running instances; monotonic running IDs, tombstones, and why IDs are not reused.}
-  \item \xxx{Data path resolution rule: modules root + data root; how module name maps to optional data folder; when \type{data\_path == nullptr}.}
-  \item \xxx{Channel registration: how \type{ModuleInfo} is registered on start and per-instance (publish/response producers) into the discovery maps used by UI/orchestration.}
-  \item \xxx{Mapping validation: type-compatibility checks + consumer count policy (SINGLE/RANGE/AUTO\_ALL) checks performed by \type{addModule}.}
-  \item \xxx{Routing tables: internal representation of mappings for publish$\rightarrow$subscribe and request$\rightarrow$response; what keys are used (producer channel -> list of consumer endpoints, etc.).}
-  \item \xxx{Queueing + workers: per-module queues, prioritized vs regular worker pools, how channel priority selects worker class.}
-  \item \xxx{Ingress path: where \type{onIngress} is called, what gets copied (small payload) vs shared (blob handles), and where queue capacity is enforced.}
-  \item \xxx{Request/response plumbing: \type{sendRequest} calls \type{processRequest} on the target module; core/hosting wrapper constructs and sends exactly one response preserving \type{id\_}; failure cases where core synthesizes \type{success\_=false}.}
-  \item \xxx{Removal semantics: \type{removeModuleById} flow (dependency collection, recursive removal), \type{destruction\_in\_progress\_} flag, what happens to in-flight sends/requests.}
-  \item \xxx{Locking model (high level): what is protected by the core mutex vs allocator mutex; shared vs exclusive lock; implications (message sending during add/remove may block or be dropped).}
-  \item \xxx{Allocator ownership: core-managed allocator list; create/delete operations; why allocator ops are safe across creation/removal (separate mutex).}
-  \item \xxx{Mapping state ID: when it increments and how UI uses it as a cheap invalidation mechanism.}
-  \item \xxx{Persistence implementation: what is saved (instances, parameters, mapping, optional per-module state), what is NOT saved (allocators), and how \type{load} reconstructs the graph from the loaded catalog.}
-  \item \xxx{Known limitations / intentional simplifications (brief): single-core process model, no cross-process safety, blocking behavior during topology changes, etc.}
-\end{itemize}
-
-\xxx{If you write that section in this order, it will “click” with what you already established: readers will map every contract concept to the concrete mechanism you used (and will understand the quirks like tombstones, locks, and why some calls are discouraged during teardown).}
-
 
 
 \section{Interface contracts} \label{sec:ch3_interface_contracts}
