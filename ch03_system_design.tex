@@ -906,6 +906,132 @@ A typical UI-driven interaction is:
 On save/load, the wrapper persists \emph{parameter values} (including stored \type{CUSTOM} payloads as named binary blobs) together with the wrapped module state (the wrapper nests the inner module's save data). The wrapper itself cannot reconstruct the meaning of ``activated''; after load it restores parameters, loads the inner module, and queries \type{IActivableModule::isActivated()} to decide whether to open the ingress gate. This is done, because calling \type{activate()} after load could result in tens of seconds of work (e.g. calibration), therefore it is the responsibility of the modules to save their activation state and parameters required to maintain it (e.g. requested camera parameters, calibration results).
 
 
+\subsection{Use case interface} \label{sec:ch3_usecase_wrapper}
+
+\minihead{Purpose.}
+The next interface we cover is the \emph{use case interface}. It defines what a \emph{use case module} is and provides the plugin architecture required by \ref{req:use_case_plugin_support}. Conceptually, a use case turns its inputs (poses, trajectories, detected objects, etc.) into an executable \emph{program command} and exposes a standardized command lifecycle (create $\rightarrow$ start $\rightarrow$ monitor $\rightarrow$ control $\rightarrow$ cleanup). This allows the frontend to run arbitrary use cases through a uniform protocol, without embedding module-specific UI logic.
+
+\minihead{What the contract provides.}
+The use case contract exposes a \emph{single, uniform command API} that separates a use case into two explicit phases: \emph{command construction} and \emph{command execution}.
+
+Through this API, another module (typically the UI) can:
+(i) discover what inputs are needed to build a command (typed parameter schema, including \type{CUSTOM} inputs acquired from existing channels),
+(ii) provide / trigger acquisition of those inputs, (iii) request creation of a concrete \emph{command instance} (returned as an opaque JSON blob, optionally accompanied by lightweight visualization data for preview), (iv) start execution of that command (start in real/simulated mode), and (v) manage the execution via a stable handle (\type{task\_id}) with standardized operations (query status, pause, resume, stop).
+
+Finally, the lifecycle includes an explicit \type{REMOVE} step so the UI can deterministically clean up command instances (e.g., history entries and per-command resources) without module-specific teardown logic.
+
+\minihead{Use case inputs.}
+A use case exposes three \emph{fixed} parameter lists (all using the shared \type{ParameterDescription} format from \path{module_helpers/parameter_description}):
+\begin{itemize}
+    \item \textbf{Auto parameters}: must be \type{CUSTOM}. Values are acquired from existing input consumers (subscribe or request/response) during parameter acquisition. These parameters represent the primary data inputs for the use case (e.g., current scene state or pen-provided pose --- the spatial data).
+    \item \textbf{Required parameters}: non-\type{CUSTOM} values that must be provided by the user before command creation. Their use should be kept minimal, since it shifts focus away from spatial input. However, some use cases require non-spatial input without a reasonable default (e.g., a pick-and-place command may require an object ID).
+    \item \textbf{Advanced parameters}: non-\type{CUSTOM} values with defaults; optional for the user to tweak. Hidden by default, meant for secondary tuning (e.g., approach speed). These provide flexibility without undermining the spatial input paradigm.
+\end{itemize}
+
+\minihead{Implementation structure.}
+The contract is implemented in three layers:
+\begin{itemize}
+    \item \textbf{Messaging contract (\type{message\_types.h}, \path{usecase_wrapper}).} Defines the request/response protocol used by the UI.
+    \item \textbf{\type{UsecaseWrapper} + \type{IUsecaseModule} (\path{usecase_wrapper}).} Similar in spirit to \type{ActivationWrapper}: the wrapper handles the messaging contract, while the wrapped module implements a small capability interface \type{IUsecaseModule}.
+    \item \textbf{\type{BaseUsecase} (\path{base_usecase}).} Convenience base class for use case authors. It provides default implementations for most unrelated \type{IModule} boilerplate and implements the \emph{execution} part of \type{IUsecaseModule} (the program lifecycle: \type{programStart}/\type{programStatus}/\type{programPause}/\dots) by tracking \type{task\_id}s and running programs in worker threads. The use case still implements the \emph{construction} and \emph{domain} logic (most importantly \type{createCommandFromParameters(...)}, plus \type{validateParameters(...)} and \type{runProgram(...)}), and can override normal message/response handlers when it needs to orchestrate other modules.
+\end{itemize}
+
+
+\minihead{Channels.}
+The contract itself is a prioritized request/response pair between the UI and the wrapper:
+\begin{itemize}
+    \item \textbf{UI $\rightarrow$ UsecaseWrapper:} requests for parameter schema acquisition, \type{CUSTOM} input capture, command creation, and execution control.
+    \item \textbf{UsecaseWrapper $\rightarrow$ UI:} responses with result codes and any associated payloads (e.g., schema description, captured \type{CUSTOM} bytes, command JSON, visualization blob, \type{task\_id}, status/error info).
+\end{itemize}
+
+\minihead{Message families.}
+The UI--use case protocol can be viewed as four request groups; most requests optionally attach a single blob payload.
+
+\begin{itemize}
+    \item \textbf{Parameter schema acquisition.}
+    \begin{itemize}
+        \item \type{READ\_COMMAND\_PARAMETERS}: returns the declared parameter schema (auto/required/advanced), together with basic use case metadata (identifier + name/description).
+    \end{itemize}
+
+    \item \textbf{Auto-input capture for \type{CUSTOM}.}
+    \begin{itemize}
+        \item \type{READ\_CUSTOM\_PARAMETER\_START}: starts acquisition for one auto parameter and returns a read handle.
+        \item \type{READ\_CUSTOM\_PARAMETER\_CHECK}: polls completion (or cancels); on success returns an opaque captured value.
+    \end{itemize}
+    Captured messages/responses are not interpreted by the wrapper: they are first offered to \type{IUsecaseModule::processCustomMessageOrResponse()}, which can \type{DROP} unrelated packets, \type{ACCEPT} them (stored as a canonical serialized payload), or \type{ACCEPT\_REPLACE} with a module-provided normalized representation.
+
+    \item \textbf{Command creation.}
+    \begin{itemize}
+        \item \type{CREATE\_COMMAND}: request attaches all filled parameter values; response returns an opaque command representation (JSON), optionally accompanied by lightweight preview/visualization data.
+    \end{itemize}
+
+    \item \textbf{Execution control + cleanup.}
+    \begin{itemize}
+        \item \type{PROGRAM\_START\_REAL} / \type{PROGRAM\_START\_SIMULATED}: starts execution from the command JSON and returns a \type{task\_id}.
+        \item \type{PROGRAM\_STATUS}: queries current \type{ProgramStatus} (and optional error details).
+        \item \type{PROGRAM\_PAUSE}, \type{PROGRAM\_RESUME}, \type{PROGRAM\_STOP}: optional controls (unsupported operations fail fast).
+        \item \type{PROGRAM\_REMOVE}: explicit removal of finished tasks to release per-task resources.
+    \end{itemize}
+\end{itemize}
+
+\minihead{Flow.}
+A typical UI-driven interaction is:
+\begin{enumerate}
+    \item \type{READ\_COMMAND\_PARAMETERS}: fetch the parameter schema (auto/required/ advanced) and basic metadata; the UI renders a generic editor (with auto and required shown, advanced hidden).
+    \item Fill out parameters via the UI. For each auto \type{CUSTOM} parameter: start acquisition with \type{READ\_CUSTOM\_PARAMETER\_START} and poll \type{READ\_CUSTOM\_PARAMETER\_CHECK} until \type{SUCCESS} (or cancel).
+    \item \type{CREATE\_COMMAND}: submit all filled parameter values; the use case returns an opaque command representation (JSON) and optionally a lightweight preview/visualization blob.
+    \item \type{PROGRAM\_START\_REAL} or \type{PROGRAM\_START\_SIMULATED}: provide back the command JSON to start execution and obtain a \type{task\_id}.
+    \item While running: poll \type{PROGRAM\_STATUS} and optionally issue \type{PROGRAM\_PAUSE}/\type{PROGRAM\_RESUME}/\type{PROGRAM\_STOP} (if supported).
+    \item After a terminal status: \type{PROGRAM\_REMOVE} to deterministically release per-task resources.
+\end{enumerate}
+
+\xxx{Fig (OPTIONAL): Use case request sequence: READ\_COMMAND\_PARAMETERS $\rightarrow$ (CUSTOM reads) $\rightarrow$ CREATE\_COMMAND $\rightarrow$ PROGRAM\_START\_* $\rightarrow$ STATUS/CONTROL $\rightarrow$ PROGRAM\_REMOVE.}
+
+\xxx{Fig (OPTIONAL): Use case request sequence: schema query $\rightarrow$ (\type{CUSTOM} acquisition) $\rightarrow$ command creation $\rightarrow$ start $\rightarrow$ status/control $\rightarrow$ remove.}
+
+\minihead{BaseUsecase: what authors implement.}
+\type{BaseUsecase} is a convenience base for use case modules. It mainly removes two categories of boilerplate:
+(i) the \type{program*} lifecycle methods of \type{IUsecaseModule} (task IDs, per-task status tracking, thread ownership, pause/stop bookkeeping, and \type{PROGRAM\_REMOVE} cleanup), and
+(ii) default implementations of \type{IModule} methods that many use cases do not need.
+
+A use case author still implements the use case-specific parts, at minimum:
+\begin{itemize}
+    \item \type{createCommandFromParameters(...)}: builds the opaque command JSON (and optional preview/visualization data) from the filled parameter values.
+    \item \type{validateParameters(command\_json)}: semantic validation of the created command before execution.
+    \item \type{runProgram(command\_json, simulated)}: the blocking runtime logic executed in a worker thread.
+\end{itemize}
+
+For interactive use cases, it is common to also override:
+\begin{itemize}
+    \item \type{processCustomMessageOrResponse(...)} to filter/normalize captured inputs,
+    \item optionally \type{sendRequestFromUsecase(...)} when \type{CUSTOM} acquisition uses request/response, and
+    \item \type{valid()}, \type{onIngress()}, \type{processMessage()}, \type{processResponse()} to orchestrate other modules during execution (e.g., robot control, detect scene).
+\end{itemize}
+
+Pause/stop can be implemented cooperatively by periodically calling \type{checkControlRequests()} or \type{handleControlRequests(...)} inside long-running loops.
+
+\minihead{Guarantees and limitations.}
+\begin{itemize}
+    \item \textbf{Uniform plugin protocol:} the UI never calls use case-specific channels; it only uses the wrapper protocol.
+    \item \textbf{Always visible (no activation gate):} use cases can be listed and their parameter schema queried at any time.
+    \item \textbf{Validation boundary:} the wrapper enforces type/limits/list bounds according to \type{ParameterDescription}; the module focuses on semantic validation and execution.
+    \item \textbf{Task identity and control:} all running programs are addressed by \type{task\_id}; invalid IDs return \type{ID\_INVALID}. Pause/resume/stop are optional capabilities (fail fast if unsupported).
+    \item \textbf{Multiple concurrent use case instances:} the interface supports multiple concurrent tasks. Whether a specific use case allows this is module-defined (in \type{BaseUsecase} via \type{supports\_multi\_program\_}).
+    \item \textbf{Explicit cleanup:} finished tasks should be removed via \type{PROGRAM\_REMOVE} to avoid accumulating per-task state (and to join program threads in \type{BaseUsecase}).
+    \item \textbf{CUSTOM payload opacity:} captured messages/responses are stored as opaque byte arrays (after module-side filtering/serialization). Their internal meaning is strictly module-defined.
+    \item \textbf{Stateless command construction:} unlike activation, the wrapper does not own a persistent ``current parameter set'' for a use case.
+    Parameter editing state lives in the caller (typically the UI): each command-creation request carries a complete snapshot of all parameter values.
+    This makes it possible to keep multiple independent drafts/instances of the same use case in parallel (e.g., the user starts filling one instance, switches to another, and returns later).
+    The created command is returned as an opaque JSON representation, so it can also be stored externally and passed back unchanged when starting execution.
+\end{itemize}
+
+\minihead{Persistence boundary.}
+Use cases are designed to be \emph{stateless orchestration plugins}: the wrapper does not persist parameter drafts, created commands, or task history.
+The only state that necessarily lives inside the use case module is \emph{runtime execution state} of started programs (tracked by \type{task\_id}), because execution may perform arbitrary domain logic and interact with other modules.
+Finished tasks are explicitly removed to release this per-task state.
+
+
+
 % writing about my system design in latex:
 
 % The system is split into four conceptual parts: modules backbone (the "backbone" of modules, architecture to support messages passing, channels, the idea how modules work, how they receive messages, how they send messages - this is actually all the interfaces for describing how a module works without any dependence on a concrete core implementation (just covered by ICore interface), therefore not yet deciding how core should be implemented (threads vs processes etc.); they implement independent functionality (camera, calibration, pen tracking, scene detection, UI, use case, robot), however that is said later, here we want to describe just the backbone), core (concrete implementation of the core, handles loading modules, how modules are represented (dlls, but not mention yet in overview), how concretely they are called, how are messages passed to the correct modules, how is memory allocated, etc; the modules part describes what we need to do, core how it is done - we can name these differently, actually, but i do want to maintain four conceptual parts), interfaces for various (and their accompying helper classes and wrappers; interfaces fix a certain way of communicating - where modules defined interface and core defined implementation, interfaces define how is the system used, what is built on top of the system, they are more abstract, higher level logic, saying how do messages look, what do they contain, what is the message flow etc. - for example simple interfaces like camera or pen data to more complex like activation interface and its corresponding module wrapper (allowing a module to be activated in the UI, after providing parameters), usecase interface and its wrapper (allowing the module to be used as a usecase from the UI, with providing parameters, confirming teaching, providing visualization data of the taught program and actually running it), scene detection interface (allowing modules to request scan of the scene, request the objects that the scanning module is able to find in the scene etc.), 3d visualization interface and its helper class (allowing modules to provide custom 3d visualization in the UI - again by defining both a pub-sub (scene updates) and req-resp (UI requests full scene or full scene + all objects that can be shown on the scene) messaging) - all of these are *not* UI dependent, they are created indepndent of the UI and UI just implements them) and modules (these actually use the mentioned interfaces, they are built on top of the modules part (with a small wrapper connecting them to the core - they dont actually know about the wrapper, all the logic stays independent of the core) and they implement the actual functionality while using the fixed interfaces to communicate with other modules).
