@@ -1257,9 +1257,71 @@ A module that \emph{implements} robot control is expected to:
 
 
 
-\subsection{Scene detection interface}
 
-\xxx{scene\_detection\_helper}
+\subsection{Scene detection interface} \label{sec:ch3_scene_detection_interface}
+
+\minihead{Purpose.}
+Requirement~\ref{req:scene_detection_logic} (see also \autoref{subsec:ch2_analysis_scene_detection}) calls for scene detection that provides object poses for downstream use cases (e.g., seam detection and trajectory alignment). The scene detection interface standardizes this output as a small request/response contract: a client can query which objects the detector knows about and request a fresh detection result on demand.
+
+All files mentioned in this section are located in \path{backend/module_helpers/scene_detection_helper/}.
+
+\minihead{Scene model.}
+The contract assumes a \emph{static registry} of detectable object types and a \emph{dynamic scene} of detected instances:
+\begin{itemize}
+    \item \textbf{Registry objects:} a list of \type{RegisteredBox} items (stable object \type{id} + box dimensions).
+    \item \textbf{Detected objects:} a list of \type{DetectedBox} items (object \type{id} + current 6D \type{Pose}).
+\end{itemize}
+In this thesis, objects are intentionally represented only as simple boxes (width/height/depth), and detection returns their full 6D pose (position + orientation).
+
+\minihead{Communication modes and channels.}
+The interface is a simple request/response pair (definitions in \path{message_types.h}):
+\begin{itemize}
+    \item \textbf{Request:} \type{ReqType::READ\_REGISTRY} or \type{ReqType::READ\_SCENE}.
+    \item \textbf{Response:} echoes the request type and returns one blob with an array of objects (registry boxes or detected boxes).
+\end{itemize}
+
+\minihead{Message shapes.}
+Requests and responses use small POD headers plus a single blob:
+\begin{itemize}
+    \item \textbf{Request header:} \type{version} + \type{req\_type}, no blobs.
+    \item \textbf{Response header:} \type{version} + \type{req\_type} + \type{count}, plus one blob encoding \type{count} and the corresponding array.
+\end{itemize}
+The exact binary layouts and helper functions for building and parsing blobs are implemented in \path{message_types.h} and are treated as the source of truth.
+
+\minihead{Typical flow (client perspective).}
+A module that needs scene information typically:
+\begin{enumerate}
+    \item obtains the object registry once by sending \type{READ\_REGISTRY} and caching the returned \type{RegisteredBox} list.
+    \item sends \type{READ\_SCENE} whenever it needs a fresh detection; parses the returned \type{DetectedBox} list (\type{id} + \type{Pose}).
+\end{enumerate}
+
+\minihead{RegistryRequestHandler (optional convenience).}
+To avoid needing to handle the \type{READ\_REGISTRY} request manually, clients may use \type{RegistryRequestHandler} (\path{registry_request_handler.h}). It:
+\begin{itemize}
+    \item resolves the target request channel once,
+    \item runs a small background thread that repeatedly issues \type{READ\_REGISTRY} until a valid response arrives (or shutdown), and
+    \item exposes a thread-safe snapshot via \type{getRegisteredBoxesSnapshot()}.
+\end{itemize}
+This is a convenience only; the core contract remains plain request/response without wrappers.
+
+\minihead{Notes for scene-detection module implementers.}
+A scene detection module is expected to:
+\begin{itemize}
+    \item store the registry (registered boxes) internally and serve \type{READ\_REGISTRY} from that state (the registry should not change at runtime),
+    \item perform detection on \type{READ\_SCENE} and respond with the detected boxes (\type{id} and \type{Pose}),
+    \item validate \type{version} and \type{req\_type} and fail fast on unsupported requests.
+\end{itemize}
+
+\minihead{Guarantees and limitations.}
+\begin{itemize}
+    \item \textbf{Box-only object model:} the registry and detections are limited to \type{RegisteredBox} and \type{DetectedBox}; there is no support for meshes, richer geometry, or object-specific shape parameters beyond box extents.
+    \item \textbf{Static registry assumption:} the registry is intended to remain constant over the module lifetime; clients typically request it once and reuse it.
+    \item \textbf{No uncertainty model:} detections report only \type{id} and \type{Pose}; there is no standardized confidence, covariance, or multiple-hypothesis output in the current protocol.
+\end{itemize}
+
+
+
+
 
 \subsection{Supporting message types}
 
