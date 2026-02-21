@@ -292,7 +292,7 @@ In this thesis, all concrete modules inherit from \type{BaseModule}, a small con
 These helpers are intentionally simple: they only ensure consistent metadata and correct \type{ChannelIdentifier} construction; they do not change routing semantics defined by the core.
 
 \minihead{Allocator RAII wrappers.}
-To simplify shared payload allocation (\autoref{subsec:ch3_allocator_contract}), \type{BaseModule} exposes \type{createDynamicAllocator()} and \type{createBufferAllocator(slot\_size\_bytes, number\_of\_slots)}. Both return an \type{AllocatorPtr} (\type{std::unique\_ptr<IAllocator, deleter>}) whose custom deleter calls \type{ICore::deleteAllocator}. This makes allocator ownership explicit and avoids leaks even when modules exit early. (Allocator operations are independent of message routing and may be used during creation/removal.)
+To simplify shared payload allocation (\autoref{subsec:ch3_allocator_contract}), \type{BaseModule} exposes \type{createDynamicAllocator()} and \type{createBufferAllocator(slot\_size\_bytes, number\_of\_slots)}. Both return an \type{AllocatorPtr} (\type{std::unique\_ptr<IAllocator, deleter>}) whose custom deleter calls \type{ICore::deleteAllocator}. This makes allocator ownership explicit and avoids leaks caused by forgotten release. Allocator operations are independent of message routing and may be used during creation/removal.
 
 \minihead{Convenience utilities.}
 \type{BaseModule} also provides:
