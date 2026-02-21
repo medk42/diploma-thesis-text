@@ -940,9 +940,8 @@ The use case contract exposes a \emph{single, uniform command API} that separate
 Through this API, another module (typically the UI) can:
 (i) discover what inputs are needed to build a command (typed parameter schema, including \type{CUSTOM} inputs acquired from existing channels),
 (ii) provide / trigger acquisition of those inputs,
-(iii) request creation of a concrete \emph{command instance} (returned as an opaque JSON blob, optionally accompanied by lightweight visualization data for preview),
-(iv) start execution of that command (start in real/simulated mode) and manage it via a stable handle (\type{task\_id}) with standardized operations (query status, pause, resume, stop),
-and (v) remove finished tasks to deterministically release per-task resources.
+(iii) request creation of a concrete \emph{command instance} (returned as an opaque JSON blob, optionally accompanied by lightweight visualization data for preview), and
+(iv) start execution of that command (start in real/simulated mode) and manage it via a stable handle (\type{task\_id}) with standardized operations (query status, pause, resume, stop).
 
 \minihead{Use case inputs.}
 A use case exposes three \emph{fixed} parameter lists (all using the shared \type{ParameterDescription} format from \path{module_helpers/parameter_description}):
