@@ -941,7 +941,7 @@ Through this API, another module (typically the UI) can:
 (i) discover what inputs are needed to build a command (typed parameter schema, including \type{CUSTOM} inputs acquired from existing channels),
 (ii) provide / trigger acquisition of those inputs,
 (iii) request creation of a concrete \emph{command instance} (returned as an opaque JSON blob, optionally accompanied by lightweight visualization data for preview), and
-(iv) start execution of that command (start in real/simulated mode) and manage it via a stable handle (\type{task\_id}) with standardized operations (query status, pause, resume, stop).
+(iv) start execution of that command (start in real/simulated mode) and manage it via a stable handle (\type{task\_id}) with standardized operations (query status, pause, resume, stop), and remove finished tasks to deterministically release per-task resources.
 
 \minihead{Use case inputs.}
 A use case exposes three \emph{fixed} parameter lists (all using the shared \type{ParameterDescription} format from \path{module_helpers/parameter_description}):
@@ -1023,6 +1023,14 @@ A typical UI-driven interaction is:
 
 \xxx{Fig (OPTIONAL): Use case request sequence: READ\_COMMAND\_PARAMETERS $\rightarrow$ (CUSTOM reads) $\rightarrow$ CREATE\_COMMAND $\rightarrow$ PROGRAM\_START\_* $\rightarrow$ STATUS/CONTROL $\rightarrow$ PROGRAM\_REMOVE.}
 
+\minihead{Use case responsibilities.}
+The contract intentionally splits use case logic into two distinct responsibilities:
+(i) \emph{static construction} and (ii) \emph{dynamic execution}.
+
+During construction, the caller provides a complete parameter snapshot (with \type{CUSTOM} values acquired through the wrapper) and the use case performs a single conversion step: it resolves task-specific details and returns a self-contained command representation (JSON) and optional preview/visualization data.
+
+During execution, that JSON is treated as the program to run: the wrapper only provides lifecycle management (\type{task\_id}, status, pause/resume/stop, remove), while the use case module itself must perform all runtime interaction with its environment via its own channels (requests/responses, optional subscriptions), e.g., query scene state, command robot motion, and wait for acknowledgements.
+
 \minihead{BaseUsecase: what authors implement.}
 \type{BaseUsecase} is a convenience base for use case modules. It mainly removes two categories of boilerplate:
 (i) the \type{program*} lifecycle methods of \type{IUsecaseModule} (task IDs, per-task status tracking, thread ownership, pause/stop bookkeeping, and \type{PROGRAM\_REMOVE} cleanup), and
@@ -1055,7 +1063,6 @@ If you need non-blocking control (e.g., to perform cleanup before exiting), \typ
     \item \textbf{Multiple concurrent use case instances:} the interface supports multiple concurrent tasks. Whether a specific use case allows this is module-defined (in \type{BaseUsecase} via \type{supports\_multi\_program\_}).
     \item \textbf{Explicit cleanup:} finished tasks should be removed via \type{PROGRAM\_REMOVE} to avoid accumulating per-task states and to release finished program threads. Calling \type{PROGRAM\_REMOVE} while a task is still running will fail; calling it again for an already removed \type{task\_id} returns an invalid-ID result. If the call is omitted, per-task bookkeeping and finished threads remain retained until module shutdown.
     \item \textbf{CUSTOM payload opacity:} captured messages/responses are stored as opaque byte arrays (after module-side filtering/serialization). Their internal meaning is strictly module-defined.
-    \item \textbf{Stateless command construction:} parameter drafts and created command instances are external state (typically held by the UI), as described above in \emph{State ownership}.
     \item \textbf{Stateless command construction:} parameter drafts and created command instances are external state (typically held by the UI), as described above in \emph{State ownership}. Neither \type{UsecaseWrapper} nor \type{BaseUsecase} persist drafts, created commands, or task history; if commands must be restored later (e.g., across sessions), the control module is responsible for storing the parameter snapshot and/or the returned command JSON and submitting it again when needed.
 \end{itemize}
 
