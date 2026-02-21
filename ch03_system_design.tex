@@ -883,8 +883,7 @@ Requests carry a small fixed header (request kind + parameter addressing) and op
     \item \type{READ\_ACTIVATION\_PARAMETERS}: response returns a textual description of the parameter list (generated from \type{ParameterList::toString()}).
     \item \type{READ\_VALUES}: response returns a compact binary snapshot of all current values; \type{CUSTOM} items are represented only as present/absent markers.
 \end{itemize}
-For \type{CUSTOM} parameters, the wrapper still does not interpret the domain payload, but it also does not blindly serialize the packet.
-When a candidate message/response arrives on the configured input (subscribe channel, or a matching response identified by the stored request ID), the wrapper forwards it to \type{IActivableModule::processCustomMessageOrResponse()}.
+For \type{CUSTOM} parameters, when a candidate message/response arrives on the configured input (subscribe channel, or a matching response identified by the stored request ID), the wrapper forwards it to \type{IActivableModule::processCustomMessageOrResponse()}.
 The module can then (i) \emph{DROP} the packet (e.g., unrelated message on a shared channel) and keep waiting, (ii) \emph{ACCEPT} it, in which case the wrapper serializes the incoming \type{MessageHeader} (+ blobs) into a canonical opaque byte array, or (iii) \emph{ACCEPT\_REPLACE}, where the module supplies its own serialized representation (e.g., reduced/normalized data) to be stored instead.
 The resulting byte array is stored in \type{parameter\_values} and later passed unchanged to \type{IActivableModule::activate()}.
 
@@ -901,13 +900,26 @@ A typical UI-driven interaction is:
 
 \xxx{Fig (OPTIONAL): ActivationWrapper state machine. Deactivated $\rightarrow$ (editing) $\rightarrow$ WaitingForCustomValue / Activating $\rightarrow$ Activated, with symmetric deactivation and \type{CANCEL\_TASK} transitions.}
 
+\minihead{Activation state semantics.}
+Activation is primarily a \emph{module-level on/off switch} with explicit configuration: \type{activate()} receives the filled parameter set and is expected to bring the module into an operational state (e.g., connect to a device/robot, allocate resources, and begin producing outputs). Conversely, \type{deactivate()} is expected to shut the module down and stop producing outputs. The wrapper mirrors this operational state in an internal \type{activated} flag, reports it to the UI, and uses it to gate non-activation traffic.
+
+A newly created module starts \emph{deactivated} (\type{activated=false}), so only the activation protocol is reachable until activation succeeds (and the module should treat itself as inactive accordingly).
+
+\begin{itemize}
+    \item \textbf{State changes are driven by task success.} \type{ACTIVATE} and \type{DEACTIVATE} start an asynchronous task, but the wrapper keeps its current \type{activated} value while the task is running. When the task finishes and the module reports success (callback returns \type{true}), the wrapper flips \type{activated}. On failure (returns \type{false}), \type{activated} remains unchanged.
+    \item \textbf{Requests are state-guarded.} \type{ACTIVATE} fails if the module is already activated; \type{DEACTIVATE} fails if it is currently deactivated.
+    \item \textbf{Cancellation keeps the previous state.} If a running activation/deactivation task is cancelled, the module should set the \type{cancelled} flag and leave its internal state consistent with the previous mode; the wrapper keeps the previous \type{activated} value (deactivated when cancelling activation, activated when cancelling deactivation).
+    \item \textbf{After load, the module defines the activation state.} On load, the wrapper restores parameters and inner module data and then sets \type{activated} from \type{IActivableModule::isActivated()}. This is the only point where the module directly controls the wrapper's state without running \type{activate()/deactivate()}; the module is therefore responsible for persisting and restoring any activation artifacts needed to remain operational after load.
+\end{itemize}
+
 \minihead{Guarantees and limitations.}
 \begin{itemize}
-    \item The wrapper centralizes parameter handling: modules do not implement the UI protocol, only \type{activate()/deactivate()}, progress/status checks, and two hooks for custom parameter processing.
+    \item The wrapper centralizes parameter handling: modules only implement \type{activate()/deactivate()}, progress/status checks, and two hooks for custom parameter processing.
     \item Basic parameter validation is enforced before activation (type checks, numeric bounds, enum options, list size constraints).
     \item Parameter edits are blocked while activated, while waiting for a \type{CUSTOM} value, or while an activation/deactivation task is running (to keep activation inputs consistent).
     \item \type{CUSTOM} payloads are treated as opaque; their semantics and internal structure are module-defined.
     \item Non-activation traffic is not buffered while deactivated; senders must tolerate dropped messages until activation completes.
+    \item The wrapper gates \emph{ingress} (incoming traffic) while deactivated, but it does not suppress the wrapped module’s own outgoing publishes/requests; therefore, modules must honor their activation state and avoid producing outputs or side effects while deactivated.
 \end{itemize}
 
 \minihead{Persistence boundary.}
