@@ -941,7 +941,7 @@ Through this API, another module (typically the UI) can:
 (i) discover what inputs are needed to build a command (typed parameter schema, including \type{CUSTOM} inputs acquired from existing channels),
 (ii) provide / trigger acquisition of those inputs,
 (iii) request creation of a concrete \emph{command instance} (returned as an opaque JSON blob, optionally accompanied by lightweight visualization data for preview), and
-(iv) start execution of that command (start in real/simulated mode) and manage it via a stable handle (\type{task\_id}) with standardized operations (query status, pause, resume, stop), and remove finished tasks to deterministically release per-task resources.
+(iv) start execution of that command (start in real/simulated mode) and manage it via a stable handle (\type{task\_id}) with standardized operations (query status, pause, resume, stop).
 
 \minihead{Use case inputs.}
 A use case exposes three \emph{fixed} parameter lists (all using the shared \type{ParameterDescription} format from \path{module_helpers/parameter_description}):
@@ -1027,7 +1027,7 @@ A typical UI-driven interaction is:
 The contract intentionally splits use case logic into two distinct responsibilities:
 (i) \emph{static construction} and (ii) \emph{dynamic execution}.
 
-During construction, the caller provides a complete parameter snapshot (with \type{CUSTOM} values acquired through the wrapper) and the use case performs a single conversion step: it resolves task-specific details and returns a self-contained command representation (JSON) and optional preview/visualization data.
+During construction, the caller submits a complete parameter snapshot and the use case performs a single conversion step: it resolves task-specific details and returns a self-contained command representation (JSON) and optional preview/visualization data.
 
 During execution, that JSON is treated as the program to run: the wrapper only provides lifecycle management (\type{task\_id}, status, pause/resume/stop, remove), while the use case module itself must perform all runtime interaction with its environment via its own channels (requests/responses, optional subscriptions), e.g., query scene state, command robot motion, and wait for acknowledgements.
 
