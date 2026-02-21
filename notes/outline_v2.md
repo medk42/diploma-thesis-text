@@ -692,7 +692,7 @@ Future work
 ## Appendices
 
 - Main appendix: developer docs - should be "A short developer appendix that freezes the interfaces + architecture intent (so someone can build on it)."
-    - Build and tooling notes + licencing
+    - Build and tooling notes + licencing (base64)
         - packages used and versions and vcpkg
     - full system graph
     - Message and interface tables (message structure,  serialized message blob form, expected communication graphs)
