@@ -640,7 +640,7 @@ The ingress logic is:
     If accepted, the wrapper takes one \type{ProcessingData} from the preallocated pool, copies:
     (i) the raw payload bytes into \type{ProcessingData::data\_},
     and (ii) the blob handles into \type{ProcessingData::blobs\_}.
-    Then it patches \type{MessageHeader} to point to these owned buffers and pushes the work item to the channel’s processing queue.
+    Then it patches \type{MessageHeader} to point to these owned buffers and pushes the work item to the channel's processing queue.
 \end{enumerate}
 Copying into \type{ProcessingData} makes the queued work self-contained. The core forwards \type{MessageHeader} with pointers that are only meant to be used during the delivery call, but the wrapper processes messages later on worker threads, so it must copy \type{data\_} and the blob-handle array into the enqueued \type{ProcessingData} before returning. The pool then reuses the same \type{ProcessingData} slots, so the internal vectors keep their capacity over time and most ingress operations avoid repeated allocations. The copied \type{SharedDataBlob} handles must be stored with the work item as well (to reconstruct \type{MessageHeader} for deferred processing); keeping these handles until processing finishes also keeps the referenced shared payloads alive for the duration of the call into \type{IModule}.
 
@@ -922,7 +922,7 @@ A newly created module starts \emph{deactivated} (\type{activated=false}), so on
     \item Parameter edits are blocked while activated, while waiting for a \type{CUSTOM} value, or while an activation/deactivation task is running (to keep activation inputs consistent).
     \item \type{CUSTOM} payloads are treated as opaque; their semantics and internal structure are module-defined.
     \item Non-activation traffic is not buffered while deactivated; senders must tolerate dropped messages until activation completes.
-    \item The wrapper gates \emph{ingress} (incoming traffic) while deactivated, but it does not suppress the wrapped module’s own outgoing publishes/requests; therefore, modules must honor their activation state and avoid producing outputs or side effects while deactivated.
+    \item The wrapper gates \emph{ingress} (incoming traffic) while deactivated, but it does not suppress the wrapped module's own outgoing publishes/requests; therefore, modules must honor their activation state and avoid producing outputs or side effects while deactivated.
 \end{itemize}
 
 \minihead{Persistence boundary.}
@@ -1144,10 +1144,14 @@ To make a module contribute to the shared 3D scene:
 
 \minihead{Guarantees and limitations.}
 \begin{itemize}
-    \item \textbf{State reconstructability:} a consumer can always reconstruct the producer’s complete state by issuing \type{READ\_FULL} (or \type{READ\_SCENE} if resources are already known), even if it missed some \type{UPDATE}s.
-    \item \textbf{Best-effort updates:} \type{UPDATE} is a compact delta stream without update IDs. If messages are dropped, a consumer has no direct way to detect the gap other than requesting \type{READ\_SCENE}/\type{READ\_FULL} (a future extension could add monotonic update IDs).
-    \item \textbf{No global ordering across producers:} updates from different producer modules are not globally serialized; the consumer should treat the combined scene as eventually consistent.
+    \item \textbf{State reconstructability:} a consumer can always reconstruct the producer's complete state by issuing \type{READ\_FULL} (or \type{READ\_SCENE} if resources are already known), even if it missed some \type{UPDATE}s.
+    \item \textbf{Best-effort updates (no IDs):} \type{UPDATE} is a compact delta stream without update IDs. If messages are dropped, a consumer has no direct way to detect the gap other than requesting \type{READ\_SCENE}/\type{READ\_FULL} (a future extension could add monotonic update IDs).
+    
+    In particular, a dropped \emph{remove} leaves stale objects/trajectories visible indefinitely, and a dropped \emph{add} can cause later updates to reference an unknown ID until a re-sync is performed.
+    \item \textbf{No global synchronization across producers:} updates from different producer modules are not globally serialized; the consumer simply merges per-producer contributions as they arrive (each producer's stream is self-consistent, but cross-producer timing is unconstrained).
     \item \textbf{Static resources:} resource registrations are intended to be declared once (before \type{announce()}) and then reused by instance updates; changing resource descriptions at runtime is not supported by the current protocol.
+    \item \textbf{Thread safety:} \type{VisualizationHelper} is not internally thread-safe; all calls must be externally synchronized (e.g., by a mutex), except \type{getResponseProducerChannel()} as explicitly documented. This is intentional: a logical scene update typically consists of multiple \type{add/update/remove} calls followed by a single \type{sendUpdate()}, and these steps should not be interleaved with changes from other threads.
+    \item \textbf{Simplified primitives:} the scene description supports only simple primitive-based shapes (no meshes, no boolean operations such as subtract/intersect; complex shapes are formed by composing primitives).
 \end{itemize}
 
 
