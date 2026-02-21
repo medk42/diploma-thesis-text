@@ -844,8 +844,10 @@ To support stacking multiple wrappers, modules expose optional capabilities via 
 \minihead{Purpose.}
 Many modules cannot start producing meaningful outputs immediately: they first need user-provided configuration (e.g., selecting a concrete device instance) or they must derive internal state from incoming data (e.g., computing calibration from a short image sequence). These steps can take tens of seconds and must run as a cancellable task. The activation interface standardizes this interaction so the UI can configure and (de)activate modules without requiring module-specific UI logic.
 
+All files mentioned in this section are located in \path{backend/module_helpers/activation_wrapper/} (protocol + \type{ActivationWrapper}) and \path{backend/module_helpers/parameter_description/} (parameter schema).
+
 \minihead{What the contract provides.}
-A module declares a \emph{fixed list} of activation parameters (see \path{parameter_description.h} in \path{module_helpers/parameter_description}). Each parameter specifies:
+A module declares a \emph{fixed list} of activation parameters (see \path{parameter_description.h}). Each parameter specifies:
 \begin{itemize}
     \item a type (\type{BOOL}, \type{LONG}, \type{DOUBLE}, \type{STRING}, \type{ENUM}, \type{CUSTOM}),
     \item an optional default value and optional limits / enum options,
@@ -856,7 +858,7 @@ This enables both lightweight configuration (e.g., numeric settings, selecting a
 Once parameters are filled, the UI triggers \type{ACTIVATE}. At that point, the wrapped module receives the complete parameter set and performs the module-specific activation procedure asynchronously (e.g., probing a device that matches the requested properties, or running calibration on the provided data). The same protocol also supports \type{DEACTIVATE} and cancellation of long-running operations.
 
 \minihead{Implementation structure.}
-The protocol is implemented by \type{ActivationWrapper} in \path{backend/module_helpers/activation_wrapper/}. The wrapper owns the parameter storage and implements the parameter editing/validation protocol, while the wrapped module exposes a small capability interface \type{IActivableModule} (\path{activable_module.h}).
+The protocol is implemented by \type{ActivationWrapper}. The wrapper owns the parameter storage and implements the parameter editing/validation protocol, while the wrapped module exposes a small capability interface \type{IActivableModule} (\path{activable_module.h}).
 
 \minihead{How modules implement the contract.}
 To make a module activatable through the standard UI:
@@ -934,6 +936,8 @@ On save/load, the wrapper persists \emph{parameter values} (including stored \ty
 \minihead{Purpose.}
 The next interface we cover is the \emph{use case interface}. It defines what a \emph{use case module} is and provides the plugin architecture required by \ref{req:use_case_plugin_support}. Conceptually, a use case turns its inputs (poses, trajectories, detected objects, etc.) into an executable \emph{program command} and exposes a standardized command lifecycle (create $\rightarrow$ start $\rightarrow$ monitor $\rightarrow$ control $\rightarrow$ cleanup). This allows the frontend to run arbitrary use cases through a uniform protocol, without embedding module-specific UI logic.
 
+All files mentioned in this section are located in \path{backend/module_helpers/usecase_wrapper/} (protocol + \type{UsecaseWrapper}), \path{backend/module_helpers/base_usecase/} (\type{BaseUsecase}), and \path{backend/module_helpers/parameter_description/} (shared parameter schema).
+
 \minihead{What the contract provides.}
 The use case contract exposes a \emph{single, uniform command API} that separates a use case into two explicit phases: \emph{command construction} and \emph{command execution}.
 
@@ -944,7 +948,7 @@ Through this API, another module (typically the UI) can:
 (iv) start execution of that command (start in real/simulated mode) and manage it via a stable handle (\type{task\_id}) with standardized operations (query status, pause, resume, stop).
 
 \minihead{Use case inputs.}
-A use case exposes three \emph{fixed} parameter lists (all using the shared \type{ParameterDescription} format from \path{module_helpers/parameter_description}):
+A use case exposes three \emph{fixed} parameter lists (all using the shared \type{ParameterDescription} format):
 \begin{itemize}
     \item \textbf{Auto parameters}: must be \type{CUSTOM}. Values are acquired from existing input consumers (subscribe or request/response) during parameter acquisition. These parameters represent the primary data inputs for the use case (e.g., current scene state or pen-provided pose --- the spatial data).
     \item \textbf{Required parameters}: non-\type{CUSTOM} values that must be provided by the user before command creation. Their use should be kept minimal, since it shifts focus away from spatial input. However, some use cases require non-spatial input without a reasonable default (e.g., a pick-and-place command may require an object ID).
