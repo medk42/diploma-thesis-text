@@ -1322,11 +1322,45 @@ A scene detection module is expected to:
 
 
 
+\subsection{Supporting message types} \label{sec:ch3_supporting_messages}
 
-\subsection{Supporting message types}
+\minihead{Purpose.}
+Besides the core interface contracts, the system uses several shared message formats for transporting camera, calibration, and pen data between modules. These are lightweight schemas (not wrappers) that keep the sensing pipeline modular: producers publish structured data, and downstream modules can be swapped as long as they keep consuming the same message types.
 
-\xxx{camera\_image, camera\_image\_with\_pose, calibrated\_camera\_set, pen\_raw, pen\_intent}
-\xxx{maybe also mention mixed\_buffer\_allocator, pose\_utils, synchronous\_request\_helper}
+All files mentioned in this section are located in \path{backend/module_helpers/} under
+\path{camera_messages/}, \path{camera_pose_helper/}, \path{calibrated_camera_world_messages/}, and \path{pen_messages/}.
+
+\minihead{Camera images.}
+\type{camera\_messages} defines a \type{CameraMessage} header plus one or more blobs that can pack \emph{multiple images per blob} (header + per-image descriptors + raw pixel data). In this thesis, it is used to send a stereo pair in a single blob, produced by \type{stereo\_camera\_module\_windows} and consumed by \type{frontend\_module} (preview) and \type{camera\_pose\_injector\_module} (pose augmentation).
+
+\minihead{Camera images with robot pose.}
+\type{camera\_pose\_helper} extends the camera header with the latest robot flange pose (\type{CameraWithFlangePose}). This format is produced by \type{camera\_pose\_injector\_module} and consumed by \type{robot\_stereo\_camera\_calibration\_module}. The injector exists to attach robot pose at the message level (dropping camera frames until a pose is available), keeping calibration inputs self-contained.
+
+\minihead{Calibrated camera set.}
+\type{calibrated\_camera\_world\_messages} defines \type{CalibratedCameraSet}: camera images accompanied by per-camera world poses (extrinsics) and intrinsics (camera matrix \type{K} and distortion coefficients \type{D}, as used by OpenCV). It is produced by \type{robot\_stereo\_camera\_calibration\_module} and consumed by \type{pen\_tracking\_multicam\_module} and \type{scene\_detection\_stereocam\_module}.
+
+\minihead{Pen messages.}
+\type{pen\_messages} provides:
+\begin{itemize}
+    \item \type{PenMessageRaw}: a low-level stream (timestamp, tip pose, button states) published while the pen is being tracked.
+    \item \type{PenMessageIntent}: discrete, higher-level intents emitted when the user completes a pen interaction: \type{POSE} (a single user-defined target pose), \type{TRAJECTORY} (a user-defined path; pose sequence stored in a blob), and \type{SPECIAL\_ACTION} (a generic auxiliary trigger interpreted by the consumer module).
+\end{itemize}
+In this thesis, \type{pen\_tracking\_multicam\_module} publishes both; \type{PenMessageIntent} is consumed by \type{frontend\_module} (special action handling) and by use case modules that capture poses/trajectories as \type{CUSTOM} inputs.
+
+\minihead{Convenience utilities.}
+Several small internal helpers are used throughout the implementation (all under \path{backend/module_helpers/}):
+\begin{itemize}
+    \item \type{mixed\_buffer\_allocator}: combines a fixed-slot buffered allocator with a dynamic allocator to cheaply allocate typical small blobs while still supporting occasional large payloads.
+    \item \type{pose\_utils}: a minimal \type{SE3} utility (composition, inversion, conversions) used in calibration and geometric processing.
+    \item \type{synchronous\_request\_helper}: turns the core asynchronous request/response mechanism into a blocking call, which is convenient in modules that want a simple linear control flow (e.g., a use case issuing a scene-detection request and waiting for the response).
+    \item \type{async\_helpers}: a small cancellable task wrapper used where the UI/wrappers need to run long work asynchronously (e.g., activation/deactivation).
+    \item \type{base64} (third-party): base64 encode/decode used when converting \type{CUSTOM} parameter payloads to/from strings (in \type{parameter\_description}).
+    \item \type{serialization\_helper}: lightweight binary (de)serialization utilities used pervasively for building and parsing blob payloads across message types and wrappers.
+\end{itemize}
+
+
+
+
 \xxx{usecase\_tree in the next section}
 
 
