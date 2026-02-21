@@ -422,7 +422,7 @@ Based on our prototyping results and the practical requirement for stable depth 
 Finally, the analysis above reflects our ArUco-based pipeline and typical behavior of planar fiducial pose estimation. In our implementation we use OpenCV ArUco markers for both the pen and scene objects; other families (e.g., AprilTag) are compatible with the same overall architecture. In particular, \emph{STag} markers \cite{BENLIGIRAY2019158} are a promising option for improving pose stability by combining square and circular features, and they were evaluated against several common marker systems.
 
 
-\subsection{Robot interface}
+\subsection{Robot interface} \label{subsec:ch2_analysis_robot_interface}
 
 In the previous subsections we focused on sensing. We now turn to the \emph{robot interface}, which is the main output channel of our system and the critical link to execution. Requirement~\ref{req:robot_communication_interface} states that the system needs to provide a \emph{robot communication interface} that allows use cases to move the robot and control its tool, and that can support multiple robot brands/models to ensure broader applicability. In this subsection we briefly outline the practical requirements for such an interface.
 

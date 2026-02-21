@@ -1156,6 +1156,114 @@ To make a module contribute to the shared 3D scene:
 
 
 
+\subsection{Robot execution interface} \label{sec:ch3_robot_interface}
+
+\minihead{Purpose.}
+Requirement~\ref{req:robot_communication_interface} (see also \autoref{subsec:ch2_analysis_robot_interface}) motivates a robot-agnostic execution interface: use cases should be able to trigger motion primitives and observe execution state without hard-coding a vendor API. In this thesis, the interface is used primarily for robot motion and basic state feedback; tool control was considered in the interface design, but it is not implemented and is not required by the demonstration scenarios.
+
+All files mentioned in this section are located in \path{backend/module_helpers/robot_interface/} (contract + feature messages) and \path{backend/module_helpers/robot_wrapper/} (client-side helper).
+
+\minihead{Communication modes and channels.}
+The contract uses a small, feature-agnostic envelope (request type / feature / action ID) and carries the \emph{feature-specific meaning} in an attached blob (see \path{message_types.h} and \path{message_types_definitions.h}). Concretely, it combines a request/response path for starting and controlling actions with two asynchronous subscribe streams for feedback:
+\begin{itemize}
+    \item \textbf{Request/response:} a client sends \type{START\_ACTION} or \type{UPDATE\_ACTION} for a specific \type{RobotFeature}. In practice, these requests almost always include a feature-specific blob that describes \emph{what} action to start/update and with which parameters. The robot module replies immediately with a standardized outcome and, for long-running actions, a fresh \type{action\_id}.
+    \item \textbf{Subscribe (status):} periodic \type{STATUS} messages tagged by \type{RobotFeature}, typically with a feature-specific blob describing the current state (e.g., current pose/joints/execution state).
+    \item \textbf{Subscribe (finished):} a \type{FINISHED} notification for long-running actions, identified by \type{action\_id} and a success flag. A feature-specific blob may additionally carry results or error details (e.g., an error message on failure).
+\end{itemize}
+
+\minihead{High-level request types.}
+All robot actions share the same top-level request envelope:
+\begin{itemize}
+    \item \type{START\_ACTION}: starts a new action for a given \type{RobotFeature}. The concrete action kind and its parameters are encoded in the feature-specific blob.
+    \item \type{UPDATE\_ACTION}: targets an already running action identified by \type{action\_id} (e.g., cancel or other feature-defined updates), again described by the feature-specific blob.
+\end{itemize}
+
+\minihead{Response outcomes.}
+The response envelope standardizes common outcomes across all features (with any additional details carried in an optional feature-specific blob):
+\begin{itemize}
+    \item \type{FEATURE\_NOT\_SUPPORTED}: the requested feature is not implemented by the robot module.
+    \item \type{DATA\_INVALID}: the feature-specific blob could not be parsed or validated.
+    \item \type{SUCCESS}: the request was applied successfully (for \type{UPDATE\_ACTION}) or completed immediately (for \type{START\_ACTION}).
+    \item \type{SUCCESS\_IN\_PROGRESS}: \type{START\_ACTION} succeeded and continues asynchronously; the response carries a fresh \type{action\_id}.
+    \item \type{NOT\_IN\_PROGRESS}: \type{UPDATE\_ACTION} references an unknown or non-running \type{action\_id}.
+    \item \type{FAILURE}: the request failed (optionally with feature-specific error detail).
+\end{itemize}
+
+\minihead{Motion primitives used in this thesis.}
+Within \type{RobotFeature::ROBOT\_CONTROL}, the implemented messages cover:
+\begin{itemize}
+    \item \textbf{Start requests:} joint, linear, arc, and trajectory motions (long-running tasks), plus a \emph{robot specs} query (limits, joint count and ranges; immediate response).
+    \item \textbf{Update requests:} an update command for cancelling an in-progress motion (by \type{action\_id}).
+    \item \textbf{Asynchronous feedback:} periodic \type{STATUS} updates (current pose(s), joint positions, and a coarse execution state), and a \type{FINISHED} notification for long-running motions (identified by \type{action\_id}, with success/failure and an optional error detail on failure).
+\end{itemize}
+The exact payload layouts are implemented in \path{features/robot_control/messages.h} and are treated as the source of truth; this section stays at the protocol level.
+
+\xxx{Fig (OPTIONAL): Robot action lifecycle: START\_ACTION $\rightarrow$ (SUCCESS\_IN\_PROGRESS, action\_id) $\rightarrow$ STATUS stream + optional UPDATE\_ACTION $\rightarrow$ FINISHED(action\_id, success).}
+
+\minihead{Typical flow (client perspective).}
+A typical use case that commands motion proceeds as follows:
+\begin{enumerate}
+    \item Send \type{START\_ACTION} with \type{feature=ROBOT\_CONTROL} and a feature-specific motion payload.
+    \item If the response is \type{SUCCESS\_IN\_PROGRESS}, store the returned \type{action\_id}. All subsequent control refers to this action by passing \type{action\_id} (either via \type{UPDATE\_ACTION} or by matching the asynchronous \type{FINISHED} notification).
+    \item While the action runs, optionally consume \type{STATUS} messages for monitoring (pose/joints/state); if cancellation is needed, send \type{UPDATE\_ACTION} for the stored \type{action\_id} with the appropriate feature-specific update payload (e.g., a cancel request).
+    \item When a \type{FINISHED(action\_id, success)} message arrives, treat the action as complete (and optionally inspect the feature-specific payload for error details on failure).
+\end{enumerate}
+
+\minihead{Helper implementation (recommended for clients).}
+To reduce boilerplate for use cases, modules typically use \type{RobotWrapper} (\path{robot_wrapper.h}). It:
+\begin{itemize}
+    \item resolves the request and subscribe channels during construction and exposes \type{valid()},
+    \item wraps robot control commands (move joint/linear/arc/trajectory, cancel, get specs),
+    \item provides both \emph{non-blocking} calls (return \type{action\_id}) and a \emph{blocking} mode that waits for the corresponding \type{FINISHED},
+    \item parses \type{STATUS} and \type{FINISHED} messages and exposes optional callbacks (\type{setStatusCallback}, \type{setFinishedCallback}), and
+    \item wraps the low-level request/response + subscribe streams into a simple typed API.
+\end{itemize}
+
+\minihead{How modules implement the contract (client-side wiring).}
+A module that \emph{controls} the robot (e.g., a use case) typically:
+\begin{itemize}
+    \item declares the three robot-interface \textbf{consumers} in \type{ModuleInfo}: one request consumer and two subscribe consumers (status + finished),
+    \item constructs \type{RobotWrapper} in its constructor and fails module initialization if \type{valid()} is false,
+    \item forwards core callbacks to the wrapper:
+    \begin{itemize}
+        \item in \type{onIngress()}, delegate to the wrapper when \type{handlesIngress(...)} is true,
+        \item in \type{processResponse()}, delegate when \type{handlesResponse(...)} is true,
+        \item in \type{processMessage()}, forward status/finished subscribe messages to \type{RobotWrapper::processMessage(...)}.
+    \end{itemize}
+    \item then issues motion/spec/cancel calls through the wrapper from its runtime logic.
+\end{itemize}
+
+\minihead{Notes for robot-module implementers.}
+A module that \emph{implements} robot control is expected to:
+\begin{itemize}
+    \item respond to \type{START\_ACTION}/\type{UPDATE\_ACTION} immediately with standardized outcomes,
+    \item generate and track \type{action\_id}s for long-running actions,
+    \item publish periodic \type{STATUS} updates (feature-tagged), and
+    \item publish a \type{FINISHED} message exactly once for each \type{SUCCESS\_IN\_PROGRESS} action when it reaches a terminal state.
+\end{itemize}
+
+\minihead{Guarantees and limitations.}
+\begin{itemize}
+    \item \textbf{Feature gating:} unsupported capabilities are reported explicitly via \type{FEATURE\_NOT\_SUPPORTED}, allowing clients to degrade gracefully.
+    \item \textbf{Asynchronous completion:} long-running operations are identified by \type{action\_id} and terminate via \type{FINISHED}; request/response does not stream progress.
+    \item \textbf{Best-effort feedback streams:} \type{STATUS} and \type{FINISHED} are asynchronous subscribe streams; if messages are dropped, a client may miss intermediate status samples, and missing \type{FINISHED} requires recovery logic (in this thesis, \type{RobotWrapper} includes practical heuristics for stale actions, but robust gap detection would require explicit sequence IDs as a future extension).
+    \item \textbf{Tool control is out of scope:} the feature list reserves identifiers for tool-oriented capabilities, but this thesis implements and uses only \type{RobotFeature::ROBOT\_CONTROL}.
+\end{itemize}
+
+
+
+
+\subsection{Scene detection interface}
+
+\xxx{scene\_detection\_helper}
+
+\subsection{Supporting message types}
+
+\xxx{camera\_image, camera\_image\_with\_pose, calibrated\_camera\_set, pen\_raw, pen\_intent}
+\xxx{maybe also mention mixed\_buffer\_allocator, pose\_utils, synchronous\_request\_helper}
+\xxx{usecase\_tree in the next section}
+
+
 % writing about my system design in latex:
 
 % The system is split into four conceptual parts: modules backbone (the "backbone" of modules, architecture to support messages passing, channels, the idea how modules work, how they receive messages, how they send messages - this is actually all the interfaces for describing how a module works without any dependence on a concrete core implementation (just covered by ICore interface), therefore not yet deciding how core should be implemented (threads vs processes etc.); they implement independent functionality (camera, calibration, pen tracking, scene detection, UI, use case, robot), however that is said later, here we want to describe just the backbone), core (concrete implementation of the core, handles loading modules, how modules are represented (dlls, but not mention yet in overview), how concretely they are called, how are messages passed to the correct modules, how is memory allocated, etc; the modules part describes what we need to do, core how it is done - we can name these differently, actually, but i do want to maintain four conceptual parts), interfaces for various (and their accompying helper classes and wrappers; interfaces fix a certain way of communicating - where modules defined interface and core defined implementation, interfaces define how is the system used, what is built on top of the system, they are more abstract, higher level logic, saying how do messages look, what do they contain, what is the message flow etc. - for example simple interfaces like camera or pen data to more complex like activation interface and its corresponding module wrapper (allowing a module to be activated in the UI, after providing parameters), usecase interface and its wrapper (allowing the module to be used as a usecase from the UI, with providing parameters, confirming teaching, providing visualization data of the taught program and actually running it), scene detection interface (allowing modules to request scan of the scene, request the objects that the scanning module is able to find in the scene etc.), 3d visualization interface and its helper class (allowing modules to provide custom 3d visualization in the UI - again by defining both a pub-sub (scene updates) and req-resp (UI requests full scene or full scene + all objects that can be shown on the scene) messaging) - all of these are *not* UI dependent, they are created indepndent of the UI and UI just implements them) and modules (these actually use the mentioned interfaces, they are built on top of the modules part (with a small wrapper connecting them to the core - they dont actually know about the wrapper, all the logic stays independent of the core) and they implement the actual functionality while using the fixed interfaces to communicate with other modules).
