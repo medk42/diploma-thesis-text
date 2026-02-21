@@ -434,7 +434,7 @@ Finally, requirement~\ref{req:robot_communication_interface} also mentions tool 
 
 Overall, we aim for a robot-agnostic interface: use cases operate on a small, consistent set of motion primitives and state signals, while robot-specific details are handled inside the robot integration layer. This makes it feasible to reuse the same use case logic across different robot platforms as long as the platform can provide the required motion execution and state feedback.
 
-\subsection{UI}
+\subsection{UI} \label{subsec:ch2_analysis_ui}
 
 The user interface (UI) is the main point of interaction with the system: it lets the user select a use case, enter non-spatial parameters, inspect the generated program, and trigger execution.
 
