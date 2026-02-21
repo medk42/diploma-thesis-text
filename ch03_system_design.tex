@@ -1068,6 +1068,90 @@ If you need non-blocking control (e.g., to perform cleanup before exiting), \typ
 
 
 
+
+
+\subsubsection{3D visualization interface} \label{sec:ch3_visualization_interface}
+
+\minihead{Purpose.}
+Requirement~\ref{req:ui_use_case_selection} implies that the UI should visualize the programmed tasks, and \autoref{subsec:ch2_analysis_ui} suggests doing so using a simple shared 3D scene view (e.g., pose markers and trajectories in the workspace).
+Instead of embedding module-specific rendering rules in the UI (e.g., special-casing a particular robot model or a concrete 6D input device), the 3D visualization interface lets \emph{producer modules} describe what should appear in the shared scene. This keeps the 3D visualization extensible and allows modules to be replaced without updating UI code: a new tracking module simply publishes its own visualization primitives.
+
+All files mentioned in this section are located in \path{backend/module_helpers/visualization_3d_interface/}.
+
+
+\minihead{Scene model.}
+The contract represents the 3D scene as:
+\begin{itemize}
+    \item a static \textbf{resource registry} (shape descriptions), and
+    \item dynamic \textbf{instances} (objects referencing a resource ID + current pose) and \textbf{trajectories} (poly-lines).
+\end{itemize}
+Resources are built from simple primitive shapes (box, sphere, cylinder) combined into a \type{ComplexShape} (see \path{scene_desc_api.h}). Instances refer to registered resources via \type{ResourceId} and are addressed by stable \type{ObjectId}s.
+
+\minihead{Communication modes and channels.}
+Unlike activation and use cases, this contract is not implemented as a wrapper. It exposes a small publish stream for best-effort updates plus a request/response path for full scene queries (see \path{message_types.h}):
+\begin{itemize}
+    \item \textbf{Publish:} \type{PubType::ANNOUNCE} (presence/readiness) and \type{PubType::UPDATE} (delta updates).
+    \item \textbf{Request/response:} \type{ReqType::READ\_FULL} (resources + full current scene) and \type{ReqType::READ\_SCENE} (scene only).
+\end{itemize}
+
+\minihead{Message shapes.}
+All messages use a tiny POD header and an optional blob payload:
+\begin{itemize}
+    \item \textbf{Publish:} data contains \type{PubType} (1 byte).
+    \begin{itemize}
+        \item \type{ANNOUNCE}: no blobs.
+        \item \type{UPDATE}: one blob with a batch of ``add/update/remove'' commands for objects and trajectories.
+    \end{itemize}
+    \item \textbf{Request:} data contains \type{ReqType} (1 byte), no blobs.
+    \item \textbf{Response:} data echoes \type{ReqType} and attaches one blob:
+    \begin{itemize}
+        \item \type{READ\_FULL}: resource registrations + current objects + current trajectories,
+        \item \type{READ\_SCENE}: current objects + current trajectories.
+    \end{itemize}
+\end{itemize}
+The exact binary layouts are implemented in \path{serialization_helper.h} and are treated as the source of truth; this section intentionally stays at the protocol level.
+
+\minihead{Typical flows.}
+\begin{itemize}
+    \item \textbf{Bootstrap / (re)sync:} a producer publishes \type{ANNOUNCE}. A visualization consumer (typically the UI) reacts by issuing \type{READ\_FULL} to obtain all resources and the current full scene. From that point on, it applies \type{UPDATE} deltas.
+    \item \textbf{Updates:} whenever the producer changes the scene (adds/updates/removes objects or trajectories), it publishes \type{UPDATE}. To avoid sending many small messages and to prevent partial intermediate states, changes are typically accumulated and then flushed as a single coalesced \type{UPDATE} at a logical update boundary (e.g., once per processing cycle).
+\end{itemize}
+
+
+\xxx{Fig (OPTIONAL): Bootstrap flow: ANNOUNCE $\rightarrow$ READ\_FULL (resources + scene) $\rightarrow$ UPDATE stream.}
+\xxx{Fig (OPTIONAL): Update flow: multiple local edits $\rightarrow$ coalesced UPDATE (one blob).}
+
+\minihead{Helper implementation.}
+To reduce boilerplate and keep updates compact, modules typically use \type{VisualizationHelper} (\path{visualization_helper.h}):
+\begin{itemize}
+    \item holds the \emph{current state} (registered resources, existing objects, existing trajectories),
+    \item buffers edits in a \type{CommandCoalescer} / \type{CommandBuffer} so that add/\allowbreak update/\allowbreak remove operations are merged (e.g., add+remove cancels out; update+update merges),
+    \item serves \type{READ\_FULL}/\type{READ\_SCENE} requests from the stored state, and
+    \item publishes \type{ANNOUNCE} and \type{UPDATE} using a dynamic allocator for response/update blobs.
+\end{itemize}
+The helper is not internally thread-safe; most calls require external mutual exclusion (the only exception is retrieving the constant response-producer channel ID).
+
+\minihead{How modules implement the contract.}
+To make a module contribute to the shared 3D scene:
+\begin{itemize}
+    \item Add the contract channels to \type{ModuleInfo}: one publish producer (\type{visualization\_3d\_interface\_publish\_producer}) and one response producer (\type{visualization\_3d\_interface\_response\_producer}).
+    \item Construct a \type{VisualizationHelper} in the module constructor, check \type{valid()}, and cache the helper's response-producer channel ID via \type{getResponseProducerChannel()}.
+    \item Register all required resources via \type{registerResource(...)} \emph{before} announcing (resources are fixed after \type{announce()}). This is typically done directly from the module constructor after the \type{valid()} check.
+    \item Call \type{announce()} once when the module is ready to interact with the system. It is typically triggered from runtime code (e.g. the consumer message processing methods or your own background thread), not the constructor, to avoid initialization deadlocks.
+    \item Wire request handling: in \type{onIngress()}, accept requests on the cached response-producer channel; in \type{processRequest()}, forward those requests to \type{VisualizationHelper::processVisualizationRequest(...)}.
+    \item During runtime, update the scene by calling \type{addObject}/\type{updateObject}/\type{removeObject} and \type{addTrajectory}/\type{updateTrajectory}/\type{removeTrajectory}, then call \type{sendUpdate()} once the logical update batch is complete to publish a coalesced delta. All helper calls except \type{getResponseProducerChannel()} must be done under a mutex.
+\end{itemize}
+
+\minihead{Guarantees and limitations.}
+\begin{itemize}
+    \item \textbf{State reconstructability:} a consumer can always reconstruct the producer’s complete state by issuing \type{READ\_FULL} (or \type{READ\_SCENE} if resources are already known), even if it missed some \type{UPDATE}s.
+    \item \textbf{Best-effort updates:} \type{UPDATE} is a compact delta stream without update IDs. If messages are dropped, a consumer has no direct way to detect the gap other than requesting \type{READ\_SCENE}/\type{READ\_FULL} (a future extension could add monotonic update IDs).
+    \item \textbf{No global ordering across producers:} updates from different producer modules are not globally serialized; the consumer should treat the combined scene as eventually consistent.
+    \item \textbf{Static resources:} resource registrations are intended to be declared once (before \type{announce()}) and then reused by instance updates; changing resource descriptions at runtime is not supported by the current protocol.
+\end{itemize}
+
+
+
 % writing about my system design in latex:
 
 % The system is split into four conceptual parts: modules backbone (the "backbone" of modules, architecture to support messages passing, channels, the idea how modules work, how they receive messages, how they send messages - this is actually all the interfaces for describing how a module works without any dependence on a concrete core implementation (just covered by ICore interface), therefore not yet deciding how core should be implemented (threads vs processes etc.); they implement independent functionality (camera, calibration, pen tracking, scene detection, UI, use case, robot), however that is said later, here we want to describe just the backbone), core (concrete implementation of the core, handles loading modules, how modules are represented (dlls, but not mention yet in overview), how concretely they are called, how are messages passed to the correct modules, how is memory allocated, etc; the modules part describes what we need to do, core how it is done - we can name these differently, actually, but i do want to maintain four conceptual parts), interfaces for various (and their accompying helper classes and wrappers; interfaces fix a certain way of communicating - where modules defined interface and core defined implementation, interfaces define how is the system used, what is built on top of the system, they are more abstract, higher level logic, saying how do messages look, what do they contain, what is the message flow etc. - for example simple interfaces like camera or pen data to more complex like activation interface and its corresponding module wrapper (allowing a module to be activated in the UI, after providing parameters), usecase interface and its wrapper (allowing the module to be used as a usecase from the UI, with providing parameters, confirming teaching, providing visualization data of the taught program and actually running it), scene detection interface (allowing modules to request scan of the scene, request the objects that the scanning module is able to find in the scene etc.), 3d visualization interface and its helper class (allowing modules to provide custom 3d visualization in the UI - again by defining both a pub-sub (scene updates) and req-resp (UI requests full scene or full scene + all objects that can be shown on the scene) messaging) - all of these are *not* UI dependent, they are created indepndent of the UI and UI just implements them) and modules (these actually use the mentioned interfaces, they are built on top of the modules part (with a small wrapper connecting them to the core - they dont actually know about the wrapper, all the logic stays independent of the core) and they implement the actual functionality while using the fixed interfaces to communicate with other modules).
