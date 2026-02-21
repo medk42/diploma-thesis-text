@@ -861,9 +861,9 @@ The protocol is implemented by \type{ActivationWrapper} in \path{backend/module_
 \minihead{How modules implement the contract.}
 To make a module activatable through the standard UI:
 \begin{itemize}
+    \item Declare the activation parameter list using \type{ParameterList}.
     \item Implement \type{IActivableModule}. At minimum, provide \type{activate()}, \type{deactivate()}, and \type{isActivated()}. The remaining hooks are optional: if you do not use request-based \type{CUSTOM} inputs, \type{sendRequestFromActivation(...)} can return \type{false}; if you do not need filtering/normalization, \type{processCustomMessageOrResponse(...)} can return \type{ProcessingResult::ACCEPT}; and if you do not report progress, \type{getActivationProgress()} can return \type{ProgressData} with \type{progress\_type\_=ProgressType::NONE}.
     \item Expose the activation-wrapper response channel in the module's \type{ModuleInfo} (so that the wrapper can receive UI requests via its response-producer entry point).
-    \item Declare the activation parameter list using \type{ParameterList}.
     \item Wrap the module in \type{ActivationWrapper} in the module factory (\type{createModule}) and pass the parameter list to the wrapper.
 \end{itemize}
 
@@ -966,8 +966,8 @@ The contract is implemented in three layers:
 \minihead{How modules implement the contract.}
 To register a new use case as a plugin module:
 \begin{itemize}
-    \item Define use case metadata (identifier and description) and the three parameter lists (auto/required/advanced).
-    \item Implement \type{BaseUsecase} (at minimum \type{createCommandFromParameters(...)}, \type{validateParameters(...)}, and \type{runProgram(...)}).
+    \item Define use case metadata (name and description) and the three parameter lists (auto/required/advanced).
+    \item Implement your use case module by deriving from \type{BaseUsecase} (at minimum implement \type{createCommandFromParameters(...)}, \type{validateParameters(...)}, and \type{runProgram(...)}).
     \item Expose the use case wrapper response channel in the module's \type{ModuleInfo} (so \type{UsecaseWrapper} can receive UI requests via its response-producer entry point).
     \item In the module factory (\type{createModule}), construct the module instance and wrap it in \type{UsecaseWrapper} (passing the metadata and parameter lists). Return the wrapper as the exported module instance.
     \item Optionally implement \type{processCustomMessageOrResponse(...)} to filter/normalize \type{CUSTOM} inputs (and \type{sendRequestFromUsecase(...)} for request/response acquisition).
@@ -985,7 +985,7 @@ The UI--use case protocol can be viewed as four request groups; most requests op
 \begin{itemize}
     \item \textbf{Parameter schema acquisition.}
     \begin{itemize}
-        \item \type{READ\_COMMAND\_PARAMETERS}: returns the declared parameter schema (auto/required/ advanced), together with basic use case metadata (identifier + name/description).
+        \item \type{READ\_COMMAND\_PARAMETERS}: returns the declared parameter schema (auto/\allowbreak required/\allowbreak advanced), together with basic use case metadata (module identifier, use case name and description).
     \end{itemize}
 
     \item \textbf{Auto-input capture for \type{CUSTOM}.}
@@ -993,7 +993,7 @@ The UI--use case protocol can be viewed as four request groups; most requests op
         \item \type{READ\_CUSTOM\_PARAMETER\_START}: starts acquisition for one auto parameter and returns a read handle.
         \item \type{READ\_CUSTOM\_PARAMETER\_CHECK}: polls completion (or cancels); on success returns an opaque captured value.
     \end{itemize}
-    Captured messages/responses are not interpreted by the wrapper: they are first offered to \type{IUsecaseModule::processCustomMessageOrResponse()}, which can \type{DROP} unrelated packets, \type{ACCEPT} them (stored as a canonical serialized payload), or \type{ACCEPT\_REPLACE} with a module-provided normalized representation.
+    Captured messages/responses are not interpreted by the wrapper. Instead, each candidate packet is forwarded to \type{IUsecaseModule::processCustomMessageOrResponse()}, which can \type{DROP} it, \type{ACCEPT} it (stored as a canonical serialized payload), or \type{ACCEPT\_REPLACE} it with a module-provided normalized representation. If a packet is accepted, the stored bytes are then returned to the querying module in the next \type{READ\_CUSTOM\_PARAMETER\_CHECK}.
 
     \item \textbf{Command creation.}
     \begin{itemize}
@@ -1003,20 +1003,22 @@ The UI--use case protocol can be viewed as four request groups; most requests op
     \item \textbf{Execution control + cleanup.}
     \begin{itemize}
         \item \type{PROGRAM\_START\_REAL} / \type{PROGRAM\_START\_SIMULATED}: starts execution from the command JSON and returns a \type{task\_id}.
-        \item \type{PROGRAM\_STATUS}: queries current \type{ProgramStatus} (and optional error details).
-        \item \type{PROGRAM\_PAUSE}, \type{PROGRAM\_RESUME}, \type{PROGRAM\_STOP}: optional controls (unsupported operations fail fast).
-        \item \type{PROGRAM\_REMOVE}: explicit removal of finished tasks to release per-task resources.
+        \item \type{PROGRAM\_STATUS}: queries current \type{ProgramStatus} (and optional error details) with a \type{task\_id}.
+        \item \type{PROGRAM\_PAUSE}, \type{PROGRAM\_RESUME}, \type{PROGRAM\_STOP}: optional controls (unsupported operations fail fast) with a \type{task\_id}.
+        \item \type{PROGRAM\_REMOVE}: explicit removal of finished tasks to release per-task resources with a \type{task\_id}.
     \end{itemize}
 \end{itemize}
+
+\xxx{Fig: the communication, showing possible req/resp}
 
 \minihead{Flow.}
 A typical UI-driven interaction is:
 \begin{enumerate}
-    \item \type{READ\_COMMAND\_PARAMETERS}: fetch the parameter schema (auto/required/advanced) and basic metadata; the UI renders a generic editor.
+    \item \type{READ\_COMMAND\_PARAMETERS}: fetch the parameter schema (auto/\allowbreak required/\allowbreak advanced) and basic metadata; the UI renders a generic editor.
     \item Fill out parameters via the UI. For each auto \type{CUSTOM} parameter: start acquisition with \type{READ\_CUSTOM\_PARAMETER\_START} and poll \type{READ\_CUSTOM\_PARAMETER\_CHECK} until \type{SUCCESS} (or cancel).
     \item \type{CREATE\_COMMAND}: submit all filled parameter values; the use case returns an opaque command representation (JSON) and optionally a lightweight preview/visualization blob.
     \item \type{PROGRAM\_START\_REAL} or \type{PROGRAM\_START\_SIMULATED}: provide back the command JSON to start execution and obtain a \type{task\_id}.
-    \item While running: poll \type{PROGRAM\_STATUS} and optionally issue \type{PROGRAM\_PAUSE}/\type{PROGRAM\_RESUME}/\type{PROGRAM\_STOP} (if supported).
+    \item While running: use \type{task\_id} to poll \type{PROGRAM\_STATUS} and optionally issue \type{PROGRAM\_PAUSE}/\type{PROGRAM\_RESUME}/\type{PROGRAM\_STOP} (if supported).
     \item After a terminal status: call \type{PROGRAM\_REMOVE} (once per \type{task\_id}) to deterministically release per-task resources.
 \end{enumerate}
 
@@ -1041,19 +1043,20 @@ For interactive use cases, it is common to also override:
     \item \type{valid()}, \type{onIngress()}, \type{processMessage()}, \type{processResponse()} to orchestrate other modules during execution (e.g., robot control, scene detection).
 \end{itemize}
 
-Pause/stop can be implemented cooperatively by periodically calling \type{checkControlRequests()} or \type{handleControlRequests(...)} inside long-running loops.
+Pause/stop can be implemented cooperatively by periodically calling \type{handleControlRequests(...)} inside long-running loops. If a pause is requested, the call blocks until a resume arrives (via an internal condition variable); if a stop is requested, it aborts execution by throwing \type{BaseUsecase::StopException}.
+
+If you need non-blocking control (e.g., to perform cleanup before exiting), \type{checkControlRequests()} can be used to poll whether pause/stop has been requested and handle it explicitly.
 
 \minihead{Guarantees and limitations.}
 \begin{itemize}
     \item \textbf{Uniform plugin protocol:} the UI never calls use case-specific channels; it only uses the wrapper protocol.
-    \item \textbf{Always visible (no activation gate):} use cases can be listed and their parameter schema queried at any time.
+    \item \textbf{No activation state for use cases:} use case modules are not gated by the activation interface. They are expected to always respond to the wrapper protocol (at least \type{READ\_COMMAND\_PARAMETERS} and \type{CREATE\_COMMAND}); if prerequisites are missing (e.g., tracking or robot backend inactive), they fail fast with an appropriate error instead of being ``inactive''.
     \item \textbf{Validation boundary:} the wrapper enforces type/limits/list bounds according to \type{ParameterDescription}; the module focuses on semantic validation and execution.
     \item \textbf{Task identity and control:} all running programs are addressed by \type{task\_id}; invalid IDs return \type{ID\_INVALID}. Pause/resume/stop are optional capabilities (fail fast if unsupported).
     \item \textbf{Multiple concurrent use case instances:} the interface supports multiple concurrent tasks. Whether a specific use case allows this is module-defined (in \type{BaseUsecase} via \type{supports\_multi\_program\_}).
     \item \textbf{Explicit cleanup:} finished tasks should be removed via \type{PROGRAM\_REMOVE} to avoid accumulating per-task states and to release finished program threads. Calling \type{PROGRAM\_REMOVE} while a task is still running will fail; calling it again for an already removed \type{task\_id} returns an invalid-ID result. If the call is omitted, per-task bookkeeping and finished threads remain retained until module shutdown.
     \item \textbf{CUSTOM payload opacity:} captured messages/responses are stored as opaque byte arrays (after module-side filtering/serialization). Their internal meaning is strictly module-defined.
     \item \textbf{Stateless command construction:} parameter drafts and created command instances are external state (typically held by the UI), as described above in \emph{State ownership}.
-    \item \textbf{Concurrency expectations:} draft concurrency is external (see \emph{State ownership}); the number of concurrently running commands is decided by the use case module (e.g., \type{BaseUsecase} can enforce single-program execution via \type{supports\_multi\_program\_}).
 \end{itemize}
 
 \minihead{Persistence boundary.}
