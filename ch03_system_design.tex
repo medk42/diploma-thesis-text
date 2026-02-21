@@ -1001,10 +1001,10 @@ The UI--use case protocol can be viewed as four request groups; most requests op
 
     \item \textbf{Execution control + cleanup.}
     \begin{itemize}
-        \item \type{PROGRAM\_START\_REAL} / \type{PROGRAM\_START\_SIMULATED}: starts execution from the command JSON and returns a \type{task\_id}.
-        \item \type{PROGRAM\_STATUS}: queries current \type{ProgramStatus} (and optional error details) with a \type{task\_id}.
-        \item \type{PROGRAM\_PAUSE}, \type{PROGRAM\_RESUME}, \type{PROGRAM\_STOP}: optional controls (unsupported operations fail fast) with a \type{task\_id}.
-        \item \type{PROGRAM\_REMOVE}: explicit removal of finished tasks to release per-task resources with a \type{task\_id}.
+        \item \type{PROGRAM\_START\_REAL} / \type{PROGRAM\_START\_SIMULATED}: starts execution from the command JSON and returns a fresh \type{task\_id}. All subsequent execution-related requests refer to that running instance by passing this \type{task\_id}.
+        \item \type{PROGRAM\_STATUS}: queries current \type{ProgramStatus} (and optional error details).
+        \item \type{PROGRAM\_PAUSE}, \type{PROGRAM\_RESUME}, \type{PROGRAM\_STOP}: optional controls (unsupported operations fail fast).
+        \item \type{PROGRAM\_REMOVE}: explicit removal of finished tasks to release per-task resources.
     \end{itemize}
 \end{itemize}
 
@@ -1056,10 +1056,8 @@ If you need non-blocking control (e.g., to perform cleanup before exiting), \typ
     \item \textbf{Explicit cleanup:} finished tasks should be removed via \type{PROGRAM\_REMOVE} to avoid accumulating per-task states and to release finished program threads. Calling \type{PROGRAM\_REMOVE} while a task is still running will fail; calling it again for an already removed \type{task\_id} returns an invalid-ID result. If the call is omitted, per-task bookkeeping and finished threads remain retained until module shutdown.
     \item \textbf{CUSTOM payload opacity:} captured messages/responses are stored as opaque byte arrays (after module-side filtering/serialization). Their internal meaning is strictly module-defined.
     \item \textbf{Stateless command construction:} parameter drafts and created command instances are external state (typically held by the UI), as described above in \emph{State ownership}.
+    \item \textbf{Stateless command construction:} parameter drafts and created command instances are external state (typically held by the UI), as described above in \emph{State ownership}. Neither \type{UsecaseWrapper} nor \type{BaseUsecase} persist drafts, created commands, or task history; if commands must be restored later (e.g., across sessions), the control module is responsible for storing the parameter snapshot and/or the returned command JSON and submitting it again when needed.
 \end{itemize}
-
-\minihead{Persistence boundary.}
-By default, neither the wrapper nor \type{BaseUsecase} persist drafts/commands; only running tasks exist as module-local state (also not persisted). If the parameters or created use case commands need to be persisted, the control module (UI) must handle this on its side.
 
 
 
