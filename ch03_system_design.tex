@@ -912,6 +912,9 @@ A newly created module starts \emph{deactivated} (\type{activated=false}), so on
     \item \textbf{After load, the module defines the activation state.} On load, the wrapper restores parameters and inner module data and then sets \type{activated} from \type{IActivableModule::isActivated()}. This is the only point where the module directly controls the wrapper's state without running \type{activate()/deactivate()}; the module is therefore responsible for persisting and restoring any activation artifacts needed to remain operational after load.
 \end{itemize}
 
+
+\xxx{Fig: the activation steps outlined.}
+
 \minihead{Guarantees and limitations.}
 \begin{itemize}
     \item The wrapper centralizes parameter handling: modules only implement \type{activate()/deactivate()}, progress/status checks, and two hooks for custom parameter processing.
