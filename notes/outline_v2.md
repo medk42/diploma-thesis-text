@@ -628,6 +628,8 @@ SEE FUTURE WORK FOR MORE RESOURCES
     - I’m not a teach pendant expert; integrators do complex programs
     - See "Diploma Thesis Archive/Linear Program"
 - Big issue / limitation is the fragmented updates. It's meant to minimize communication, but it has issues when messages are dropped. Mostly it is fine and this could be fixed with an extra message ID and periodic checking of modules for the last sent ID (if UI receives an update with ID that is NOT last_id + 1, then it requests READ_SCENE; UI periodically (once per second) sends QUERY_LAST_ID that would return the last_id - if not matching -> READ_SCENE). 
+- UI on save/load (particularly save) - freezes (and other stuff too!), its sync blocking, shouldnt be. This causes dropped messages -> visualization issues for example
+- re-adding camera module will not be visualized
 
 ---
 
