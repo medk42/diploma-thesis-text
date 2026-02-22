@@ -1422,6 +1422,17 @@ Use case authoring and execution is \emph{orchestrator-driven}: the UI initiates
     \item \textbf{Execute:} start a program run (real or simulated). The runtime executes commands sequentially and exposes the program state and final result to the caller.
 \end{enumerate}
 
+\minihead{Execution control semantics.}
+\type{UsecaseTree} delegates all execution to the use case wrapper’s task lifecycle. Concretely, a program run is realized by sending \type{PROGRAM\_START\_REAL} (or \type{PROGRAM\_START\_SIMULATED}) for each confirmed command JSON, polling \type{PROGRAM\_STATUS} until a terminal status is reported, and issuing \type{PROGRAM\_REMOVE} for explicit cleanup (\path{program_instance.h}, \path{program_instance.cpp}). 
+
+The optional control operations \type{PROGRAM\_PAUSE}, \type{PROGRAM\_RESUME}, and \type{PROGRAM\_STOP} are treated as \emph{best-effort}:
+\begin{itemize}
+    \item if the active use case module implements these requests, the current command may pause/stop mid-execution and the polled status reflects that;
+    \item if a module ignores or does not support the operation, \type{ProgramInstance} still provides a deterministic user-facing behavior at \emph{command boundaries}: a pause request takes effect after the current command completes (the next command is not started until resume), and a stop request terminates the program after the current command completes.
+\end{itemize}
+This yields a robust orchestration model without requiring every use case module to implement advanced control logic; modules that do support it simply provide a better interactive experience.
+
+
 \minihead{Persistence boundary.}
 \type{UsecaseTree} persistence is intentionally scoped to the \emph{user program}: it stores the ordered command list with parameter values and cached command JSON (plus optional per-command preview visualization), and it recreates commands on load. The cached command JSON is treated as a derived artifact; when parameters change, it may be invalidated and must be re-confirmed.
 
