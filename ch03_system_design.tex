@@ -72,7 +72,7 @@ Channel declarations specify what the module can produce and what it requires as
 
 As noted in \autoref{subsec:ch3_roles}, message processing is executed by core-managed worker threads. Each module specifies how many worker threads it requires, allowing it to process multiple messages, requests or responses concurrently. Worker threads are created per module and are divided into two classes: \emph{prioritized} and \emph{regular}. Prioritized workers handle channels marked as prioritized; regular workers handle the remaining channels. This mechanism is crucial for UI responsiveness, because it allows latency-sensitive UI traffic to be processed in parallel with heavy computation (e.g., camera processing for pen tracking).
 
-Finally, the auto-create flag marks modules that are instantiated automatically when the system starts (e.g., the UI module). Auto-created modules cannot depend on a manually provided channel mapping. In this thesis, we therefore restrict auto-created modules to \emph{AUTO\_ALL} consumer channels: they may declare inputs, but only in a form that can be wired automatically to all currently available producers of the given type (see \autoref{subsec:ch3_channel_contract}).
+Finally, the auto-create flag marks modules that are instantiated automatically when the system starts (e.g., the UI module). Auto-created modules cannot depend on a manually provided channel mapping. In this thesis, we therefore restrict auto-created modules to \type{AUTO\_ALL} consumer channels: they may declare inputs, but only in a form that can be wired automatically to all currently available producers of the given type (see \autoref{subsec:ch3_channel_contract}).
 
 \subsection{Channel contract} \label{subsec:ch3_channel_contract}
 
@@ -90,22 +90,33 @@ A \type{Producer} contains:
     \item message queue capacity (maximum number of pending items on the receiver side).
 \end{itemize}
 
-Prioritization on the producer side is only relevant for response producers: if a response producer is prioritized, the corresponding request is processed by a prioritized worker thread in the receiving module.
+The priority setting affects scheduling only for channel endpoints that \emph{receive inbound work} (i.e., where the core can enqueue something and later invoke an \type{IModule} callback). Therefore, for producer endpoints it matters only for \emph{response producers}, since they receive incoming requests; publish producers never receive inbound traffic, so their priority setting has no effect.
 
 We define message queue capacity to bound the amount of pending work at the receiver. If messages or requests arrive faster than the module can process them, the queue capacity prevents unbounded buffering; the module can then decide how to handle overload (drop, replace, etc.), described in \autoref{subsec:ch3_message_lifecycle}.
 
 A \type{Consumer} contains:
 \begin{itemize}
     \item channel type identifier, name, description, prioritized flag, and message queue capacity (same meaning as in \type{Producer}),
-    \item count policy (\type{single}, \type{range} or \type{auto\_all}); specifies how many producer endpoints of the same type must be bound to this consumer endpoint when the module is instantiated,
-    \item min/max bounds (used only for the \type{range} policy).
+    \item count policy (\type{SINGLE}, \type{RANGE} or \type{AUTO\_ALL}); specifies how many producer endpoints of the same type must be bound to this consumer endpoint when the module is instantiated,
+    \item min/max bounds (used only for the \type{RANGE} policy).
 \end{itemize}
 
 When \type{ICore::addModule} is called, the core validates that the provided channel mapping satisfies these constraints (type match and required cardinality bounds); otherwise the module instantiation fails.
 
-Prioritization on the consumer side applies to both subscribe and request channels. If a subscribe consumer is prioritized, incoming messages are processed by a prioritized worker thread. If a request consumer is prioritized, the corresponding response is processed by a prioritized worker thread.
+Consumer endpoints always receive inbound work: subscribe consumers receive published messages, and request consumers receive responses. If marked as prioritized, their inbound items are processed by prioritized worker threads; otherwise they use regular workers.
 
-The count policy expresses wiring requirements. With \type{single}, exactly one producer endpoint of the given type must be connected. With \type{range}, the consumer requires between \type{min} and \type{max} connected producer endpoints (inclusive). With \type{auto\_all}, the consumer is wired automatically to all currently available producer endpoints of the given type, which is primarily used for auto-created modules that cannot receive an explicit mapping. For example, the UI module can subscribe to all available \type{camera\_stream} producers via an \type{auto\_all} subscribe consumer, combining the convenience of broadcast with the explicit wiring model used elsewhere.
+The count policy expresses wiring requirements. With \type{SINGLE}, exactly one producer endpoint of the given type must be connected. With \type{RANGE}, the consumer requires between \type{min} and \type{max} connected producer endpoints (inclusive). With \type{AUTO\_ALL}, the consumer is wired automatically to all currently available producer endpoints of the given type, which is primarily used for auto-created modules that cannot receive an explicit mapping. For example, the UI module can subscribe to all available \type{camera\_stream} producers via an \type{AUTO\_ALL} subscribe consumer, combining the convenience of broadcast with the explicit wiring model used elsewhere.
+
+Although the same \type{SINGLE}/\type{RANGE}/\type{AUTO\_ALL} policy is used for both subscribe and request consumers, its effect differs by communication primitive:
+\begin{itemize}
+    \item \textbf{Subscribe consumers (publish/subscribe):} the policy directly defines the stream fan-in --- i.e., how many publishers feed this input (one, several, or all). Published messages are effectively broadcast to all wired subscribers, and each delivered message carries the sender endpoint identifier so the receiver can distinguish origins if needed.
+    \item \textbf{Request consumers (request/response):} the policy defines how many responders are available as potential request targets, but requests themselves are still \emph{directed}: each request names exactly one concrete responder (there is no request broadcast). For \type{SINGLE}/\type{RANGE}, the eligible targets are fixed when the module is instantiated and they are provided to the module; with \type{AUTO\_ALL}, the module is created without an explicit target list and must discover candidate responders at runtime via the core reflection API (see \autoref{subsec:ch3_reflection_orchestration}).
+\end{itemize}
+
+In request/response, the endpoint names reflect the \emph{inbound} direction:
+a \emph{request consumer} is the caller-side endpoint that \emph{sends} requests and later \emph{consumes} the matching response,
+while a \emph{response producer} is the callee-side endpoint that \emph{receives} requests and then \emph{produces} the response.
+
 
 \subsection{Message structure: header and optional shared blobs}
 
@@ -116,7 +127,7 @@ The header contains:
     \item \textbf{Small copied payload} given by a data pointer and length. This part is intended for small, trivially copyable control data (e.g., pen intent, state updates) and is copied from the producer to each consumer.
     \item \textbf{Optional blob array} (pointer + count), representing one or more shared payloads used for large data (e.g., images, point clouds, serialized structures) that should not be copied repeatedly.
     \item \textbf{Request/response metadata:} \type{id\_} to match requests with responses and a \type{success\_} flag indicating whether the request was processed successfully at the communication layer.
-    \item \textbf{Timestamp} (\type{timestamp\_ns\_}) for tracing and ordering.
+    \item \textbf{Timestamp} (\type{timestamp\_ns\_}) for tracing / profiling.
 \end{itemize}
 
 In practice, most messages consist only of the small copied payload. When large data needs to be transmitted, the message includes one or more blobs. A producer allocates a blob, writes the payload into it, and sends a message that references the blob. Consumers can then read the payload directly and may forward the same blob further (e.g., camera $\rightarrow$ calibration $\rightarrow$ pen tracking) without copying the underlying data.
@@ -139,7 +150,7 @@ Allocator and blob lifetime are owned by the core to ensure consistent memory ma
 
 \subsection{Communication primitives} \label{subsec:ch3_comm_primitives}
 
-This subsection describes the runtime semantics of the two communication primitives. Channel declaration and mapping rules are defined by \type{ModuleInfo} and the channel contract (\autoref{subsec:ch3_channel_contract}). All channels in this sections contain a module identifier and a channel identifier (index into the module's channel list --- publish producer list for publishing message, request consumer list or response producer list for request/response logic), which together uniquely identify the channel endpoint in the system.
+This subsection describes the runtime semantics of the two communication primitives. Channel declaration and mapping rules are defined by \type{ModuleInfo} and the channel contract (\autoref{subsec:ch3_channel_contract}). Throughout the system, a channel endpoint is identified by \type{(module\_id,local\_channel\_id)} (represented by \type{ChannelIdentifier}): the module id selects the running module instance, and the local id selects one of its declared channel endpoints (from the appropriate publish/subscribe/request/response list for the given call).
 
 \minihead{Publish/subscribe} is used for streams and events. A module publishes a message by calling \type{ICore::sendMessage(source\_channel, message)} with \type{source\_channel} identifying its producer channel. The core routes the message to all subscribe consumers that are connected to this producer by the current mapping. Delivery is best-effort and may be affected by the receiver's ingress and queueing policy (\autoref{subsec:ch3_message_lifecycle}).
 
@@ -164,7 +175,7 @@ Include dashed failure path: if request cannot be delivered or is dropped, synth
     \item The core determines the destination module(s) and consumer channel(s):
     \begin{itemize}
         \item \textbf{Publish/subscribe:} the core resolves routing using the current channel mapping (i.e., the producer is routed to all mapped subscribe consumers).
-        \item \textbf{Request/response:} the destination is given explicitly by \type{target\_channel}. The core validates that the target endpoint is compatible with the sender's mapping policy (e.g., within \type{SINGLE}/\type{RANGE}; \type{AUTO\_ALL} does not require a specific mapping check).
+        \item \textbf{Request/response:} the destination is given explicitly by \type{target\_channel}.
     \end{itemize}
     \item For each destination consumer, the core calls the receiver's ingress decision point \type{IModule::onIngress} and provides the message header and the current queue status.
     \item If the message is rejected (or must be dropped due to capacity), it is not delivered. For requests, the transport-level failure is reported back to the requester as a failed response (\type{success\_ = false}).
@@ -192,16 +203,16 @@ While the loaded catalog lists available types, the runtime also maintains a set
 This contract is reflected in \type{RunningModuleInfo}, which contains an \type{exists\_} flag and a reference to the instance's \type{ModuleInfo} (\type{module\_info\_}). The method \type{getRunningModulesCount()} returns the total number of identifiers issued over the lifetime of the core object (not the number of currently alive instances). Callers therefore iterate \type{running\_module\_id} from \type{0} to \type{getRunningModulesCount()-1} and query each entry via \type{getRunningModulesInfo(running\_module\_id)}, filtering out non-existing modules using \type{exists\_}. Running module identifiers must not be assumed stable across program sessions or save/load.
 
 \minihead{Wiring query (who is connected to whom).}
-For each running module instance, \type{getRunningModulesChannelMap(running\_module\_id)} returns its current input wiring: for every subscribe and request consumer channel, the core provides the list of bound producer endpoints (\type{ChannelIdentifier} pairs identifying producer module and producer channel). This is the core reflection primitive needed to visualize or debug the module graph and to implement higher-level orchestration logic (e.g., configuration panels that depend on which sources are currently connected).
+For each running module instance, \type{getRunningModulesChannelMap(running\_module\_id)} returns its current input wiring: for every subscribe and request consumer channel, the core provides the list of bound producer endpoints (identified by \type{ChannelIdentifier}, that is a pair of the producer module ID and the local producer channel ID). This is the core reflection primitive needed to visualize or debug the module graph and to implement higher-level orchestration logic (e.g., configuration panels that depend on which sources are currently connected).
 
 \minihead{Existing producers by channel type (discovery).}
 For reflection and UI/orchestration, the core provides
 \type{getExistingPublishChannelsByName(channel\_type\_identifier)} and
 \type{getExistingResponseChannelsByName(channel\_type\_identifier)}.
-These functions return the set of currently known producer endpoints (module ID + channel ID) for the given channel type identifier.
+These functions return the set of currently known producer endpoints (\type{ChannelIdentifier}) for the given channel type identifier (\type{string}).
 
-For \emph{SINGLE} and \emph{RANGE} request consumers, the requester typically does \emph{not} need discovery: the core provides the concrete mapped endpoints as part of \type{InputChannelMapInfo} during module creation, and the module uses those \type{ChannelIdentifier}s as request targets.
-Discovery is primarily needed for \emph{AUTO\_ALL} request consumers, where the target set is not known at instantiation time (and therefore is not enumerated in \type{InputChannelMapInfo}).
+For \type{SINGLE} and \type{RANGE} request consumers, the requester typically does \emph{not} need discovery: the core provides the concrete mapped endpoints as part of \type{InputChannelMapInfo} during module creation, and the module uses those \type{ChannelIdentifier}s as request targets.
+Discovery is primarily needed for \type{AUTO\_ALL} request consumers, where the target set is not known at instantiation time (and therefore is not enumerated in \type{InputChannelMapInfo}).
 
 \minihead{Mapping state change indicator.}
 Because the running set and its wiring may change over time (modules created/removed), the core exposes \type{getModulesMappingStateId()}. The returned value is a monotonically increasing identifier that changes whenever the mapping topology changes (modules are added or removed). UI modules can use it as a cheap change detector to refresh cached views.
@@ -308,7 +319,12 @@ To simplify shared payload allocation (\autoref{subsec:ch3_allocator_contract}),
 Finally, \type{BaseModule} implements \type{IModule::getModuleInfo()} by returning the \type{ModuleInfo} pointer provided at construction. This ensures that higher-level infrastructure can always obtain the module description through the contract entry point, while concrete modules typically delegate the storage of that pointer to \type{BaseModule}.
 
 
+
+
+
 \section{Core implementation used in this thesis} \label{sec:ch3_core}
+
+\xxx{Core routing and request/response “exactly one response” is explained in several places (communication primitives, message delivery flow, routing section, wrapper section). It’s fine for now, but later you can replace one of the later repeats with “as described in §X”.}
 
 The previous section defined the module contract in an implementation-independent way: what a module is, how it declares channels, how messages are represented, and what services the runtime must provide through \type{ICore}. In this section, we describe the concrete runtime core used in this thesis, which implements that contract in a single process using threads and in-memory routing.
 
@@ -1362,6 +1378,7 @@ Several small internal helpers are used throughout the implementation (all under
 
 
 \xxx{usecase\_tree in the next section}
+\xxx{add label sec:ch3\_ui to the next section or rename it above}
 
 
 % writing about my system design in latex:
