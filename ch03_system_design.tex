@@ -1338,7 +1338,7 @@ A scene detection module is expected to:
 
 
 
-\subsection{Supporting message types} \label{sec:ch3_supporting_messages}
+\subsection{Supporting message formats} \label{sec:ch3_supporting_messages}
 
 \minihead{Purpose.}
 Besides the core interface contracts, the system uses several shared message formats for transporting camera, calibration, and pen data between modules. These are lightweight schemas (not wrappers) that keep the sensing pipeline modular: producers publish structured data, and downstream modules can be swapped as long as they keep consuming the same message types.
@@ -1363,8 +1363,11 @@ All files mentioned in this section are located in \path{backend/module_helpers/
 \end{itemize}
 In this thesis, \type{pen\_tracking\_multicam\_module} publishes both; \type{PenMessageIntent} is consumed by \type{frontend\_module} (special action handling) and by use case modules that capture poses/trajectories as \type{CUSTOM} inputs.
 
-\minihead{Convenience utilities.}
-Several small internal helpers are used throughout the implementation (all under \path{backend/module_helpers/}):
+
+\subsection{Implementation helper utilities} \label{sec:ch3_shared_helper_utilities}
+
+\minihead{Purpose.}
+Besides message schemas, the implementation relies on a few small reusable utilities used across multiple wrappers and message types (all under \path{backend/module_helpers/}).
 \begin{itemize}
     \item \type{mixed\_buffer\_allocator}: combines a fixed-slot buffered allocator with a dynamic allocator to cheaply allocate typical small blobs while still supporting occasional large payloads.
     \item \type{pose\_utils}: a minimal \type{SE3} utility (composition, inversion, conversions) used in calibration and geometric processing.
@@ -1378,7 +1381,7 @@ Several small internal helpers are used throughout the implementation (all under
 
 
 \xxx{usecase\_tree in the next section}
-\xxx{add label sec:ch3\_ui to the next section or rename it above}
+\xxx{add label sec:ch3\_ui to the next section or rename it above; also rename the part where it is used (it is put together everythinmg, not just UI)}
 
 
 % writing about my system design in latex:
