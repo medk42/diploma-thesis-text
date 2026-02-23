@@ -1459,24 +1459,150 @@ Internal identifiers used for bookkeeping are implementation details and are reg
 
 
 
+
+
+
+
+% =========================================================================================
+
 \subsection{UI orchestration module} \label{sec:ch3_ui_orchestration}
 
-\xxx{Describe the UI as the concrete control-plane module using: core reflection/orchestration, activation wrapper, usecase wrapper (through UsecaseTree), visualization streams, and ad-hoc buttons (robot home, scene refresh).}
-\xxx{In UI orchestration, explicitly contrast: visualization/camera preview are stream-driven (subscribe updates), scene refresh / robot home are user-triggered requests (directed req/resp).}
+\minihead{Purpose.}
+While the contracts in this chapter define \emph{compatibility} (which channels can talk to which), the system still requires a control-plane component that \emph{drives} these interactions into an end-user workflow. In this thesis, this role is implemented by the web-based \type{frontend\_module}: it is a normal module from the module contract’s perspective, but it orchestrates the module graph, activation, use case programming/execution (via \type{UsecaseTree}), visualization aggregation, and persistence.
 
-\xxx{1–1.5 pages max, “system behavior” level}
+\minihead{UI decomposition (three screens).}
+The frontend exposes three user-facing views that mirror its orchestration responsibilities:
+\begin{itemize}
+    \item \type{\textbf{AddModuleUi}}: graph \emph{construction} by instantiating modules and selecting input channel wiring.
+    \item \type{\textbf{ActivationUi}}: graph \emph{configuration} by editing activation parameters, activating/deactivating modules, and removing modules.
+    \item \type{\textbf{MainVisualizationUi}}: \emph{operation} of the configured system (camera preview, 3D scene visualization, use case program authoring/execution, and utility actions).
+\end{itemize}
+This separation is conceptual: it reflects three phases of using the system rather than internal UI implementation details.
+
+\minihead{Module graph wiring via core reflection/orchestration.}
+Graph editing is implemented on top of \type{ICoreControl} (\autoref{subsec:ch3_reflection_orchestration}):
+\begin{itemize}
+    \item The frontend presents the \emph{loaded module catalog} as a palette of module types that can be instantiated, together with their declared subscribe/request consumers.
+    \item For each consumer, it presents a \emph{current registry} of compatible producer endpoints (publish producers for subscribe wiring; response producers for request wiring), and the user \emph{explicitly selects} which endpoints to bind.
+    \item On creation, the selected endpoints are collected into an \type{InputChannelMapInfo} and passed to \type{ICoreControl::addModule}; the core validates and materializes the wiring as part of the runtime graph.
+    \item Removal is likewise delegated to the core (\type{removeModuleById}), with dependency-aware removal supported by \type{collectDependencies} when the UI needs to present the user with the impact of a removal.
+\end{itemize}
+
+
+\minihead{Activation driving (generic configuration panel).}
+For each running module instance, the frontend determines whether it is activable by checking whether the module exposes the activation-wrapper protocol (activation response producer). Activable modules are configured and driven through the activation interface (\autoref{subsec:ch3_activation_interface}):
+\begin{itemize}
+    \item The UI requests the activation parameter schema (\type{READ\_ACTIVATION\_PARAMETERS}) and current values (\type{READ\_VALUES}) and renders a generic editor that follows the shared parameter-description semantics (types, ranges, enum domains, list bounds; see \path{backend/module_helpers/parameter_description/}).
+    \item Users edit values and list cardinalities; changes are propagated to the activation wrapper using \type{SET\_VALUE} and \type{LIST\_ADD}/\type{LIST\_REMOVE}.
+    \item Activation and deactivation are started explicitly by \type{ACTIVATE}/\type{DEACTIVATE} and monitored via \type{GET\_STATUS}; long-running tasks are presented as cancelable progress dialogs via \type{CANCEL\_TASK}.
+    \item Modules that do not expose activation are treated as \emph{always ready} (no activate/deactivate controls), keeping the setup UI uniform even for modules that need no configuration.
+\end{itemize}
+
+\minihead{Use case programming and execution.}
+The main visualization view embeds the programming UI (\type{ProgramTree}) backed by \type{UsecaseTree} (\path{program_tree.h}/\path{program_tree.cpp} and \path{backend/module_helpers/usecase_tree/}):
+\begin{itemize}
+    \item The UI discovers available use cases by querying all connected use case modules for metadata and parameter schema (\type{READ\_COMMAND\_PARAMETERS}).
+    \item The user composes a linear program by appending or reordering commands (each command binds a use case identifier to concrete parameter values).
+    \item Missing \type{CUSTOM} inputs are acquired on demand through the use case wrapper’s capture protocol (\type{READ\_CUSTOM\_PARAMETER\_START} and repeated \type{READ\_CUSTOM\_PARAMETER\_CHECK}), either manually (``Click to set'') or via a pen-triggered auto-fill shortcut.
+    \item Each command is explicitly \emph{confirmed} by requesting \type{CREATE\_COMMAND}, which materializes the command JSON (and optionally a preview visualization) and caches it as the executable representation.
+    \item A program run is then started in real or simulated mode and controlled via start/pause/resume/stop; execution is sequential and its progress is surfaced to the user through the program state and completion dialogs.
+\end{itemize}
+This makes the control flow explicit and reproducible: execution is never pushed by modules; it is always initiated and advanced by the orchestrator via directed request/response.
+
+\minihead{Visualization aggregation: stream-driven vs request-driven.}
+The frontend combines two visualization paths with distinct interaction styles:
+\begin{itemize}
+    \item \textbf{Stream-driven previews (subscribe):} camera frames and incremental 3D scene updates arrive as publish/subscribe messages. For the camera preview, the frontend intentionally keeps only the most recent frame to avoid UI lag; for the 3D scene, it forwards updates to the browser as they arrive.
+    \item \textbf{Request-driven resynchronization:} the UI exposes ``Reload Visualization'', which re-requests a full scene snapshot from visualization producers (via the 3D visualization interface’s request/response path) and rebuilds the local scene mirror.
+\end{itemize}
+The scene view additionally integrates per-command preview overlays returned by use case modules as part of \type{CREATE\_COMMAND}.
+
+\minihead{On-demand utility actions (directed requests).}
+Besides the generic contracts, the main view exposes a small set of practical operator actions implemented as explicit requests:
+\begin{itemize}
+    \item \textbf{Scan Scene:} triggers a fresh scene-detection request (\type{READ\_SCENE}) to an available scene-detection module; the resulting objects appear through the standard visualization channel (the UI does not interpret detection blobs directly).
+    \item \textbf{Set Position / Move To Position:} persists a user-defined default joint configuration (stored in \path{main_visualization_data.json}) and commands a robot move to that configuration via the robot execution interface.
+\end{itemize}
+
+\xxx{EASY Fig (PLANNED): Screenshot collage of the three UI screens (AddModuleUi, ActivationUi, MainVisualizationUi) with brief callouts: (A) module palette + wiring selection, (B) activation parameters + activate/deactivate + remove, (C) camera preview + 3D scene + program panel. Keep callouts minimal; this figure is about \emph{orchestration responsibilities}, not UI aesthetics.}
+
+% =========================================================================================
 
 \subsection{User workflow state machine} \label{sec:ch3_workflow_state_machine}
 
-\xxx{Makes everything above click as one end-to-end workflow.}
+\minihead{Purpose.}
+The contracts and helper components above define individual interactions (mapping, activation, use case requests, visualization), but a user experiences the system as an end-to-end workflow. This subsection summarizes that workflow as a small state machine whose transitions are triggered by explicit user actions in the UI.
 
-\xxx{1 figure + short explanation}
+\minihead{Workflow states (user perspective).}
+A typical session proceeds through the following states:
+\begin{enumerate}
+    \item \textbf{Graph setup:} instantiate modules and choose wiring for subscribe/request consumers (AddModuleUi; \type{ICoreControl::addModule}).
+    \item \textbf{Module configuration:} edit activation parameters and activate required modules (ActivationUi; activation wrapper protocol).
+    \item \textbf{Program authoring:} compose a linear list of use case commands and fill parameters, including on-demand acquisition of \type{CUSTOM} values (MainVisualizationUi; \type{UsecaseTree}).
+    \item \textbf{Command confirmation:} materialize each command into its executable JSON representation (\type{CREATE\_COMMAND}); confirmed commands become eligible for execution.
+    \item \textbf{Execution:} start a program run (real/simulated), monitor status, and optionally pause/resume/stop; completion yields a final result (completed / stopped / error).
+\end{enumerate}
+Persistence actions (save/load) can be invoked as explicit transitions from setup and authoring: core save/load replaces the current module graph, while program save/load replaces the current command list.
+
+\xxx{EASY Fig (PLANNED): User workflow state machine. States: \emph{Setup graph} $\rightarrow$ \emph{Activate modules} $\rightarrow$ \emph{Author program} $\rightarrow$ \emph{Confirm commands} $\rightarrow$ \emph{Run} (with \emph{Paused} as a substate). Add side transitions for \emph{Save/Load core state} (graph) and \emph{Save/Load program} (command list). The goal is to show the end-to-end control-plane story on one small diagram.}
+
+% =========================================================================================
 
 \subsection{Persistence semantics} \label{sec:ch3_persistence_semantics}
 
-\xxx{Keep conceptual and clearly split: a) core saves/loads module graph + per-module state b) UI saves/loads program list (UsecaseTree JSON) c) IDs reassigned on load}
+\minihead{Two orthogonal persistence layers.}
+The frontend exposes two independent persistence mechanisms that correspond to two distinct user artifacts:
+\begin{itemize}
+    \item \textbf{System state (core):} the \emph{module graph} (instances + wiring) and optional per-module state, saved and loaded through the core persistence API (\autoref{subsec:ch3_core_persistence}).
+    \item \textbf{Program (UI):} the \emph{user-authored linear program} (use case identifiers, parameter values, cached command JSON, and optional preview visualization), saved and loaded through \type{UsecaseTree::toJson()/fromJson()} (\autoref{sec:ch3_usecase_tree}).
+\end{itemize}
+This separation is intentional: users may want to run multiple different programs on the same configured graph, or reuse one program under different graphs, as long as the required use case modules are available.
 
-\xxx{core vs UI vs wrappers/modules, IDs not stable}
+\minihead{Core state persistence (\type{.aergo}).}
+Core persistence stores and reconstructs the running graph using \type{ICore::save}/\type{ICore::load} (\autoref{subsec:ch3_core_persistence}). The frontend’s role is purely orchestration and packaging:
+\begin{itemize}
+    \item it triggers \type{save()} / \type{load(...)} on explicit user request,
+    \item it wraps the returned core container into a user-facing archive (\type{.aergo}) with a human-readable \path{project.json} and accompanying binary blobs (useful for inspection/debugging),
+    \item and it refreshes its views after loading because module identifiers and wiring endpoints are reconstructed (IDs are not stable across save/load).
+\end{itemize}
+
+\minihead{Program persistence (\type{.paergo}).}
+Program persistence stores only the programming artifact managed by \type{UsecaseTree}:
+\begin{itemize}
+    \item each command is anchored by a stable \emph{use case identifier} (as reported by the module) and stores the user-edited parameter values;
+    \item confirmed commands additionally store the cached command JSON (and optional preview visualization) as derived data; if parameters change, the cached JSON may be invalidated and must be re-confirmed;
+    \item internal bookkeeping identifiers (command IDs, transient execution state) are implementation details and are regenerated on load.
+\end{itemize}
+Loading a program therefore requires that the corresponding use case identifiers exist among currently available use case modules; if a required identifier is missing, the program cannot be reconstructed faithfully and is reported as invalid in the UI.
+
+\minihead{Practical implication.}
+The saved graph (\type{.aergo}) defines \emph{what capabilities are currently instantiated and connected}; the saved program (\type{.paergo}) defines \emph{what the user wants to run}. Keeping these files separate prevents accidental coupling between ``how the system is wired'' and ``what task sequence the user authored'', and mirrors the control-plane/data-plane split: graph persistence is core-owned infrastructure, while program persistence is a UI-level authoring artifact built on top of the use case interface.
+
+\xxx{EASY Fig (OPTIONAL): Persistence split diagram. Left: \type{.aergo} = core save (graph + per-module state, IDs reconstructed). Right: \type{.paergo} = UI save (program list + parameters + cached command JSON + preview). Show that both are user-invoked and independent.}
+
+
+
+
+
+
+% \subsection{UI orchestration module} \label{sec:ch3_ui_orchestration}
+
+% \xxx{Describe the UI as the concrete control-plane module using: core reflection/orchestration, activation wrapper, usecase wrapper (through UsecaseTree), visualization streams, and ad-hoc buttons (robot home, scene refresh).}
+% \xxx{In UI orchestration, explicitly contrast: visualization/camera preview are stream-driven (subscribe updates), scene refresh / robot home are user-triggered requests (directed req/resp).}
+
+% \xxx{1–1.5 pages max, “system behavior” level}
+
+% \subsection{User workflow state machine} \label{sec:ch3_workflow_state_machine}
+
+% \xxx{Makes everything above click as one end-to-end workflow.}
+
+% \xxx{1 figure + short explanation}
+
+% \subsection{Persistence semantics} \label{sec:ch3_persistence_semantics}
+
+% \xxx{Keep conceptual and clearly split: a) core saves/loads module graph + per-module state b) UI saves/loads program list (UsecaseTree JSON) c) IDs reassigned on load}
+
+% \xxx{core vs UI vs wrappers/modules, IDs not stable}
 
 \subsection{Demo module graphs} \label{sec:ch3_demo_graph}
 
