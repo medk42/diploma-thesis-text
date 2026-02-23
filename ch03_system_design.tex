@@ -1545,7 +1545,7 @@ A typical session proceeds through the following states:
     \item \textbf{Command confirmation:} materialize each command into its executable JSON representation (\type{CREATE\_COMMAND}); when all commands are confirmed, the program becomes eligible for execution.
     \item \textbf{Execution:} start a program run (real/simulated), monitor execution, and optionally pause/resume/stop; completion yields a final result (completed / stopped / error).
 \end{enumerate}
-Persistence actions (save/load) are available as side transitions throughout the workflow: \emph{core} save/load (from the activation screen) persists and restores the current module graph together with optional per-module state (including activation-related state when the module chooses to serialize it), while \emph{program} save/load persists and restores the current \type{UsecaseTree} program (command list, all parameter values including \type{CUSTOM}, cached command JSON/visualization, and each command's ``confirmed / out-of-sync'' state).
+At any point, the user may persist either the current system setup (module graph + optional per-module state) or the current program (command list and each command's authored state); the concrete semantics are described in \autoref{sec:ch3_persistence_semantics}.
 
 \xxx{EASY Fig (PLANNED): User workflow state machine. States: \emph{Setup graph} $\rightarrow$ \emph{Activate modules} $\rightarrow$ \emph{Author program} $\rightarrow$ \emph{Confirm commands} $\rightarrow$ \emph{Run} (with \emph{Paused} as a substate). Add side transitions for \emph{Save/Load core state} (graph + per-module state) and \emph{Save/Load program} (program list + parameters + cached artifacts), and note that these transitions can be invoked at multiple points, not only at the end of a stage. The goal is to show the end-to-end control-plane story on one small diagram. I would do large boxes to separate the logically distinct stages (graph setup, activation, programming, execution) and then use arrows save --> disk. disk --> load to show that persistence can save at any stage of setup. }
 
@@ -1553,35 +1553,45 @@ Persistence actions (save/load) are available as side transitions throughout the
 
 \subsection{Persistence semantics} \label{sec:ch3_persistence_semantics}
 
-\minihead{Two orthogonal persistence layers.}
-The frontend exposes two independent persistence mechanisms that correspond to two distinct user artifacts:
+\minihead{Two persisted artifacts.}
+The UI exposes two save/load mechanisms that intentionally target different kinds of user work:
 \begin{itemize}
-    \item \textbf{System state (core):} the \emph{module graph} (instances + wiring) and optional per-module state, saved and loaded through the core persistence API (\autoref{subsec:ch3_core_persistence}).
-    \item \textbf{Program (UI):} the \emph{user-authored linear program} (use case identifiers, parameter values, cached command JSON, and optional preview visualization), saved and loaded through \type{UsecaseTree::toJson()/fromJson()} (\autoref{sec:ch3_usecase_tree}).
+    \item \textbf{System setup (\type{.aergo}, core-owned):} the current runtime module graph (which modules are instantiated and how they are wired) together with optional per-module state, saved/loaded via \type{ICore::save}/\type{ICore::load} (\autoref{subsec:ch3_core_persistence}).
+    \item \textbf{Program (\type{.paergo}, UI-owned):} the user-authored linear program managed by \type{UsecaseTree} (command list, parameter values including \type{CUSTOM}, and cached derived artifacts), saved/loaded via \type{UsecaseTree::toJson()/fromJson()} (\autoref{sec:ch3_usecase_tree}).
 \end{itemize}
-This separation is intentional: users may want to run multiple different programs on the same configured graph, or reuse one program under different graphs, as long as the required use case modules are available.
+
+\minihead{Rationale.}
+The system setup is primarily an \emph{environment-specific configuration step}: the user instantiates the sensing/robot pipeline modules that match their hardware and workspace and activates them (e.g., camera selection and calibration, input device setup, scene detection). Once the graph works in a given environment, it can typically be reused many times without rebuilding it from scratch.
+Programs are authored \emph{within} such a prepared setup: they describe the task sequence (use case commands and their parameters) that the user wants to run on top of the already-configured pipeline.
 
 \minihead{Core state persistence (\type{.aergo}).}
-Core persistence stores and reconstructs the running graph using \type{ICore::save}/\type{ICore::load} (\autoref{subsec:ch3_core_persistence}). The frontend’s role is purely orchestration and packaging:
+Core persistence stores and reconstructs the running graph using \type{ICore::save}/\type{ICore::load} (\autoref{subsec:ch3_core_persistence}). The UI's role is orchestration and packaging:
 \begin{itemize}
-    \item it triggers \type{save()} / \type{load(...)} on explicit user request,
-    \item it wraps the returned core container into a user-facing archive (\type{.aergo}) with a human-readable \path{project.json} and accompanying binary blobs (useful for inspection/debugging),
-    \item and it refreshes its views after loading because module identifiers and wiring endpoints are reconstructed (IDs are not stable across save/load).
+    \item \textbf{Save:} invoke \type{ICore::save()}, wrap the returned container into a user-facing \type{.aergo} archive with a human-readable \path{project.json} header and any accompanying binary blobs, and write it to disk.
+    \item \textbf{Load:} read an \type{.aergo} archive from disk, unpack \path{project.json} and binary blobs, invoke \type{ICore::load(...)} to reconstruct the graph, then refresh UI views (module identifiers and wiring endpoints may change across load).
 \end{itemize}
+Per-module state is optional and module-owned: all modules expose \type{ISerializableModule}, but they may report \type{supports\_saving\_=false} and thus opt out of persistence. Regardless of whether a module supports persistence or chooses to serialize an ``activated'' state, its activation parameter values are persisted by the \type{ActivationWrapper}. 
+
+Whether a module ends up activated after loading is module-defined: some modules may treat activation as a restorable internal state (e.g., calibrated), while others may require re-activation due to external dependencies such as connected hardware (e.g., robot communication).
 
 \minihead{Program persistence (\type{.paergo}).}
 Program persistence stores only the programming artifact managed by \type{UsecaseTree}:
 \begin{itemize}
-    \item each command is anchored by a stable \emph{use case identifier} (as reported by the module) and stores the user-edited parameter values;
-    \item confirmed commands additionally store the cached command JSON (and optional preview visualization) as derived data; if parameters change, the cached JSON may be invalidated and must be re-confirmed;
-    \item internal bookkeeping identifiers (command IDs, transient execution state) are implementation details and are regenerated on load.
+    \item each command is anchored by a stable \emph{use case identifier} and stores the current user-edited parameter values (including \type{CUSTOM} payloads);
+    \item it additionally stores derived artifacts needed for execution and preview: cached command JSON (the executable representation) and optional preview visualization, together with the ``confirmed / out-of-sync'' flag that indicates whether the cached JSON matches current parameters (out-of-sync commands must be re-confirmed before execution);
+    \item program save/load restores the authored program state (commands, parameters, cached artifacts), not an in-flight execution; a loaded program is ready to be confirmed (if necessary) and started.
 \end{itemize}
-Loading a program therefore requires that the corresponding use case identifiers exist among currently available use case modules; if a required identifier is missing, the program cannot be reconstructed faithfully and is reported as invalid in the UI.
+To reconstruct the program during loading, the loader must resolve each stored use case identifier against 
+currently connected use case modules. If an identifier is missing, the UI cancels the load and reports an error indicating which use case identifier is unavailable.
 
-\minihead{Practical implication.}
-The saved graph (\type{.aergo}) defines \emph{what capabilities are currently instantiated and connected}; the saved program (\type{.paergo}) defines \emph{what the user wants to run}. Keeping these files separate prevents accidental coupling between ``how the system is wired'' and ``what task sequence the user authored'', and mirrors the control-plane/data-plane split: graph persistence is core-owned infrastructure, while program persistence is a UI-level authoring artifact built on top of the use case interface.
+\minihead{Summary.}
+Graph persistence is core-owned infrastructure that reconstructs the environment-specific runtime wiring and optional per-module configuration/state. Program persistence is a UI-level authoring artifact built on top of the use case interface; it stores the user-authored linear program (use case commands and their parameters) together with derived execution/preview artifacts (cached command JSON, optional preview visualization, and the confirmed/out-of-sync state). Loading a program requires the referenced use case identifiers to be available in the current setup; otherwise loading fails with a clear error.
 
-\xxx{EASY Fig (OPTIONAL): Persistence split diagram. Left: \type{.aergo} = core save (graph + per-module state, IDs reconstructed). Right: \type{.paergo} = UI save (program list + parameters + cached command JSON + preview). Show that both are user-invoked and independent.}
+\xxx{EASY Fig (OPTIONAL): Persistence split diagram. Left: \type{.aergo} = core save/load (graph + optional per-module state; IDs reconstructed). Right: \type{.paergo} = UI save/load (program list + parameters incl.\ \type{CUSTOM} + cached command JSON/preview + confirmed/out-of-sync flags).}
+
+
+
+% \xxx{Are we repetitive here?}
 
 
 
