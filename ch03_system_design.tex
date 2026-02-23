@@ -1503,18 +1503,20 @@ Activation parameter values are owned by the activation wrapper/module side; the
 The main visualization view embeds the programming UI (implemented in \path{program_tree.h}/\path{program_tree.cpp}) backed by \type{UsecaseTree} (\path{backend/module_helpers/usecase_tree/}; see also \autoref{sec:ch3_usecase_tree}):
 \begin{itemize}
     \item The UI discovers available use cases by querying all connected use case modules for metadata and parameter schema (\type{READ\_COMMAND\_PARAMETERS}).
-    \item The user composes a linear program by appending or reordering commands (each command binds a use case identifier to concrete parameter values), maintained in \type{UsecaseTree}.
+    \item The user composes a linear program by appending or reordering commands (each command binds a use case identifier to concrete parameter values).
     \item Missing \type{CUSTOM} inputs are acquired on demand through the use case wrapper’s capture protocol (\type{READ\_CUSTOM\_PARAMETER\_START} and repeated \type{READ\_CUSTOM\_PARAMETER\_CHECK}), either manually (``Click to set'') or via a pen-triggered auto-fill shortcut.
     \item Each command is explicitly \emph{confirmed} by requesting \type{CREATE\_COMMAND}, which materializes the command JSON (and optionally a preview visualization) and caches it as the executable representation.
     \item A program run is then started in real or simulated mode and controlled via start/pause/resume/stop; execution is sequential and its progress is surfaced to the user through the program state and completion dialogs.
 \end{itemize}
 This makes the control flow explicit and reproducible: execution is never pushed by modules; it is always initiated and advanced by the orchestrator via directed request/response.
 
+Unlike activation, the linear program (the command list and each command's parameter values, and optionally cached command JSON and visualization) is stored and edited entirely within the UI (via \type{UsecaseTree}); only \type{CUSTOM} values are acquired externally from the selected use case module.
+
 \minihead{Visualization: camera preview and 3D scene.}
 The main view aggregates two visualization modalities:
 \begin{itemize}
-    \item \textbf{Camera preview (subscribe):} camera frames arrive as publish/subscribe messages and are displayed in the UI so the user can inspect what the camera sees. The UI presents a single camera stream as the preview source.
-    \item \textbf{3D scene visualization (subscribe + request):} incremental scene updates arrive as publish/subscribe messages (ANNOUNCE/UPDATE). When the UI first becomes aware of a visualization producer, it requests a full scene snapshot via the 3D visualization interface's request/response path (e.g., \type{READ\_FULL}); afterwards it processes the delta updates as they arrive. The UI additionally exposes ``Reload Visualization'', which re-requests full snapshots to rebuild the local scene mirror.
+    \item \textbf{Camera preview (subscribe):} camera frames arrive as publish/subscribe messages and are displayed in the UI so the user can inspect what the camera sees (see \autoref{sec:ch3_supporting_messages}). The UI presents a single camera stream as the preview source.
+    \item \textbf{3D scene visualization (subscribe + request):} incremental scene updates arrive as publish/subscribe messages (ANNOUNCE/UPDATE). When the UI first becomes aware of a visualization producer, it requests a full scene snapshot via the 3D visualization interface's request/response path (e.g., \type{READ\_FULL}; see \autoref{sec:ch3_visualization_interface}); afterwards it processes the delta updates as they arrive. The UI additionally exposes ``Reload Visualization'', which re-requests full snapshots to rebuild the local scene mirror.
 \end{itemize}
 The scene view additionally integrates per-command preview overlays returned by use case modules as part of \type{CREATE\_COMMAND}.
 
@@ -1522,30 +1524,30 @@ The scene view additionally integrates per-command preview overlays returned by 
 Besides the generic contracts, the main view exposes a small set of practical operator actions implemented as explicit requests:
 \begin{itemize}
     \item \textbf{Scan Scene:} triggers a fresh scene-detection request (\type{READ\_SCENE}) to an available scene-detection module; the resulting objects appear through the standard visualization channel (the UI does not interpret detection blobs directly).
-    \item \textbf{Set Position / Move To Position:} persists a user-defined default joint configuration (stored in \path{main_visualization_data.json}) and commands a robot move to that configuration via the robot execution interface.
+    \item \textbf{Set Position / Move To Position:} persists a user-defined default robot joint configuration (stored in \path{main_visualization_data.json}) and commands a robot move to that configuration via the robot execution interface.
 \end{itemize}
 
 \xxx{EASY Fig (PLANNED): Screenshot collage of the three UI screens (AddModuleUi, ActivationUi, MainVisualizationUi) with brief callouts: (A) module palette + wiring selection, (B) activation parameters + activate/deactivate + remove, (C) camera preview + 3D scene + program panel. Keep callouts minimal; this figure is about \emph{orchestration responsibilities}, not UI aesthetics.}
 
 % =========================================================================================
 
-\subsection{User workflow state machine} \label{sec:ch3_workflow_state_machine}
+    \subsection{User workflow state machine} \label{sec:ch3_workflow_state_machine}
 
-\minihead{Purpose.}
-The contracts and helper components above define individual interactions (mapping, activation, use case requests, visualization), but a user experiences the system as an end-to-end workflow. This subsection summarizes that workflow as a small state machine whose transitions are triggered by explicit user actions in the UI.
+    \minihead{Purpose.}
+    The contracts and helper components above define individual interactions (mapping, activation, use case requests, visualization), but a user experiences the system as an end-to-end workflow. This subsection summarizes that workflow as a small state machine whose transitions are triggered by explicit user actions in the UI.
 
-\minihead{Workflow states (user perspective).}
-A typical session proceeds through the following states:
-\begin{enumerate}
-    \item \textbf{Graph setup:} instantiate modules and choose wiring for subscribe/request consumers (AddModuleUi; \type{ICoreControl::addModule}).
-    \item \textbf{Module configuration:} edit activation parameters and activate required modules (ActivationUi; activation wrapper protocol).
-    \item \textbf{Program authoring:} compose a linear list of use case commands and fill parameters, including on-demand acquisition of \type{CUSTOM} values (MainVisualizationUi; \type{UsecaseTree}).
-    \item \textbf{Command confirmation:} materialize each command into its executable JSON representation (\type{CREATE\_COMMAND}); confirmed commands become eligible for execution.
-    \item \textbf{Execution:} start a program run (real/simulated), monitor status, and optionally pause/resume/stop; completion yields a final result (completed / stopped / error).
-\end{enumerate}
-Persistence actions (save/load) can be invoked as explicit transitions from setup and authoring: core save/load replaces the current module graph, while program save/load replaces the current command list.
+    \minihead{Workflow states (user perspective).}
+    A typical session proceeds through the following states:
+    \begin{enumerate}
+        \item \textbf{Graph setup:} instantiate modules and choose wiring for subscribe/request consumers (AddModuleUi; \type{ICoreControl::addModule}).
+        \item \textbf{Module configuration:} edit activation parameters and activate required modules (ActivationUi; activation wrapper protocol).
+        \item \textbf{Program authoring:} compose a linear list of use case commands and fill parameters, including on-demand acquisition of \type{CUSTOM} values (MainVisualizationUi; \type{UsecaseTree}).
+        \item \textbf{Command confirmation:} materialize each command into its executable JSON representation (\type{CREATE\_COMMAND}); when all commands are confirmed, the program becomes eligible for execution.
+        \item \textbf{Execution:} start a program run (real/simulated), monitor the robot, and optionally pause/resume/stop; completion yields a final result (completed / stopped / error).
+    \end{enumerate}
+    Persistence actions (save/load) can be invoked as explicit transitions from setup and authoring: core save/load replaces the current module graph, while program save/load replaces the current command list.
 
-\xxx{EASY Fig (PLANNED): User workflow state machine. States: \emph{Setup graph} $\rightarrow$ \emph{Activate modules} $\rightarrow$ \emph{Author program} $\rightarrow$ \emph{Confirm commands} $\rightarrow$ \emph{Run} (with \emph{Paused} as a substate). Add side transitions for \emph{Save/Load core state} (graph) and \emph{Save/Load program} (command list). The goal is to show the end-to-end control-plane story on one small diagram.}
+    \xxx{EASY Fig (PLANNED): User workflow state machine. States: \emph{Setup graph} $\rightarrow$ \emph{Activate modules} $\rightarrow$ \emph{Author program} $\rightarrow$ \emph{Confirm commands} $\rightarrow$ \emph{Run} (with \emph{Paused} as a substate). Add side transitions for \emph{Save/Load core state} (graph) and \emph{Save/Load program} (command list). The goal is to show the end-to-end control-plane story on one small diagram.}
 
 % =========================================================================================
 
