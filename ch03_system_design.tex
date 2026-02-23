@@ -1531,23 +1531,23 @@ Besides the generic contracts, the main view exposes a small set of practical op
 
 % =========================================================================================
 
-    \subsection{User workflow state machine} \label{sec:ch3_workflow_state_machine}
+\subsection{User workflow state machine} \label{sec:ch3_workflow_state_machine}
 
-    \minihead{Purpose.}
-    The contracts and helper components above define individual interactions (mapping, activation, use case requests, visualization), but a user experiences the system as an end-to-end workflow. This subsection summarizes that workflow as a small state machine whose transitions are triggered by explicit user actions in the UI.
+\minihead{Purpose.}
+The contracts and helper components above define individual interactions (mapping, activation, use case requests, visualization), but a user experiences the system as an end-to-end workflow. This subsection summarizes that workflow as a small state machine whose transitions are triggered by explicit user actions in the UI.
 
-    \minihead{Workflow states (user perspective).}
-    A typical session proceeds through the following states:
-    \begin{enumerate}
-        \item \textbf{Graph setup:} instantiate modules and choose wiring for subscribe/request consumers (AddModuleUi; \type{ICoreControl::addModule}).
-        \item \textbf{Module configuration:} edit activation parameters and activate required modules (ActivationUi; activation wrapper protocol).
-        \item \textbf{Program authoring:} compose a linear list of use case commands and fill parameters, including on-demand acquisition of \type{CUSTOM} values (MainVisualizationUi; \type{UsecaseTree}).
-        \item \textbf{Command confirmation:} materialize each command into its executable JSON representation (\type{CREATE\_COMMAND}); when all commands are confirmed, the program becomes eligible for execution.
-        \item \textbf{Execution:} start a program run (real/simulated), monitor the robot, and optionally pause/resume/stop; completion yields a final result (completed / stopped / error).
-    \end{enumerate}
-    Persistence actions (save/load) can be invoked as explicit transitions from setup and authoring: core save/load replaces the current module graph, while program save/load replaces the current command list.
+\minihead{Workflow states (user perspective).}
+A typical session proceeds through the following states:
+\begin{enumerate}
+    \item \textbf{Graph setup:} instantiate modules and choose wiring for subscribe/request consumers (AddModuleUi; \type{ICoreControl::addModule}).
+    \item \textbf{Module configuration:} edit activation parameters and activate required modules (ActivationUi; activation wrapper protocol).
+    \item \textbf{Program authoring:} compose a linear list of use case commands and fill parameters, including on-demand acquisition of \type{CUSTOM} values (MainVisualizationUi; \type{UsecaseTree}).
+    \item \textbf{Command confirmation:} materialize each command into its executable JSON representation (\type{CREATE\_COMMAND}); when all commands are confirmed, the program becomes eligible for execution.
+    \item \textbf{Execution:} start a program run (real/simulated), monitor execution, and optionally pause/resume/stop; completion yields a final result (completed / stopped / error).
+\end{enumerate}
+Persistence actions (save/load) are available as side transitions throughout the workflow: \emph{core} save/load (from the activation screen) persists and restores the current module graph together with optional per-module state (including activation-related state when the module chooses to serialize it), while \emph{program} save/load persists and restores the current \type{UsecaseTree} program (command list, all parameter values including \type{CUSTOM}, cached command JSON/visualization, and each command's ``confirmed / out-of-sync'' state).
 
-    \xxx{EASY Fig (PLANNED): User workflow state machine. States: \emph{Setup graph} $\rightarrow$ \emph{Activate modules} $\rightarrow$ \emph{Author program} $\rightarrow$ \emph{Confirm commands} $\rightarrow$ \emph{Run} (with \emph{Paused} as a substate). Add side transitions for \emph{Save/Load core state} (graph) and \emph{Save/Load program} (command list). The goal is to show the end-to-end control-plane story on one small diagram.}
+\xxx{EASY Fig (PLANNED): User workflow state machine. States: \emph{Setup graph} $\rightarrow$ \emph{Activate modules} $\rightarrow$ \emph{Author program} $\rightarrow$ \emph{Confirm commands} $\rightarrow$ \emph{Run} (with \emph{Paused} as a substate). Add side transitions for \emph{Save/Load core state} (graph + per-module state) and \emph{Save/Load program} (program list + parameters + cached artifacts), and note that these transitions can be invoked at multiple points, not only at the end of a stage. The goal is to show the end-to-end control-plane story on one small diagram. I would do large boxes to separate the logically distinct stages (graph setup, activation, programming, execution) and then use arrows save --> disk. disk --> load to show that persistence can save at any stage of setup. }
 
 % =========================================================================================
 
