@@ -351,7 +351,7 @@ Caption should emphasize: core decides \emph{where} to deliver; wrapper decides 
 
 \minihead{What is covered here (and what is not).}
 This section describes how modules are discovered and loaded, how module instances are created/removed and wired, how routing and delivery are implemented, how shared payload allocation is managed, how reflection/orchestration queries are served, and how the module graph is persisted and reconstructed.
-It does \emph{not} describe domain logic of individual modules (\autoref{chapter:ch4_implementation}), UI workflow details (\autoref{sec:ch3_ui}), interface-level wrappers such as activation/use case logic (\autoref{sec:ch3_interface_contracts}), or the full binary serialization format; it also does not attempt a formal proof of the locking strategy, but documents the observable behavior and the practical constraints it imposes on module authors.
+It does \emph{not} describe domain logic of individual modules (\autoref{chapter:ch4_implementation}), user-facing UI orchestration and workflow (\autoref{sec:ch3_putting_it_together}), or interface-level protocols and helpers such as activation and use case interaction (\autoref{sec:ch3_interface_contracts}); it also does not attempt a formal proof of the locking strategy, but documents the observable behavior and the practical constraints it imposes on module authors.
 
 
 \subsection{Module packaging and hosting boundary} \label{subsec:ch3_core_dll_boundary}
@@ -1453,7 +1453,7 @@ Internal identifiers used for bookkeeping are implementation details and are reg
 
 \xxx{Fig (PLANNED): UsecaseTree/program model: a linear list of commands with per-command parameters $\rightarrow$ \type{CREATE\_COMMAND} (command JSON + optional preview) $\rightarrow$ \type{PROGRAM\_START\_*}/\type{PROGRAM\_STATUS} loop $\rightarrow$ \type{PROGRAM\_REMOVE}.}
 
-\xxx{EASY Fig (PLANNED): UsecaseTree in the actual UI. Use a screenshot of the running \type{frontend\_module} program panel and annotate it with simple callouts (prefer A--F labels over many arrows to keep it clean). Map the callouts to: (A) use case catalog, (B) program/command list (program representation), (C) parameter editing + \type{CUSTOM} parameter acquisition, (D) per-command ``confirm'' / command creation (\type{CREATE\_COMMAND} $\rightarrow$ cached command JSON + optional preview), (E) program execution controls + status (start/pause/resume/stop), (F) program persistence (save/load). Prefer vector annotation (Inkscape/draw.io) and export as PDF for crisp labels/arrows.}
+\xxx{EASY, HIGH VALUE Fig (PLANNED): UsecaseTree in the actual UI. Use a screenshot of the running \type{frontend\_module} program panel and annotate it with simple callouts (prefer A--F labels over many arrows to keep it clean). Map the callouts to: (A) use case catalog, (B) program/command list (program representation), (C) parameter editing + \type{CUSTOM} parameter acquisition, (D) per-command ``confirm'' / command creation (\type{CREATE\_COMMAND} $\rightarrow$ cached command JSON + optional preview), (E) program execution controls + status (start/pause/resume/stop), (F) program persistence (save/load). Prefer vector annotation (Inkscape/draw.io) and export as PDF for crisp labels/arrows.}
 
 
 
@@ -1527,7 +1527,7 @@ Besides the generic contracts, the main view exposes a small set of practical op
     \item \textbf{Set Position / Move To Position:} persists a user-defined default robot joint configuration (stored in \path{main_visualization_data.json}) and commands a robot move to that configuration via the robot execution interface.
 \end{itemize}
 
-\xxx{EASY Fig (PLANNED): Screenshot collage of the three UI screens (AddModuleUi, ActivationUi, MainVisualizationUi) with brief callouts: (A) module palette + wiring selection, (B) activation parameters + activate/deactivate + remove, (C) camera preview + 3D scene + program panel. Keep callouts minimal; this figure is about \emph{orchestration responsibilities}, not UI aesthetics.}
+\xxx{EASY, CRUCIAL Fig (PLANNED): Screenshot collage of the three UI screens (AddModuleUi, ActivationUi, MainVisualizationUi) with brief callouts: (A) module palette + wiring selection, (B) activation parameters + activate/deactivate + remove, (C) camera preview + 3D scene + program panel. Keep callouts minimal; this figure is about \emph{orchestration responsibilities}, not UI aesthetics.}
 
 % =========================================================================================
 
@@ -1547,7 +1547,7 @@ A typical session proceeds through the following states:
 \end{enumerate}
 At any point, the user may persist either the current system setup (module graph + optional per-module state) or the current program (command list and each command's authored state); the concrete semantics are described in \autoref{sec:ch3_persistence_semantics}.
 
-\xxx{EASY Fig (PLANNED): User workflow state machine. States: \emph{Setup graph} $\rightarrow$ \emph{Activate modules} $\rightarrow$ \emph{Author program} $\rightarrow$ \emph{Confirm commands} $\rightarrow$ \emph{Run} (with \emph{Paused} as a substate). Add side transitions for \emph{Save/Load core state} (graph + per-module state) and \emph{Save/Load program} (program list + parameters + cached artifacts), and note that these transitions can be invoked at multiple points, not only at the end of a stage. The goal is to show the end-to-end control-plane story on one small diagram. I would do large boxes to separate the logically distinct stages (graph setup, activation, programming, execution) and then use arrows save --> disk. disk --> load to show that persistence can save at any stage of setup. }
+\xxx{EASY, CRUCIAL Fig (PLANNED): User workflow state machine. States: \emph{Setup graph} $\rightarrow$ \emph{Activate modules} $\rightarrow$ \emph{Author program} $\rightarrow$ \emph{Confirm commands} $\rightarrow$ \emph{Run} (with \emph{Paused} as a substate). Add side transitions for \emph{Save/Load core state} (graph + per-module state) and \emph{Save/Load program} (program list + parameters + cached artifacts), and note that these transitions can be invoked at multiple points, not only at the end of a stage. The goal is to show the end-to-end control-plane story on one small diagram. I would do large boxes to separate the logically distinct stages (graph setup, activation, programming, execution) and then use arrows save --> disk. disk --> load to show that persistence can save at any stage of setup. }
 
 % =========================================================================================
 
@@ -1591,31 +1591,8 @@ Graph persistence is core-owned infrastructure that reconstructs the environment
 
 
 
-% \xxx{Are we repetitive here?}
+% =========================================================================================
 
-
-
-
-
-
-% \subsection{UI orchestration module} \label{sec:ch3_ui_orchestration}
-
-% \xxx{Describe the UI as the concrete control-plane module using: core reflection/orchestration, activation wrapper, usecase wrapper (through UsecaseTree), visualization streams, and ad-hoc buttons (robot home, scene refresh).}
-% \xxx{In UI orchestration, explicitly contrast: visualization/camera preview are stream-driven (subscribe updates), scene refresh / robot home are user-triggered requests (directed req/resp).}
-
-% \xxx{1–1.5 pages max, “system behavior” level}
-
-% \subsection{User workflow state machine} \label{sec:ch3_workflow_state_machine}
-
-% \xxx{Makes everything above click as one end-to-end workflow.}
-
-% \xxx{1 figure + short explanation}
-
-% \subsection{Persistence semantics} \label{sec:ch3_persistence_semantics}
-
-% \xxx{Keep conceptual and clearly split: a) core saves/loads module graph + per-module state b) UI saves/loads program list (UsecaseTree JSON) c) IDs reassigned on load}
-
-% \xxx{core vs UI vs wrappers/modules, IDs not stable}
 
 \subsection{Demo module graphs} \label{sec:ch3_demo_graph}
 
