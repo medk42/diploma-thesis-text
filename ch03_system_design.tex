@@ -1609,7 +1609,6 @@ This fully instantiated runtime module graph summarizes how the design choices d
 It captures (i) the sensing pipeline (stereo camera, calibration, pen tracking, scene detection),
 (ii) the robot execution backend, (iii) the task-oriented use case modules, and (iv) the \type{frontend\_module} that orchestrates setup,
 program authoring, and execution (\autoref{sec:ch3_ui_orchestration}).
-For readability, closely related status notifications are grouped where noted in the figure caption.
 
 \begin{landscape}
 \thispagestyle{plain}
@@ -1620,7 +1619,8 @@ For readability, closely related status notifications are grouped where noted in
     Fully instantiated runtime configuration of the demonstration system, shown as the intended module graph used in the thesis.
     Blocks are running module instances (consumers left, producers right); edges are typed according to the legend.
     Wrapper boxes indicate modules exposing the activation or use case wrapper protocol.
-    For readability, robot status and finished notifications are grouped into a single edge.%
+    For readability, robot status and finished notifications are grouped into a single edge.
+    Module and channel labels are abbreviated.% 
     }
     \label{fig:runtime_full}
 \end{figure}
