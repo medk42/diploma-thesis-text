@@ -1602,12 +1602,12 @@ Graph persistence is core-owned infrastructure that reconstructs the environment
 \minihead{Purpose.}
 The preceding subsections described how the system is operated through a control-plane integration (UI orchestration, use case programming, and persistence). We now close the system design chapter by putting these pieces together into a concrete end-to-end instantiation of the system used throughout this thesis.
 
-This fully instantiated runtime module graph summarizes how the design choices derived in \autoref{chapter:ch2_analysis} map to the concrete modules and interfaces specified in this chapter. By relating the developed modules back to the spatial authoring stages (\autoref{fig:intro__img_2__usecase_stages}), the five base components (\autoref{fig:ch2_analysis__base_components}), and their corresponding requirements, it provides a high-level end-to-end view of the system's structure and intended data/control flow without revisiting the detailed contract definitions.
+This subsection summarizes how the design choices derived in \autoref{chapter:ch2_analysis} map to the concrete modules and interfaces specified in this chapter. By relating the developed modules back to the spatial authoring stages (\autoref{fig:intro__img_2__usecase_stages}), the five base components (\autoref{fig:ch2_analysis__base_components}), and their corresponding requirements, it provides a high-level end-to-end view of the system's structure and intended data/control flow without revisiting the detailed contract definitions.
 
 \minihead{Instantiated module graph.}
 \autoref{fig:runtime_full} shows the intended runtime configuration used throughout the thesis.
 It captures (i) the sensing pipeline (stereo camera, calibration, pen tracking, scene detection),
-(ii) the robot execution backend, (iii) the task-oriented use case modules, and (iv) the \type{frontend\_module} that orchestrates setup,
+(ii) the robot execution backend, (iii) the task-oriented use case modules, and (iv) the UI/frontend module that orchestrates setup,
 program authoring, and execution (\autoref{sec:ch3_ui_orchestration}).
 
 \begin{landscape}
@@ -1629,21 +1629,19 @@ program authoring, and execution (\autoref{sec:ch3_ui_orchestration}).
 \minihead{Mapping to analysis components and requirements.}
 The concrete configuration in \autoref{fig:runtime_full} directly instantiates the base components of \autoref{fig:ch2_analysis__base_components}:
 \begin{itemize}
-    \item \textbf{6D input interface} (\autoref{req:6D_input_interface}): realized by \type{Pen Tracking (Multi-Cam)}, which consumes the calibrated camera set and produces pen messages
-    (\autoref{sec:ch3_supporting_messages}). In the authoring workflow, discrete \type{PenMessageIntent} events encode user-defined poses/trajectories used as \type{CUSTOM} inputs.
+    \item \textbf{6D input interface} (requirement \ref{req:6D_input_interface}): realized by \type{Pen Tracking (Multi-Cam)}, which consumes the calibrated camera set and produces pen messages
+    (\autoref{sec:ch3_supporting_messages}). In the authoring workflow, discrete \type{PenIntent} events encode user-defined poses/trajectories used as \type{CUSTOM} inputs.
 
-    \item \textbf{Scene detection} (\autoref{req:scene_detection_logic}): realized by \type{Scene Detection (Stereo Camera)}, which consumes the calibrated camera set and exposes the scene-detection request/response contract
-    (\autoref{sec:ch3_scene_detection_interface}). Use cases and the UI trigger scene refresh explicitly when needed.
+    \item \textbf{Scene detection} (requirement \ref{req:scene_detection_logic}): realized by \type{Scene Detection (Stereo Camera)}, which consumes the calibrated camera set and exposes the scene-detection request/response contract
+    (\autoref{sec:ch3_scene_detection_interface}). Use cases and the UI trigger scene detection explicitly when needed.
 
-    \item \textbf{Robot execution interface} (\autoref{req:robot_communication_interface}): realized by \type{Kassow Robot Module}, exposing robot action requests plus status/finished feedback
+    \item \textbf{Robot execution interface} (requirement \ref{req:robot_communication_interface}): realized by \type{Kassow Robot Module}, exposing robot action requests plus status/finished feedback
     (\autoref{sec:ch3_robot_interface}). Use case execution is expressed in terms of these common motion/control primitives.
 
-    \item \textbf{UI} (\autoref{req:ui}, \autoref{req:ui_use_case_selection}): realized by the web-based \type{frontend\_module}, which aggregates camera preview and 3D visualization
-    (\autoref{sec:ch3_supporting_messages}, \autoref{sec:ch3_visualization_interface}), drives activation and use case protocols, and presents program authoring/execution via \type{UsecaseTree}
-    (\autoref{sec:ch3_ui_orchestration}, \autoref{sec:ch3_usecase_tree}).
+    \item \textbf{UI} (requirements \ref{req:ui}, \ref{req:ui_use_case_selection}): realized by the web-based \type{Web Visualization Module}, which (i) lets the user instantiate and wire the runtime module graph via core reflection/orchestration (\autoref{subsec:ch3_reflection_orchestration}), (ii) configures and drives module activation (\autoref{subsec:ch3_activation_interface}), (iii) presents use case program authoring and execution via \type{UsecaseTree} on top of the use case protocol (\autoref{sec:ch3_ui_orchestration}, \autoref{sec:ch3_usecase_tree}, \autoref{sec:ch3_usecase_wrapper}), (iv) aggregates camera preview and shared 3D visualization (\autoref{sec:ch3_supporting_messages}, \autoref{sec:ch3_visualization_interface}), and (v) exposes save/load of both the system setup and user-authored programs (\autoref{subsec:ch3_core_persistence}, \autoref{sec:ch3_persistence_semantics}).
 
-    \item \textbf{Use case plugin support} (\autoref{req:use_case_plugin_support}): realized by task-oriented modules such as \type{Usecase Pick and Place} and \type{Usecase Weld},
-    which expose the standardized use case wrapper protocol (\autoref{sec:ch3_usecase_wrapper}) and reuse the same acquisition/execution infrastructure (pen intent, scene detection, robot interface, visualization).
+    \item \textbf{Use case plugin support} (requirement \ref{req:use_case_plugin_support}): realized by task-oriented modules such as \type{Usecase Pick and Place} and \type{Usecase Weld},
+    which expose the standardized use case wrapper protocol (\autoref{sec:ch3_usecase_wrapper}) and reuse the same acquisition/execution infrastructure (pen intent, scene detection, robot interface).
 \end{itemize}
 \xxx{If any of the requirement labels above differ in the source (\texttt{req:...}), add matching labels to the requirement definitions in Chapter~2.}
 
@@ -1651,13 +1649,13 @@ The concrete configuration in \autoref{fig:runtime_full} directly instantiates t
 The resulting end-to-end flow mirrors the conceptual stages of \autoref{fig:intro__img_2__usecase_stages}:
 the sensing stack produces calibrated inputs (camera set, detected objects) and the authoring stack produces user intent (poses/trajectories);
 a selected use case combines these inputs into task-specific command JSON and executes it via the shared robot interface.
-The \type{frontend\_module} provides the control-plane integration that makes this workflow operable in practice (module graph setup, activation,
-program authoring, confirmation, execution, and persistence; \autoref{sec:ch3_ui_orchestration}).
+The UI module acts as the system orchestrator that makes this workflow operable in practice (module graph setup, activation, program authoring, confirmation, execution, and persistence; \autoref{sec:ch3_ui_orchestration}).
+
 
 \minihead{Where details are described next.}
-\autoref{fig:runtime_full} is intended as a compact “system mental model” for the remainder of the thesis.
+\autoref{fig:runtime_full} is intended as a compact ``system mental model'' for the remainder of the thesis.
 Chapter~\ref{chapter:ch4_implementation} describes the hardware setup and the internal implementation of the individual modules in this graph,
-while Chapter~\ref{chapter:ch5_usage} documents concrete user workflows (system setup and the two demonstration use cases) on top of the same configuration.
+while Chapter~\ref{chapter:ch5_user_workflow} documents concrete user workflows (system setup and the two demonstration use cases) on top of the same configuration.
 
 
 
