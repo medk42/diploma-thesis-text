@@ -1596,19 +1596,70 @@ Graph persistence is core-owned infrastructure that reconstructs the environment
 % =========================================================================================
 
 
-\subsection{Demo module graphs} \label{sec:ch3_demo_graph}
+\clearpage
+\begin{landscape}
+\thispagestyle{plain}
 
-\xxx{Concrete "this is what we ran". Smooth bridge to Chapter~4. Rationale: This prevents the "UI does everything" paragraph from feeling like a grab bag. The reader already understands what "program" means (UsecaseTree), then the UI is simply the driver.}
+\begin{figure}[H]
+    \centering
+    \includegraphics{img/ch3_system_design/full_system.pdf}
+    \caption[Fully instantiated runtime configuration of the demonstration system]{%
+    Fully instantiated runtime configuration of the demonstration system, shown as the intended module graph used in the thesis. Blocks are running module instances (consumers left, producers right); edges are typed according to the legend. Wrapper boxes indicate modules exposing the activation or use case wrapper protocol. For readability, robot status and finished notifications are grouped into a single edge.%
+    }
+    \label{fig:runtime_full}
+\end{figure}
 
-\xxx{1 diagram + 1 paragraph}
-\xxx{Demo module graph: this is the only module wiring diagram in this section. If you already plan a full all-connected graph in Ch4, then here do a simplified demo graph (only key modules + key edges), and in Ch4 show the full one. Don’t show two full graphs back-to-back.}
+
+\end{landscape}
+\clearpage
+
+
+\subsection{Demonstration configurations} \label{sec:ch3_demo_graph}
+
+\minihead{Purpose.}
+The previous subsections explained how the UI and helper components drive the contracts into a coherent workflow. To make this concrete without duplicating the full communication graph shown later in Chapter~4, this subsection summarizes the \emph{demonstration configurations} used throughout the thesis: which module roles were instantiated, which interface families were exercised, and how they compose into the end-to-end pipeline.
+
+\minihead{Scope note.}
+The goal here is not to enumerate every channel edge. Instead, we describe the \emph{module set and responsibilities} for each demo and point to Chapter~4 for the detailed wiring.
+
+\minihead{Common baseline (all demos).}
+All demonstrations share the same control-plane and visualization baseline:
+\begin{itemize}
+    \item \textbf{Orchestrator:} \type{frontend\_module} provides graph setup, activation driving, use case programming/execution (via \type{UsecaseTree}), and persistence (\type{.aergo} for system setup and \type{.paergo} for programs).
+    \item \textbf{Visualization:} producer modules contribute to a shared 3D scene via the 3D visualization interface (\autoref{sec:ch3_visualization_interface}); the UI also shows a camera preview based on the camera message formats (\autoref{sec:ch3_supporting_messages}).
+    \item \textbf{Robot execution:} use case modules command the robot through the robot execution interface (\autoref{sec:ch3_robot_interface}).
+\end{itemize}
+
+\minihead{Pick-and-place demonstration.}
+The pick-and-place scenario combines sensing (workspace perception) with a task-oriented use case:
+\begin{itemize}
+    \item \textbf{Sensing pipeline:} camera acquisition and calibration modules produce calibrated camera observations; a tracking module provides pen inputs; a scene-detection module provides detected object poses (via \autoref{sec:ch3_scene_detection_interface}).
+    \item \textbf{Use case module:} a pick-and-place use case consumes the relevant authored inputs (typically a target pose/trajectory captured as \type{CUSTOM}) and scene information, constructs a command JSON via \type{CREATE\_COMMAND}, and executes it by issuing robot actions.
+    \item \textbf{User interaction:} the user authors a short linear program (often one or a few commands) in the UI, confirms commands (command JSON generation), and runs the program; the resulting motion and any preview markers are visible in the shared scene.
+\end{itemize}
+
+\minihead{Seam welding demonstration.}
+The seam-welding scenario emphasizes trajectory authoring and task-specific interpretation:
+\begin{itemize}
+    \item \textbf{Sensing pipeline:} as above, the system provides calibrated workspace observations and a shared 3D scene; seam-related context may be obtained either from scene detection or from user-authored inputs.
+    \item \textbf{Use case module:} the welding use case typically consumes a user-authored trajectory (\type{CUSTOM}) and task parameters, generates an executable command JSON (optionally returning a preview visualization), and executes a robot motion sequence.
+    \item \textbf{User interaction:} the UI is used to capture the trajectory, fill any remaining parameters, confirm the command, and run it; progress and results are shown through the program execution UI and visualization.
+\end{itemize}
+
+\minihead{Why this summary matters.}
+These configurations illustrate the intended separation of concerns: the environment-specific setup is expressed by the instantiated module graph (saved/loaded as \type{.aergo}), while task-specific behavior is expressed by user-authored programs over the available use cases (saved/loaded as \type{.paergo}). The detailed module-to-module wiring for the demonstrations is presented in Chapter~4 alongside the implementation and evaluation results.
 
 
 
+% \subsection{Demo module graphs} \label{sec:ch3_demo_graph}
+
+% \xxx{Concrete "this is what we ran". Smooth bridge to Chapter~4. Rationale: This prevents the "UI does everything" paragraph from feeling like a grab bag. The reader already understands what "program" means (UsecaseTree), then the UI is simply the driver.}
+
+% \xxx{1 diagram + 1 paragraph}
+% \xxx{Demo module graph: this is the only module wiring diagram in this section. If you already plan a full all-connected graph in Ch4, then here do a simplified demo graph (only key modules + key edges), and in Ch4 show the full one. Don’t show two full graphs back-to-back.}
 
 
-\xxx{usecase\_tree in the next section}
-\xxx{add label sec:ch3\_ui to the next section or rename it above; also rename the part where it is used (it is put together everythinmg, not just UI)}
+
 
 
 % writing about my system design in latex:
