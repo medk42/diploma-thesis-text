@@ -106,6 +106,9 @@
 \renewcommand{\figureautorefname}{Figure}
 \renewcommand{\tableautorefname}{Table}
 
+\newcommand{\reqref}[1]{\hyperref[#1]{Requirement~\ref*{#1}}}
+\newcommand{\goalref}[1]{\hyperref[#1]{Goal~\ref*{#1}}}
+
 % \newcommand{\type}[1]{\texttt{\detokenize{#1}}}
 \newcommand{\type}[1]{\nolinkurl{\detokenize{#1}}}
 % Better line breaking for \type{...} (underscores, ::, punctuation, CamelCase)
@@ -248,9 +251,8 @@
 \include{ch03_system_design}
 \include{ch04_implementation}
 \include{ch05_user_workflow}
-\chapter{Evaluation} \label{chapter:ch6_evaluation}
-\chapter{Discussion} \label{chapter:ch7_discussion}
-\chapter{Conclusion and Future Work} \label{chapter:ch8_conclusion_and_future_work}
+\chapter{Discussion} \label{chapter:ch6_discussion}
+\chapter{Conclusion and Future Work} \label{chapter:ch7_conclusion}
 
 \include{epilog}
 
