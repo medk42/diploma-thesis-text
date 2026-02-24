@@ -7,7 +7,9 @@ Chapter~\ref{chapter:ch2_analysis} motivated a modular architecture with explici
 \begin{figure}
   \centering
   \includegraphics[width=\textwidth]{img/ch3_system_design/four_parts.pdf}
-  \caption{Conceptual separation of contracts and implementations. The module contract defines how modules interact with the runtime core (lifecycle + message exchange). Interface contracts specify domain message semantics (e.g., camera stream, pen pose, scene detection) on top of the module contract. Concrete modules implement these contracts, while the core provides one concrete hosting and routing implementation.}
+    \caption[Contracts vs implementations]{%
+    Conceptual separation of contracts and implementations. The module contract defines how modules interact with the runtime core (lifecycle + message exchange). Interface contracts specify domain message semantics (e.g., camera stream, pen pose, scene detection) on top of the module contract. Concrete modules implement these contracts, while the core provides one concrete hosting and routing implementation.%
+}
   \label{fig:ch3_four_parts}
 \end{figure}
 
