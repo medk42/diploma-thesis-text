@@ -1596,15 +1596,13 @@ Graph persistence is core-owned infrastructure that reconstructs the environment
 % =========================================================================================
 
 
-\subsection{Demonstration configuration: instantiated system and requirement coverage}
+\subsection[End-to-end system and requirement coverage]{End-to-end system instantiation and requirement coverage}
 \label{sec:ch3_demo_configuration}
 
 \minihead{Purpose.}
-Chapters~\ref{chapter:ch2_analysis} and~\ref{chapter:ch3_system_design} motivated a modular system for in-workspace spatial authoring
-(\autoref{fig:intro__img_2__usecase_stages}) and decomposed it into the five base components
-(\autoref{fig:ch2_analysis__base_components}).
-This subsection summarizes the concrete demonstration configuration implemented in this thesis as a fully instantiated runtime module graph,
-and briefly maps the developed modules to the requirements and interface contracts defined earlier.
+The preceding subsections described how the system is operated through a control-plane integration (UI orchestration, use case programming, and persistence). We now close the system design chapter by putting these pieces together into a concrete end-to-end instantiation of the system used throughout this thesis.
+
+This fully instantiated runtime module graph summarizes how the design choices derived in \autoref{chapter:ch2_analysis} map to the concrete modules and interfaces specified in this chapter. By relating the developed modules back to the spatial authoring stages (\autoref{fig:intro__img_2__usecase_stages}), the five base components (\autoref{fig:ch2_analysis__base_components}), and their corresponding requirements, it provides a high-level end-to-end view of the system's structure and intended data/control flow without revisiting the detailed contract definitions.
 
 \minihead{Instantiated module graph.}
 \autoref{fig:runtime_full} shows the intended runtime configuration used throughout the thesis.
