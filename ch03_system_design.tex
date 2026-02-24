@@ -881,7 +881,7 @@ Once parameters are filled, the UI triggers \type{ACTIVATE}. At that point, the 
 The protocol is implemented by \type{ActivationWrapper}. The wrapper owns the parameter storage and implements the parameter editing/validation protocol, while the wrapped module exposes a small capability interface \type{IActivableModule} (\path{activable_module.h}).
 
 \minihead{How modules implement the contract.}
-To make a module activatable through the standard UI:
+To make a module activable through the standard UI:
 \begin{itemize}
     \item Declare the activation parameter list using \type{ParameterList}.
     \item Implement \type{IActivableModule}. At minimum, provide \type{activate()}, \type{deactivate()}, and \type{isActivated()}. The remaining hooks are optional: if you do not use request-based \type{CUSTOM} inputs, \type{sendRequestFromActivation(...)} can return \type{false}; if you do not need filtering/normalization, \type{processCustomMessageOrResponse(...)} can return \type{ProcessingResult::ACCEPT}; and if you do not report progress, \type{getActivationProgress()} can return \type{ProgressData} with \type{progress\_type\_=ProgressType::NONE}.
@@ -1361,7 +1361,7 @@ All files mentioned in this section are located in \path{backend/module_helpers/
 \path{camera_messages/}, \path{camera_pose_helper/}, \path{calibrated_camera_world_messages/}, and \path{pen_messages/}.
 
 \minihead{Camera images.}
-\type{camera\_messages} defines a \type{CameraMessage} header plus one or more blobs that can pack \emph{multiple images per blob} (header + per-image descriptors + raw pixel data). In this thesis, it is used to send a stereo pair in a single blob, produced by \type{stereo\_camera\_module\_windows} and consumed by \type{frontend\_module} (preview) and \type{camera\_pose\_injector\_module} (pose augmentation).
+\type{camera\_messages} defines a \type{CameraMessage} header plus one or more blobs that can pack \emph{multiple images per blob} (header + per-image descriptors + raw pixel data). In this thesis, it is used to send a stereo pair in a single blob, produced by \type{stereo\_camera\_module\_windows} and consumed by \type{web\_frontend\_module} (preview) and \type{camera\_pose\_injector\_module} (pose augmentation).
 
 \minihead{Camera images with robot pose.}
 \type{camera\_pose\_helper} extends the camera header with the latest robot flange pose (\type{CameraWithFlangePose}). This format is produced by \type{camera\_pose\_injector\_module} and consumed by \type{robot\_stereo\_camera\_calibration\_module}. The injector exists to attach robot pose at the message level (dropping camera frames until a pose is available), keeping calibration inputs self-contained.
@@ -1375,7 +1375,7 @@ All files mentioned in this section are located in \path{backend/module_helpers/
     \item \type{PenMessageRaw}: a low-level stream (timestamp, tip pose, button states) published while the pen is being tracked.
     \item \type{PenMessageIntent}: discrete, higher-level intents emitted when the user completes a pen interaction: \type{POSE} (a single user-defined target pose), \type{TRAJECTORY} (a user-defined path; pose sequence stored in a blob), and \type{SPECIAL\_ACTION} (a generic auxiliary trigger interpreted by the consumer module).
 \end{itemize}
-In this thesis, \type{pen\_tracking\_multicam\_module} publishes both; \type{PenMessageIntent} is consumed by \type{frontend\_module} (special action handling) and by use case modules that capture poses/trajectories as \type{CUSTOM} inputs.
+In this thesis, \type{pen\_tracking\_multicam\_module} publishes both; \type{PenMessageIntent} is consumed by \type{web\_frontend\_module} (special action handling) and by use case modules that capture poses/trajectories as \type{CUSTOM} inputs.
 
 
 \subsection{Implementation helper utilities} \label{sec:ch3_shared_helper_utilities}
@@ -1397,13 +1397,13 @@ Besides message schemas, the implementation relies on a few small reusable utili
 
 This chapter has so far introduced the system in terms of \emph{contracts}: the module contract (routing and lifecycle) and several interface contracts (activation, use cases, visualization, robot execution, scene detection, \dots). These contracts define \emph{what is compatible with what}, but they do not yet explain how a user actually \emph{operates} the system as a coherent tool: how modules are wired, configured, used to author commands, executed as tasks, and stored as reusable artifacts.
 
-This section therefore describes one concrete \emph{control-plane integration} used in this thesis. The \type{frontend\_module} provides the user-facing orchestration: it edits the module graph through core reflection/orchestration, drives activation and use case protocols, aggregates visualization streams, and exposes a persistence workflow. Additionally, it relies on a reusable helper, \type{UsecaseTree}, that turns the \emph{single use case} interface contract into the concrete programming model presented to the user: a linear list of commands that can be previewed, executed, and saved/loaded.
+This section therefore describes one concrete \emph{control-plane integration} used in this thesis. The \type{web\_frontend\_module} provides the user-facing orchestration: it edits the module graph through core reflection/orchestration, drives activation and use case protocols, aggregates visualization streams, and exposes a persistence workflow. Additionally, it relies on a reusable helper, \type{UsecaseTree}, that turns the \emph{single use case} interface contract into the concrete programming model presented to the user: a linear list of commands that can be previewed, executed, and saved/loaded.
 
 \subsection[UsecaseTree: from use cases to programs]{UsecaseTree: from use case modules to executable programs}
 \label{sec:ch3_usecase_tree}
 
 \minihead{Purpose.}
-The use case interface contract (\autoref{sec:ch3_usecase_wrapper}) intentionally defines \emph{one} use case module as a black box that can (i) expose a parameter schema, (ii) construct a command (JSON) from concrete parameter values, and (iii) execute that command as a task with a status lifecycle. The contract itself does not prescribe a programming UI: a use case may be executed standalone (schema $\rightarrow$ values $\rightarrow$ execute), or embedded into richer authoring environments (e.g., as reusable blocks in a teach pendant). In this thesis, the \type{frontend\_module} adopts \type{UsecaseTree} as a pragmatic integration that organizes use cases into a linear command list with explicit parameter editing, a per-command \emph{confirmation} step (command JSON generation), sequential execution, and program persistence.
+The use case interface contract (\autoref{sec:ch3_usecase_wrapper}) intentionally defines \emph{one} use case module as a black box that can (i) expose a parameter schema, (ii) construct a command (JSON) from concrete parameter values, and (iii) execute that command as a task with a status lifecycle. The contract itself does not prescribe a programming UI: a use case may be executed standalone (schema $\rightarrow$ values $\rightarrow$ execute), or embedded into richer authoring environments (e.g., as reusable blocks in a teach pendant). In this thesis, the \type{web\_frontend\_module} adopts \type{UsecaseTree} as a pragmatic integration that organizes use cases into a linear command list with explicit parameter editing, a per-command \emph{confirmation} step (command JSON generation), sequential execution, and program persistence.
 
 All files mentioned in this subsection are located in \path{backend/module_helpers/usecase_tree/}. The helper interacts with use case modules exclusively via the use case wrapper protocol in \path{backend/module_helpers/usecase_wrapper/} (notably \path{message_types.h} and \path{usecase_module_interface.h}).
 
@@ -1457,7 +1457,7 @@ Internal identifiers used for bookkeeping are implementation details and are reg
 
 \xxx{Fig (PLANNED): UsecaseTree/program model: a linear list of commands with per-command parameters $\rightarrow$ \type{CREATE\_COMMAND} (command JSON + optional preview) $\rightarrow$ \type{PROGRAM\_START\_*}/\type{PROGRAM\_STATUS} loop $\rightarrow$ \type{PROGRAM\_REMOVE}.}
 
-\xxx{EASY, HIGH VALUE Fig (PLANNED): UsecaseTree in the actual UI. Use a screenshot of the running \type{frontend\_module} program panel and annotate it with simple callouts (prefer A--F labels over many arrows to keep it clean). Map the callouts to: (A) use case catalog, (B) program/command list (program representation), (C) parameter editing + \type{CUSTOM} parameter acquisition, (D) per-command ``confirm'' / command creation (\type{CREATE\_COMMAND} $\rightarrow$ cached command JSON + optional preview), (E) program execution controls + status (start/pause/resume/stop), (F) program persistence (save/load). Prefer vector annotation (Inkscape/draw.io) and export as PDF for crisp labels/arrows.}
+\xxx{EASY, HIGH VALUE Fig (PLANNED): UsecaseTree in the actual UI. Use a screenshot of the running \type{web\_frontend\_module} program panel and annotate it with simple callouts (prefer A--F labels over many arrows to keep it clean). Map the callouts to: (A) use case catalog, (B) program/command list (program representation), (C) parameter editing + \type{CUSTOM} parameter acquisition, (D) per-command ``confirm'' / command creation (\type{CREATE\_COMMAND} $\rightarrow$ cached command JSON + optional preview), (E) program execution controls + status (start/pause/resume/stop), (F) program persistence (save/load). Prefer vector annotation (Inkscape/draw.io) and export as PDF for crisp labels/arrows.}
 
 
 
@@ -1472,7 +1472,7 @@ Internal identifiers used for bookkeeping are implementation details and are reg
 \subsection{UI orchestration module} \label{sec:ch3_ui_orchestration}
 
 \minihead{Purpose.}
-While the contracts in this chapter define \emph{compatibility} (which channels can talk to which), the system still requires a control-plane component that \emph{drives} these interactions into an end-user workflow. In this thesis, this role is implemented by the web-based \type{frontend\_module}: it is a normal module from the module contract’s perspective, but it orchestrates the module graph, activation, use case programming/execution (via \type{UsecaseTree}), visualization aggregation, and persistence.
+While the contracts in this chapter define \emph{compatibility} (which channels can talk to which), the system still requires a control-plane component that \emph{drives} these interactions into an end-user workflow. In this thesis, this role is implemented by the web-based \type{web\_frontend\_module}: it is a normal module from the module contract’s perspective, but it orchestrates the module graph, activation, use case programming/execution (via \type{UsecaseTree}), visualization aggregation, and persistence.
 
 \minihead{UI decomposition (three screens).}
 The frontend exposes three user-facing views that mirror its orchestration responsibilities:
@@ -1610,19 +1610,20 @@ The preceding subsections described how the system is operated through a control
 
 This subsection summarizes how the design choices derived in \autoref{chapter:ch2_analysis} map to the concrete modules and interfaces specified in this chapter. By relating the developed modules back to the spatial authoring stages (\autoref{fig:intro__img_2__usecase_stages}), the five base components (\autoref{fig:ch2_analysis__base_components}), and their corresponding requirements, it provides a high-level end-to-end view of the system's structure and intended data/control flow without revisiting the detailed contract definitions.
 
+Module labels in this subsection use display names; the corresponding module type identifiers (e.g., \type{pen\_tracking\_multicam\_module}, \type{scene\_detection\_stereocam\_module}, \type{web\_frontend\_module}) are used elsewhere for traceability.
+
 \minihead{Instantiated module graph.}
 \autoref{fig:runtime_full} shows the intended runtime configuration used throughout the thesis.
 It captures (i) the sensing pipeline (stereo camera, calibration, pen tracking, scene detection),
-(ii) the robot execution backend, (iii) the task-oriented use case modules, and (iv) the UI/frontend module that orchestrates setup,
-program authoring, and execution (\autoref{sec:ch3_ui_orchestration}).
+(ii) the robot execution backend, (iii) the task-oriented use case modules, and (iv) the UI/frontend module that orchestrates setup, program authoring, and execution (\autoref{sec:ch3_ui_orchestration}).
 
 \begin{landscape}
 \thispagestyle{plain}
 \begin{figure}[H]
     \centering
     \includegraphics{img/ch3_system_design/full_system.pdf}
-    \caption[Fully instantiated runtime configuration of the demonstration system]{%
-    Fully instantiated runtime configuration of the demonstration system, shown as the intended module graph used in the thesis.
+    \caption[Fully instantiated runtime configuration of the system]{%
+    Fully instantiated runtime configuration of the system, shown as the intended module graph used in the thesis.
     Blocks are running module instances (consumers left, producers right); edges are typed according to the legend.
     Wrapper boxes indicate modules exposing the activation or use case wrapper protocol.
     For readability, robot status and finished notifications are grouped into a single edge.
@@ -1649,7 +1650,6 @@ The concrete configuration in \autoref{fig:runtime_full} directly instantiates t
     \item \textbf{Use case plugin support} (requirement \ref{req:use_case_plugin_support}): realized by task-oriented modules such as \type{Usecase Pick and Place} and \type{Usecase Weld},
     which expose the standardized use case wrapper protocol (\autoref{sec:ch3_usecase_wrapper}) and reuse the same acquisition/execution infrastructure (pen intent, scene detection, robot interface).
 \end{itemize}
-\xxx{If any of the requirement labels above differ in the source (\texttt{req:...}), add matching labels to the requirement definitions in Chapter~2.}
 
 \minihead{From sensing and intent to executable tasks.}
 The resulting end-to-end flow mirrors the conceptual stages of \autoref{fig:intro__img_2__usecase_stages}:
