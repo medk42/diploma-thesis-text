@@ -2,6 +2,8 @@
 
 Chapter~\ref{chapter:ch2_analysis} motivated a modular architecture with explicit interfaces, so that sensing, UI, robot backends, and task logic can be exchanged without rewriting the whole system. This chapter describes the design of this modular system and the main interfaces that enable communication between its components.
 
+The system is implemented in C++, with all components built as modules that communicate exclusively through the runtime core.
+
 \section{System at a glance} \label{sec:ch3_overview}
 
 \begin{figure}
@@ -1529,6 +1531,10 @@ Besides the generic contracts, the main view exposes a small set of practical op
     \item \textbf{Set Position / Move To Position:} persists a user-defined default robot joint configuration (stored in \path{main_visualization_data.json}) and commands a robot move to that configuration via the robot execution interface.
 \end{itemize}
 
+\minihead{Note.}
+The UI module is described only through its externally observable behavior: how it exposes and drives the system interfaces to the user. Internal UI structure is intentionally omitted, unlike the core and selected modules, because it is not required to understand the system design. Consequently, the UI module is not decomposed further in \autoref{chapter:ch4_implementation}.
+
+
 \xxx{EASY, CRUCIAL Fig (PLANNED): Screenshot collage of the three UI screens (AddModuleUi, ActivationUi, MainVisualizationUi) with brief callouts: (A) module palette + wiring selection, (B) activation parameters + activate/deactivate + remove, (C) camera preview + 3D scene + program panel. Keep callouts minimal; this figure is about \emph{orchestration responsibilities}, not UI aesthetics.}
 
 % =========================================================================================
@@ -1654,7 +1660,7 @@ The UI module acts as the system orchestrator that makes this workflow operable 
 
 \minihead{Next steps.}
 \autoref{fig:runtime_full} is a compact ``system mental model'' for the rest of the thesis.
-\autoref{chapter:ch4_implementation} describes the hardware setup and the internal implementation of the individual modules shown in the graph.
+\autoref{chapter:ch4_implementation} describes the hardware setup and the internal implementation of the sensing/execution/use case modules shown in the graph (the UI module is not revisited beyond \autoref{sec:ch3_ui_orchestration}).
 \autoref{chapter:ch5_user_workflow} then documents the concrete user workflows (system setup and the two evaluated use cases) on top of the same configuration.
 
 
