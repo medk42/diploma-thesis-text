@@ -100,6 +100,12 @@
 \newlist{requirements}{enumerate}{1}
 \setlist[requirements]{label=\textbf{R\arabic*:}, ref=R\arabic*, leftmargin=*}
 
+\renewcommand{\chapterautorefname}{Chapter}
+\renewcommand{\sectionautorefname}{Section}
+\renewcommand{\subsectionautorefname}{Section} % Optional: map subsections to "Section"
+\renewcommand{\figureautorefname}{Figure}
+\renewcommand{\tableautorefname}{Table}
+
 % \newcommand{\type}[1]{\texttt{\detokenize{#1}}}
 \newcommand{\type}[1]{\nolinkurl{\detokenize{#1}}}
 % Better line breaking for \type{...} (underscores, ::, punctuation, CamelCase)

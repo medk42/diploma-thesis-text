@@ -1,6 +1,6 @@
 \chapter{System Design} \label{chapter:ch3_system_design}
 
-Chapter~\ref{chapter:ch2_analysis} motivated a modular architecture with explicit interfaces, so that sensing, UI, robot backends, and task logic can be exchanged without rewriting the whole system. This chapter describes the design of this modular system and the main interfaces that enable communication between its components.
+\autoref{chapter:ch2_analysis} motivated a modular architecture with explicit interfaces, so that sensing, UI, robot backends, and task logic can be exchanged without rewriting the whole system. This chapter describes the design of this modular system and the main interfaces that enable communication between its components.
 
 The system is implemented in C++, with all components built as modules that communicate exclusively through the runtime core.
 
@@ -163,7 +163,7 @@ Allocator and blob lifetime are owned by the core to ensure consistent memory ma
 
 \subsection{Communication primitives} \label{subsec:ch3_comm_primitives}
 
-This subsection describes the runtime semantics of the two communication primitives. Channel declaration and mapping rules are defined by \type{ModuleInfo} and the channel contract (\autoref{subsec:ch3_channel_contract}). Throughout the system, a channel endpoint is identified by \type{(module\_id,local\_channel\_id)} (represented by \type{ChannelIdentifier}): the module id selects the running module instance, and the local id selects one of its declared channel endpoints (from the appropriate publish/subscribe/request/response list for the given call).
+This section describes the runtime semantics of the two communication primitives. Channel declaration and mapping rules are defined by \type{ModuleInfo} and the channel contract (\autoref{subsec:ch3_channel_contract}). Throughout the system, a channel endpoint is identified by \type{(module\_id,local\_channel\_id)} (represented by \type{ChannelIdentifier}): the module id selects the running module instance, and the local id selects one of its declared channel endpoints (from the appropriate publish/subscribe/request/response list for the given call).
 
 \minihead{Publish/subscribe} is used for streams and events. A module publishes a message by calling \type{ICore::sendMessage(source\_channel, message)} with \type{source\_channel} identifying its producer channel. The core routes the message to all subscribe consumers that are connected to this producer by the current mapping. Delivery is best-effort and may be affected by the receiver's ingress and queueing policy (\autoref{subsec:ch3_message_lifecycle}).
 
@@ -240,7 +240,7 @@ Finally, the contract provides \type{save()} and \type{load(data, size)} to pers
 
 \subsection{Module lifecycle and implementer rules} \label{subsec:ch3_module_rules}
 
-This subsection summarizes (i) what runtime inputs the core provides to a newly created module instance, (ii) the expected lifecycle steps, and (iii) the key rules that module implementations must follow to be safely hostable by any compliant core.
+This section summarizes (i) what runtime inputs the core provides to a newly created module instance, (ii) the expected lifecycle steps, and (iii) the key rules that module implementations must follow to be safely hostable by any compliant core.
 
 \minihead{Construction inputs.}
 A module instance is created through the core's hosting mechanism (e.g., a factory provided by the module package). The module-facing contract assumes the following runtime inputs are provided at creation time:
@@ -402,7 +402,7 @@ For the same reason, anything with non-trivial ownership (e.g., \type{std::strin
 Small POD-like structures (\type{ChannelIdentifier}, \type{MessageHeader}, \type{InputChannelMapInfo}) are passed directly. For variable-sized \emph{inputs}, a pointer and size is used; the pointer is borrowed for the duration of the call, so if the callee needs the data later, it must copy it.
 
 \minihead{Where this leads next.}
-With the packaging boundary defined (how module libraries are found, validated, and how instances are created/destroyed), the next subsection describes the startup sequence that builds the loaded module catalog and performs the initial auto-create pass.
+With the packaging boundary defined (how module libraries are found, validated, and how instances are created/destroyed), the next section describes the startup sequence that builds the loaded module catalog and performs the initial auto-create pass.
 
 
 
@@ -469,7 +469,7 @@ On success the instance is inserted into \type{running\_modules\_} and the core 
 
 For \type{addModule}, a successful creation also increments \type{module\_mapping\_state\_id\_} so the UI can detect that the module graph changed.
 
-The next subsection describes the validation rules and the internal mapping tables that these registration steps populate.
+The next section describes the validation rules and the internal mapping tables that these registration steps populate.
 
 
 \subsection{Mapping validation and internal mapping tables} \label{subsec:ch3_core_mapping_validation}
@@ -620,14 +620,14 @@ For requests, the core additionally synthesizes a failure response if it cannot 
 it immediately calls \type{sendResponse} back to the caller with the same request \type{id\_}, an empty payload, and \type{success\_=false} (timestamped at send time).
 This guarantees that a failed request still produces a terminal response, instead of silently disappearing.
 
-The next subsection describes the \type{dll::IDllModule} implementation returned by \type{createModule}: the per-instance \type{DllModuleWrapper} that performs ingress decisions, queueing, worker scheduling, and (for requests) response dispatch.
+The next section describes the \type{dll::IDllModule} implementation returned by \type{createModule}: the per-instance \type{DllModuleWrapper} that performs ingress decisions, queueing, worker scheduling, and (for requests) response dispatch.
 
 
 
 
 \subsection{Per-module hosting wrapper} \label{subsec:ch3_core_per_module_wrapper}
 
-The previous subsection showed that the core only decides \emph{where} to forward a message: it resolves the destination endpoints and calls one of
+The previous section showed that the core only decides \emph{where} to forward a message: it resolves the destination endpoints and calls one of
 \type{IDllModule::processMessage/processRequest/processResponse}.
 Everything about \emph{how} the work is queued, scheduled, and executed lives on the module side of the DLL boundary in a per-instance hosting wrapper.
 
@@ -973,7 +973,7 @@ On save/load, the wrapper persists \emph{parameter values} (including stored \ty
 \subsection{Use case interface} \label{sec:ch3_usecase_wrapper}
 
 \minihead{Purpose.}
-The next interface we cover is the \emph{use case interface}. It defines what a \emph{use case module} is and provides the plugin architecture required by \ref{req:use_case_plugin_support}. Conceptually, a use case turns its inputs (poses, trajectories, detected objects, etc.) into an executable \emph{program command} and exposes a standardized command lifecycle (create $\rightarrow$ start $\rightarrow$ monitor $\rightarrow$ control $\rightarrow$ cleanup). This allows the frontend to run arbitrary use cases through a uniform protocol, without embedding module-specific UI logic.
+The next interface we cover is the \emph{use case interface}. It defines what a \emph{use case module} is and provides the plugin architecture required by \reqref{req:use_case_plugin_support}. Conceptually, a use case turns its inputs (poses, trajectories, detected objects, etc.) into an executable \emph{program command} and exposes a standardized command lifecycle (create $\rightarrow$ start $\rightarrow$ monitor $\rightarrow$ control $\rightarrow$ cleanup). This allows the frontend to run arbitrary use cases through a uniform protocol, without embedding module-specific UI logic.
 
 All files mentioned in this section are located in \path{backend/module_helpers/usecase_wrapper/} (protocol + \type{UsecaseWrapper}), \path{backend/module_helpers/base_usecase/} (\type{BaseUsecase}), and \path{backend/module_helpers/parameter_description/} (shared parameter schema).
 
@@ -1116,7 +1116,7 @@ If you need non-blocking control (e.g., to perform cleanup before exiting), \typ
 \subsection{3D visualization interface} \label{sec:ch3_visualization_interface}
 
 \minihead{Purpose.}
-Requirement~\ref{req:ui_use_case_selection} implies that the UI should visualize the programmed tasks, and \autoref{subsec:ch2_analysis_ui} suggests doing so using a simple shared 3D scene view (e.g., pose markers and trajectories in the workspace).
+\reqref{req:ui_use_case_selection} implies that the UI should visualize the programmed tasks, and \autoref{subsec:ch2_analysis_ui} suggests doing so using a simple shared 3D scene view (e.g., pose markers and trajectories in the workspace).
 Instead of embedding module-specific rendering rules in the UI (e.g., special-casing a particular robot model or a concrete 6D input device), the 3D visualization interface lets \emph{producer modules} describe what should appear in the shared scene. This keeps the 3D visualization extensible and allows modules to be replaced without updating UI code: a new tracking module simply publishes its own visualization primitives.
 
 All files mentioned in this section are located in \path{backend/module_helpers/visualization_3d_interface/}.
@@ -1202,7 +1202,7 @@ To make a module contribute to the shared 3D scene:
 \subsection{Robot execution interface} \label{sec:ch3_robot_interface}
 
 \minihead{Purpose.}
-Requirement~\ref{req:robot_communication_interface} (see also \autoref{subsec:ch2_analysis_robot_interface}) motivates a robot-agnostic execution interface: use cases should be able to trigger motion primitives and observe execution state without hard-coding a vendor API. In this thesis, the interface is used primarily for robot motion and basic state feedback; tool control was considered in the interface design, but it is not implemented and is not required by the demonstration scenarios.
+\reqref{req:robot_communication_interface} (see also \autoref{subsec:ch2_analysis_robot_interface}) motivates a robot-agnostic execution interface: use cases should be able to trigger motion primitives and observe execution state without hard-coding a vendor API. In this thesis, the interface is used primarily for robot motion and basic state feedback; tool control was considered in the interface design, but it is not implemented and is not required by the demonstration scenarios.
 
 All files mentioned in this section are located in \path{backend/module_helpers/robot_interface/} (contract + feature messages) and \path{backend/module_helpers/robot_wrapper/} (client-side helper).
 
@@ -1300,7 +1300,7 @@ A module that \emph{implements} robot control is expected to:
 \subsection{Scene detection interface} \label{sec:ch3_scene_detection_interface}
 
 \minihead{Purpose.}
-Requirement~\ref{req:scene_detection_logic} (see also \autoref{subsec:ch2_analysis_scene_detection}) calls for scene detection that provides object poses for downstream use cases (e.g., seam detection and trajectory alignment). The scene detection interface standardizes this output as a small request/response contract: a client can query which objects the detector knows about and request a fresh detection result on demand.
+\reqref{req:scene_detection_logic} (see also \autoref{subsec:ch2_analysis_scene_detection}) calls for scene detection that provides object poses for downstream use cases (e.g., seam detection and trajectory alignment). The scene detection interface standardizes this output as a small request/response contract: a client can query which objects the detector knows about and request a fresh detection result on demand.
 
 All files mentioned in this section are located in \path{backend/module_helpers/scene_detection_helper/}.
 
@@ -1414,7 +1414,7 @@ This section therefore describes one concrete \emph{control-plane integration} u
 \minihead{Purpose.}
 The use case interface contract (\autoref{sec:ch3_usecase_wrapper}) intentionally defines \emph{one} use case module as a black box that can (i) expose a parameter schema, (ii) construct a command (JSON) from concrete parameter values, and (iii) execute that command as a task with a status lifecycle. The contract itself does not prescribe a programming UI: a use case may be executed standalone (schema $\rightarrow$ values $\rightarrow$ execute), or embedded into richer authoring environments (e.g., as reusable blocks in a teach pendant). In this thesis, the \type{web\_frontend\_module} adopts \type{UsecaseTree} as a pragmatic integration that organizes use cases into a linear command list with explicit parameter editing, a per-command \emph{confirmation} step (command JSON generation), sequential execution, and program persistence.
 
-All files mentioned in this subsection are located in \path{backend/module_helpers/usecase_tree/}. The helper interacts with use case modules exclusively via the use case wrapper protocol in \path{backend/module_helpers/usecase_wrapper/} (notably \path{message_types.h} and \path{usecase_module_interface.h}).
+All files mentioned in this section are located in \path{backend/module_helpers/usecase_tree/}. The helper interacts with use case modules exclusively via the use case wrapper protocol in \path{backend/module_helpers/usecase_wrapper/} (notably \path{message_types.h} and \path{usecase_module_interface.h}).
 
 \minihead{What the helper provides.}
 \type{UsecaseTree} is a reusable implementation component (not a system contract). Given a host module that can send requests and receive responses, it maintains a \emph{program-level} view of use case programming:
@@ -1551,7 +1551,7 @@ The UI module is described only through its externally observable behavior: how 
 \subsection{User workflow state machine} \label{sec:ch3_workflow_state_machine}
 
 \minihead{Purpose.}
-The contracts and helper components above define individual interactions (mapping, activation, use case requests, visualization), but a user experiences the system as an end-to-end workflow. This subsection summarizes that workflow as a small state machine whose transitions are triggered by explicit user actions in the UI.
+The contracts and helper components above define individual interactions (mapping, activation, use case requests, visualization), but a user experiences the system as an end-to-end workflow. This section summarizes that workflow as a small state machine whose transitions are triggered by explicit user actions in the UI.
 
 \minihead{Workflow states (user perspective).}
 A typical session proceeds through the following states:
@@ -1615,11 +1615,11 @@ Graph persistence is core-owned infrastructure that reconstructs the environment
 \label{sec:ch3_demo_configuration}
 
 \minihead{Purpose.}
-The preceding subsections described how the system is operated through a control-plane integration (UI orchestration, use case programming, and persistence). We now close the system design chapter by putting these pieces together into a concrete end-to-end instantiation of the system used throughout this thesis.
+The preceding sections described how the system is operated through a control-plane integration (UI orchestration, use case programming, and persistence). We now close the system design chapter by putting these pieces together into a concrete end-to-end instantiation of the system used throughout this thesis.
 
-This subsection summarizes how the design choices derived in \autoref{chapter:ch2_analysis} map to the concrete modules and interfaces specified in this chapter. By relating the developed modules back to the spatial authoring stages (\autoref{fig:intro__img_2__usecase_stages}), the five base components (\autoref{fig:ch2_analysis__base_components}), and their corresponding requirements, it provides a high-level end-to-end view of the system's structure and intended data/control flow without revisiting the detailed contract definitions.
+This section summarizes how the design choices derived in \autoref{chapter:ch2_analysis} map to the concrete modules and interfaces specified in this chapter. By relating the developed modules back to the spatial authoring stages (\autoref{fig:intro__img_2__usecase_stages}), the five base components (\autoref{fig:ch2_analysis__base_components}), and their corresponding requirements, it provides a high-level end-to-end view of the system's structure and intended data/control flow without revisiting the detailed contract definitions.
 
-Module labels in this subsection use display names; the corresponding module type identifiers (e.g., \type{pen\_tracking\_multicam\_module}, \type{scene\_detection\_stereocam\_module}, \type{web\_frontend\_module}) are used elsewhere for traceability.
+Module labels in this section use display names; the corresponding module type identifiers (e.g., \type{pen\_tracking\_multicam\_module}, \type{scene\_detection\_stereocam\_module}, \type{web\_frontend\_module}) are used elsewhere for traceability.
 
 \minihead{Instantiated module graph.}
 \autoref{fig:runtime_full} shows the intended runtime configuration used throughout the thesis.
@@ -1645,18 +1645,18 @@ It captures (i) the sensing pipeline (stereo camera, calibration, pen tracking, 
 \minihead{Mapping to analysis components and requirements.}
 The concrete configuration in \autoref{fig:runtime_full} directly instantiates the base components of \autoref{fig:ch2_analysis__base_components}:
 \begin{itemize}
-    \item \textbf{6D input interface} (requirement \ref{req:6D_input_interface}): realized by \type{Pen Tracking (Multi-Cam)}, which consumes the calibrated camera set and produces pen messages
+    \item \textbf{6D input interface} (\reqref{req:6D_input_interface}): realized by \type{Pen Tracking (Multi-Cam)}, which consumes the calibrated camera set and produces pen messages
     (\autoref{sec:ch3_supporting_messages}). In the authoring workflow, discrete \type{PenIntent} events encode user-defined poses/trajectories used as \type{CUSTOM} inputs.
 
-    \item \textbf{Scene detection} (requirement \ref{req:scene_detection_logic}): realized by \type{Scene Detection (Stereo Camera)}, which consumes the calibrated camera set and exposes the scene-detection request/response contract
+    \item \textbf{Scene detection} (\reqref{req:scene_detection_logic}): realized by \type{Scene Detection (Stereo Camera)}, which consumes the calibrated camera set and exposes the scene-detection request/response contract
     (\autoref{sec:ch3_scene_detection_interface}). Use cases and the UI trigger scene detection explicitly when needed.
 
-    \item \textbf{Robot execution interface} (requirement \ref{req:robot_communication_interface}): realized by \type{Kassow Robot Module}, exposing robot action requests plus status/finished feedback
+    \item \textbf{Robot execution interface} (\reqref{req:robot_communication_interface}): realized by \type{Kassow Robot Module}, exposing robot action requests plus status/finished feedback
     (\autoref{sec:ch3_robot_interface}). Use case execution is expressed in terms of these common motion/control primitives.
 
-    \item \textbf{UI} (requirements \ref{req:ui}, \ref{req:ui_use_case_selection}): realized by the web-based \type{Web Visualization Module}, which (i) lets the user instantiate and wire the runtime module graph via core reflection/orchestration (\autoref{subsec:ch3_reflection_orchestration}), (ii) configures and drives module activation (\autoref{subsec:ch3_activation_interface}), (iii) presents use case program authoring and execution via \type{UsecaseTree} on top of the use case protocol (\autoref{sec:ch3_ui_orchestration}, \autoref{sec:ch3_usecase_tree}, \autoref{sec:ch3_usecase_wrapper}), (iv) aggregates camera preview and shared 3D visualization (\autoref{sec:ch3_supporting_messages}, \autoref{sec:ch3_visualization_interface}), and (v) exposes save/load of both the system setup and user-authored programs (\autoref{subsec:ch3_core_persistence}, \autoref{sec:ch3_persistence_semantics}).
+    \item \textbf{UI} (\reqref{req:ui}, \reqref{req:ui_use_case_selection}): realized by the web-based \type{Web Visualization Module}, which (i) lets the user instantiate and wire the runtime module graph via core reflection/orchestration (\autoref{subsec:ch3_reflection_orchestration}), (ii) configures and drives module activation (\autoref{subsec:ch3_activation_interface}), (iii) presents use case program authoring and execution via \type{UsecaseTree} on top of the use case protocol (\autoref{sec:ch3_ui_orchestration}, \autoref{sec:ch3_usecase_tree}, \autoref{sec:ch3_usecase_wrapper}), (iv) aggregates camera preview and shared 3D visualization (\autoref{sec:ch3_supporting_messages}, \autoref{sec:ch3_visualization_interface}), and (v) exposes save/load of both the system setup and user-authored programs (\autoref{subsec:ch3_core_persistence}, \autoref{sec:ch3_persistence_semantics}).
 
-    \item \textbf{Use case plugin support} (requirement \ref{req:use_case_plugin_support}): realized by task-oriented modules such as \type{Usecase Pick and Place} and \type{Usecase Weld},
+    \item \textbf{Use case plugin support} (\reqref{req:use_case_plugin_support}): realized by task-oriented modules such as \type{Usecase Pick and Place} and \type{Usecase Weld},
     which expose the standardized use case wrapper protocol (\autoref{sec:ch3_usecase_wrapper}) and reuse the same acquisition/execution infrastructure (pen intent, scene detection, robot interface).
 \end{itemize}
 
@@ -1669,8 +1669,8 @@ The UI module acts as the system orchestrator that makes this workflow operable 
 
 \minihead{Next steps.}
 \autoref{fig:runtime_full} is a compact ``system mental model'' for the rest of the thesis.
-Chapter~\ref{chapter:ch4_implementation} describes the hardware setup and the internal implementation of the sensing and execution modules shown in the graph (the UI module is not revisited beyond \autoref{sec:ch3_ui_orchestration}).
-Chapter~\ref{chapter:ch5_user_workflow} then documents the concrete user workflows (system setup and the two evaluated use cases) on top of the same configuration.
+\autoref{chapter:ch4_implementation} describes the hardware setup and the internal implementation of the sensing and execution modules shown in the graph (the UI module is not revisited beyond \autoref{sec:ch3_ui_orchestration}).
+\autoref{chapter:ch5_user_workflow} then documents the concrete user workflows (system setup and the two evaluated use cases) on top of the same configuration.
 
 
 

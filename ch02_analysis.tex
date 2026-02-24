@@ -11,9 +11,9 @@ Let us first re-state the goals we want to achieve with our system for reference
   \item \label{an_goal:3} Demonstrate the approach on a real robot with representative use cases for a material-handling task (pick-and-place) and a trajectory-centric task (seam welding), and evaluate the benefits and limitations of spatial authoring for these tasks.
 \end{goals}
 
-First, we will define the requirements for the system based on the use cases we want to implement. The two use cases mentioned in goal \ref{an_goal:3} are a material-handling task (\emph{pick-and-place}) and a trajectory-centric task (\emph{seam welding}). 
+First, we will define the requirements for the system based on the use cases we want to implement. The two use cases mentioned in \goalref{an_goal:3} are a material-handling task (\emph{pick-and-place}) and a trajectory-centric task (\emph{seam welding}). 
 
-Our system should also support the addition of new use cases (goal~\ref{an_goal:2}), so we will outline some potential future use cases and see if the requirements derived from our main use cases are sufficient to support them as well. 
+Our system should also support the addition of new use cases (\goalref{an_goal:2}), so we will outline some potential future use cases and see if the requirements derived from our main use cases are sufficient to support them as well. 
 
 One example of a future use case is a \emph{painting task}, where the goal is to uniformly paint a selected face of an object using a spray gun. In addition, the system should be capable of expressing traditional robot motion primitives (e.g., moving to a point or along a path). While such primitives are not the main focus of our work, their compatibility with the proposed input architecture is relevant.
 
@@ -112,7 +112,7 @@ The comparisons presented in this section are qualitative engineering assessment
 
 \subsection{6D input interface} \label{subsec:ch2_analysis_6D_input_interface}
 
-As stated in requirement \ref{req:6D_input_interface}, our system needs to provide \emph{6D input} (position and orientation) for defining poses and trajectories in the real workspace. High precision is not a strict requirement for our two use cases, because use case logic can refine user input using scene data, but higher stability and lower jitter are still desirable --- they simplify downstream processing and keep the interface usable for potential future tasks.
+As stated in \reqref{req:6D_input_interface}, our system needs to provide \emph{6D input} (position and orientation) for defining poses and trajectories in the real workspace. High precision is not a strict requirement for our two use cases, because use case logic can refine user input using scene data, but higher stability and lower jitter are still desirable --- they simplify downstream processing and keep the interface usable for potential future tasks.
 
 When selecting an input approach, we consider:
 \begin{enumerate*}[label=(\roman*)]
@@ -196,13 +196,13 @@ Low\textsuperscript{c} \\
 \paragraph{Summary}
 Since both demonstrative use cases require repeated capture of stable poses and short trajectories near objects, we prioritize robustness and predictable capture over maximum intuitiveness.
 
-Table~\ref{tab:6D_input_comparison} summarizes the trade-offs. Given our constraints, marker tracking provides the best balance of implementation effort and usable tracking quality for pose and trajectory authoring, while keeping hardware requirements low. Therefore, we select a camera-based marker tracking approach for the 6D input interface in this thesis. At the same time, we keep the input interface modular to allow substituting alternative 6D input sources (e.g., hand tracking or VR controllers) in future work.
+\autoref{tab:6D_input_comparison} summarizes the trade-offs. Given our constraints, marker tracking provides the best balance of implementation effort and usable tracking quality for pose and trajectory authoring, while keeping hardware requirements low. Therefore, we select a camera-based marker tracking approach for the 6D input interface in this thesis. At the same time, we keep the input interface modular to allow substituting alternative 6D input sources (e.g., hand tracking or VR controllers) in future work.
 
 In principle, marker pose can be estimated from a single calibrated RGB camera. In our early experiments, however, monocular pose estimation produced unstable depth (translation along the camera z axis), which directly impacts trajectory authoring. Therefore, while we select marker tracking as the input modality, we treat the underlying camera configuration (mono vs. stereo/RGB-D) as a separate system decision discussed in \autoref{subsec:ch2_analysis_camera_tradeoffs}.
 
 \subsection{Scene detection} \label{subsec:ch2_analysis_scene_detection}
 
-Based on requirement \ref{req:scene_detection_logic}, our system needs to provide \emph{scene detection} logic that can detect objects in the scene and provide their poses. The accuracy requirements for scene detection are higher than for the 6D input interface, since the detected object poses are used to refine and constrain user-defined trajectories. For example, in the seam welding use case, we rely on the detected objects to find the seam between them and align the user-defined trajectory to it. If the estimated object poses are inaccurate, the derived seam geometry and aligned trajectory will also be affected, directly degrading execution quality.
+Based on \reqref{req:scene_detection_logic}, our system needs to provide \emph{scene detection} logic that can detect objects in the scene and provide their poses. The accuracy requirements for scene detection are higher than for the 6D input interface, since the detected object poses are used to refine and constrain user-defined trajectories. For example, in the seam welding use case, we rely on the detected objects to find the seam between them and align the user-defined trajectory to it. If the estimated object poses are inaccurate, the derived seam geometry and aligned trajectory will also be affected, directly degrading execution quality.
 
 When selecting an approach for scene detection, we consider:
 \begin{enumerate*}[label=(\roman*)]
@@ -308,7 +308,7 @@ Recon-D – depth-based 3D reconstruction.
 \end{table}
 
 \paragraph{Summary}
-Table~\ref{tab:scene_detection_comparison} summarizes the trade-offs between the considered scene detection approaches. 
+\autoref{tab:scene_detection_comparison} summarizes the trade-offs between the considered scene detection approaches. 
 
 Given the scope of this thesis and the available hardware, fiducial-based detection provides the most favorable balance between implementation effort, cost, and sufficient pose accuracy for our target use cases. The approach can be implemented using the same camera setup as the 6D input interface, and the detection pipeline can reuse significant parts of the existing marker-based pose estimation logic.
 
@@ -319,7 +319,7 @@ Therefore, we select a camera-based fiducial marker detection approach for scene
 
 \subsection{Camera configuration} \label{subsec:ch2_analysis_camera_tradeoffs}
 
-In the previous subsections (\autoref{subsec:ch2_analysis_6D_input_interface} and \autoref{subsec:ch2_analysis_scene_detection}) we selected camera-based marker tracking for both the 6D input interface and the scene detection. This shifts the main design question to the \emph{camera configuration}: the same camera setup determines the achievable pose stability for the pen input and the pose accuracy for detected scene objects.
+In the previous sections (\autoref{subsec:ch2_analysis_6D_input_interface} and \autoref{subsec:ch2_analysis_scene_detection}) we selected camera-based marker tracking for both the 6D input interface and the scene detection. This shifts the main design question to the \emph{camera configuration}: the same camera setup determines the achievable pose stability for the pen input and the pose accuracy for detected scene objects.
 
 We evaluate alternative camera configurations along two axes:
 \begin{enumerate*}[label=(\roman*)]
@@ -413,7 +413,7 @@ Robot multi-view\textsuperscript{a} & Low--Med & High & Very High & High \\
 \emph{Note:} Ratings are qualitative and reflect our expected performance and deployment effort in the thesis setup. Pen/scene quality assumes reasonable camera placement and calibration; mount robustness reflects how likely the calibrated extrinsics remain valid under typical disturbances (bumps, vibration, cable strain).
 \end{table}
 
-To make the trade-offs explicit, Table~\ref{tab:camera_config_comparison} summarizes the expected properties of the considered configurations. Here, \emph{Setup/Maint.} refers primarily to calibration and synchronization effort from the operator's perspective; configurations that require additional runtime workflow or optimization beyond this are noted separately.
+To make the trade-offs explicit, \autoref{tab:camera_config_comparison} summarizes the expected properties of the considered configurations. Here, \emph{Setup/Maint.} refers primarily to calibration and synchronization effort from the operator's perspective; configurations that require additional runtime workflow or optimization beyond this are noted separately.
 
 Overall, monocular configurations are the simplest to deploy but suffer from depth instability and viewing-angle sensitivities that directly affect both pen tracking and fiducial scene pose estimation. Stereo addresses the main depth-related weakness with only moderate additional calibration effort. Multi-camera setups can further improve robustness (occlusion handling and view diversity), but at the cost of substantially higher calibration/synchronization complexity and reduced flexibility for rapid prototyping; they may nevertheless be appropriate in deployments where maximum scene pose quality without requiring robot movement is the primary goal.
 
@@ -426,13 +426,13 @@ Finally, the analysis above reflects our ArUco-based pipeline and typical behavi
 
 \subsection{Robot interface} \label{subsec:ch2_analysis_robot_interface}
 
-In the previous subsections we focused on sensing. We now turn to the \emph{robot interface}, which is the main output channel of our system and the critical link to execution. Requirement~\ref{req:robot_communication_interface} states that the system needs to provide a \emph{robot communication interface} that allows use cases to move the robot and control its tool, and that can support multiple robot brands/models to ensure broader applicability. In this subsection we briefly outline the practical requirements for such an interface.
+In the previous sections we focused on sensing. We now turn to the \emph{robot interface}, which is the main output channel of our system and the critical link to execution. \reqref{req:robot_communication_interface} states that the system needs to provide a \emph{robot communication interface} that allows use cases to move the robot and control its tool, and that can support multiple robot brands/models to ensure broader applicability. In this section we briefly outline the practical requirements for such an interface.
 
 At a minimum, use cases must be able to command the robot to execute motions and to receive feedback about what the robot is currently doing. Since our authoring workflow defines targets in Cartesian space (poses and trajectories in the workspace), the interface should support Cartesian motions directly, not only joint targets. While it is possible to realize Cartesian motion by streaming joint commands at a high rate, this is not always available or desirable. Therefore, it is useful to expose a small set of higher-level motion primitives that cover typical needs of our use cases: joint-space motion (\emph{moveJ}), linear motion in Cartesian space (\emph{moveL}), execution of a user-defined Cartesian trajectory (\emph{moveT}), and optionally an arc motion primitive (\emph{moveA}). If a particular robot does not support a primitive natively, it can be approximated by the robot interface implementation using the primitives that the robot does provide. This keeps the use case logic independent of vendor-specific robot APIs.
 
 In addition to motion commands, the interface must provide the state needed for both execution and sensing. Use cases benefit from access to the current robot execution state (idle/running/error). For our sensing setup, it is also important to obtain the robot pose in a consistent reference frame. In particular, we distinguish the pose of the tool flange center (TFC), which is fixed by the robot mechanics, and the pose of the tool center point (TCP), which depends on the currently mounted tool and its user-defined TCP offset. In our workflow, user-authored targets and executed motions are expressed in terms of the TCP. This implicitly assumes that the TCP is configured correctly for the used tool (e.g., at the end of a welding torch or between gripper fingers). When a robot-mounted camera is used, the reported TFC pose together with the calibrated camera-to-flange transformation is used to determine the camera pose in the workspace. Therefore, the interface must provide access to both TFC and TCP poses, expressed consistently (e.g., in the robot base frame).
 
-Finally, requirement~\ref{req:robot_communication_interface} also mentions tool control (e.g., gripper actuation or welding on/off). In practice, portable tool control is significantly harder to standardize than motion, because tools differ widely in capabilities and communication (simple digital I/O vs. fieldbuses, vendor-specific command sets, additional features such as touch sensing, seam tracking, wire feed control, etc.). Designing a clean, extensible tool API that works across robots and tools is therefore a substantial topic on its own. For this thesis, we focus primarily on robot motion and state feedback, and we treat tool control as an optional extension that can be integrated in future work without changing the core spatial authoring workflow.
+Finally, \reqref{req:robot_communication_interface} also mentions tool control (e.g., gripper actuation or welding on/off). In practice, portable tool control is significantly harder to standardize than motion, because tools differ widely in capabilities and communication (simple digital I/O vs. fieldbuses, vendor-specific command sets, additional features such as touch sensing, seam tracking, wire feed control, etc.). Designing a clean, extensible tool API that works across robots and tools is therefore a substantial topic on its own. For this thesis, we focus primarily on robot motion and state feedback, and we treat tool control as an optional extension that can be integrated in future work without changing the core spatial authoring workflow.
 
 Overall, we aim for a robot-agnostic interface: use cases operate on a small, consistent set of motion primitives and state signals, while robot-specific details are handled inside the robot integration layer. This makes it feasible to reuse the same use case logic across different robot platforms as long as the platform can provide the required motion execution and state feedback.
 
@@ -440,7 +440,7 @@ Overall, we aim for a robot-agnostic interface: use cases operate on a small, co
 
 The user interface (UI) is the main point of interaction with the system: it lets the user select a use case, enter non-spatial parameters, inspect the generated program, and trigger execution.
 
-Given requirements \ref{req:ui} and \ref{req:ui_use_case_selection}, the UI must support:
+Given \reqref{req:ui} and \reqref{req:ui_use_case_selection}, the UI must support:
 \begin{enumerate}[label=(\roman*)]
     \item defining non-spatial parameters for use cases (e.g., object type for pick-and-place, welding parameters for seam welding),
     \item selecting the use case to be programmed,
@@ -467,7 +467,7 @@ Given the practical goal of a hardware-light solution suitable for rapid prototy
 
 \subsection{Use case plugin support} \label{subsec:ch2_analysis_use_case_plugins}
 
-Requirement~\ref{req:use_case_plugin_support} states that the system should support adding new task-oriented use cases while reusing the same input and execution infrastructure. This is important for two reasons.
+\reqref{req:use_case_plugin_support} states that the system should support adding new task-oriented use cases while reusing the same input and execution infrastructure. This is important for two reasons.
 
 First, the set of tasks that can benefit from spatial authoring is broad, and different tasks require different task logic even when they share the same sensing and execution capabilities. For example, pick-and-place and seam welding both reuse the same 6D input and scene detection, but they interpret the input differently and generate different robot motion structure. Therefore, we avoid hard-coding task-specific logic into the core system and instead treat each task as an interchangeable \emph{use case plugin}.
 
@@ -478,7 +478,7 @@ In this thesis, we demonstrate this plugin approach on two representative use ca
 
 \subsection{Modular architecture} \label{subsec:ch2_analysis_modular_architecture}
 
-Across the previous subsections, we repeatedly relied on the same engineering principle: we commit to a pragmatic solution for the thesis prototype, but we want to keep the option to replace individual parts later. This applies to multiple parts of the system:
+Across the previous sections, we repeatedly relied on the same engineering principle: we commit to a pragmatic solution for the thesis prototype, but we want to keep the option to replace individual parts later. This applies to multiple parts of the system:
 \begin{enumerate}[label=(\roman*), itemsep=0.2em]
     \item the 6D input source (marker tracking vs. other tracking modalities),
     \item the scene detection approach (fiducials vs. model-based or reconstruction-based methods),
@@ -488,7 +488,7 @@ Across the previous subsections, we repeatedly relied on the same engineering pr
     \item the set of use cases supported by the system.
 \end{enumerate}
 
-Taken together with requirement~\ref{req:use_case_plugin_support}, these points naturally motivate a \emph{modular architecture}: the system should be composed of independent components with clear interfaces, so that one component can be replaced without rewriting the others. This shifts the emphasis from selecting the “best” algorithm upfront to defining \emph{stable interfaces} between components. With well-chosen interfaces, we can start with a simple proof-of-concept implementation and later upgrade only the relevant part (e.g., replace fiducial scene detection with a model-based pipeline) while keeping the rest unchanged.
+Taken together with \reqref{req:use_case_plugin_support}, these points naturally motivate a \emph{modular architecture}: the system should be composed of independent components with clear interfaces, so that one component can be replaced without rewriting the others. This shifts the emphasis from selecting the “best” algorithm upfront to defining \emph{stable interfaces} between components. With well-chosen interfaces, we can start with a simple proof-of-concept implementation and later upgrade only the relevant part (e.g., replace fiducial scene detection with a model-based pipeline) while keeping the rest unchanged.
 
 A modular decomposition also matches the structure derived from the requirements in \autoref{fig:ch2_analysis__base_components}. For example, different camera setups can be implemented as alternative sensing components that provide the same outputs (time-stamped images and calibrated poses in a shared reference frame). Similarly, the pen tracking and scene detection components can be exchanged independently as long as they produce the same abstract outputs used by the use cases (pen poses/trajectories and object poses/IDs). Finally, use cases consume these abstract inputs and translate them into robot actions executed through the common robot interface (e.g., sequences of motion primitives with associated parameters).
 
