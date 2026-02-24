@@ -4,6 +4,12 @@
 
 \xxx{Sensing pipeline modules (Stereo Camera → Pose Injector → Camera Calibration → CalibratedCameraSet).}
 
+\xxx{If optimization is structurally important (e.g.\ calibration accuracy, tracking stability), mention what is optimized (objective/variables) and that it is solved as nonlinear least squares using Ceres; do not describe Ceres itself.}
+
+\xxx{Use a right-sized pattern: 1--2 sentences for the problem and objective (residuals, weights, parameters), then 1 sentence stating the solver choice (nonlinear least squares via Ceres), then focus on assumptions, convergence/failure modes, and which outputs feed which interface messages.}
+
+\xxx{If optimization is incidental (a small sub-step that does not affect results), say only "we optimize ..." and omit the library name.}
+
 \xxx{Authoring modules (Pen Tracking, Scene Detection).}
 
 \xxx{Execution modules (Robot module, then the two “real” use cases: Pick-and-Place, Weld; optionally mention the simple motion-primitive use cases).}
