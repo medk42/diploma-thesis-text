@@ -1,0 +1,197 @@
+\chapter{Attachments}
+\label{appendix:attachments}
+
+This appendix summarizes the submitted electronic attachment package: the pruned source code snapshot used to build the prototype, the external build/dependency boundaries, and the hardware/calibration artifacts required to reproduce the physical setup.
+
+\section{Submission package, source code, and third-party software}
+\label{appendix:source_code}
+
+\minihead{Development repository.}
+The development history of the project is available at \url{https://github.com/medk42/diploma-thesis-code}.
+The electronic attachment submitted with this thesis contains a pruned snapshot intended for building and inspection; it may not correspond to a single stable tagged revision of the development repository.
+\xxx{Update this link if the maintained repository is moved/split. Optionally add a tag/commit hash if a stable release is created.}
+
+\minihead{Top-level structure of the submitted attachment.}
+The attachment package is organized as follows (paths are relative to the attachment root):
+
+\begin{verbatim}
+camera/                  Calibration artifacts (Charuco PDF, camera mount CAD)
+diploma-thesis-code/      Pruned C++ source tree (core + helpers + modules)
+pen/                     Pen CAD + firmware
+robot/aergo_interface_cbun/ Robot-side component (CBun) source tree
+scene/                   Example scene CAD model(s)
+third_party_licenses/    License texts for vendored components
+LICENSE, NOTICE, README.md, THIRD_PARTY_NOTICES.md
+\end{verbatim}
+
+\minihead{Included vs.\ excluded code scope.}
+The submitted code snapshot includes:
+\begin{itemize}
+    \item the core runtime and module contract (\path{diploma-thesis-code/backend/core/}, \path{diploma-thesis-code/backend/module_common/}),
+    \item the interface helpers and shared message formats (\path{diploma-thesis-code/backend/module_helpers/}),
+    \item the concrete modules used by \autoref{fig:runtime_full} (\path{diploma-thesis-code/default_modules/}),
+    \item build configuration and dependency manifests (\path{diploma-thesis-code/manifests/}, \path{diploma-thesis-code/vcpkg-triplets/}).
+\end{itemize}
+
+The submitted snapshot intentionally excludes development-only content (e.g., demos and retired modules) and does not redistribute third-party binaries.
+\xxx{If your pruning script also removes specific internal folders (e.g., \path{demos/}, \path{default_modules_retired/}, \path{sources/}), list them explicitly here as a short bullet list.}
+
+\minihead{Build quickstart (core runtime + modules).}
+The project is implemented in C++ and uses CMake with presets together with vcpkg (manifest mode) to obtain third-party dependencies.
+A typical build workflow is:
+
+\minihead{Prerequisites.}
+\begin{itemize}
+    \item C++23-capable toolchain (Windows: MSVC; Linux: modern GCC/Clang).
+    \item CMake and a multi-configuration Ninja generator (``Ninja Multi-Config'').
+    \item vcpkg installed from its Git repository; environment variable \type{VCPKG\_ROOT} must point to the vcpkg repository root.
+\end{itemize}
+
+\minihead{Configure and build.}
+From \path{diploma-thesis-code/}:
+\begin{verbatim}
+cmake --list-presets
+cmake --preset core-windows    # or: core-linux
+cmake --build --preset core-windows-Release   # or: -Debug / core-linux-*
+\end{verbatim}
+
+\minihead{Install step (required runtime layout).}
+After building, the install step assembles a self-contained runtime tree under \path{binaries/}
+(executables, module binaries, and per-module data such as frontend \path{docroot/}).
+Some tests and the runtime expect this installed layout.
+
+\begin{verbatim}
+cmake --install build-core-windows --config Release
+\end{verbatim}
+
+\minihead{Run.}
+After installation:
+\begin{verbatim}
+cd binaries
+.\core.exe modules data
+\end{verbatim}
+By default, the web frontend is available at \texttt{http://localhost:8080}.
+\xxx{If the default port is configurable via a frontend config file, reference the exact file path (e.g., \path{.../frontend_module/module_data/config.txt}).}
+
+\minihead{Third-party dependencies and licensing boundary.}
+This thesis distributes the implementation as source code only (no third-party binaries).
+Third-party software falls into two categories:
+
+\begin{itemize}
+    \item \textbf{External dependencies (not redistributed).}
+    These are obtained separately (typically via vcpkg) and remain under their upstream licenses.
+    The direct dependencies used by the core build are declared in \path{diploma-thesis-code/manifests/core/vcpkg.json} and pinned by the vcpkg \texttt{builtin-baseline} in that manifest.
+    \item \textbf{Vendored components (redistributed in-tree).}
+    A small number of files (web assets, fonts, and derived firmware/design files) are included directly in the attachment and remain under their original licenses.
+    Their license texts are provided in \path{third\_party\_licenses/} and summarized in \path{THIRD\_PARTY\_NOTICES.md}.
+\end{itemize}
+
+\minihead{Project license.}
+All original work in the submitted attachment is licensed under the Apache License 2.0 (see \path{LICENSE} and \path{NOTICE} at the attachment root).
+Vendored components remain under their upstream licenses as described above.
+
+\minihead{Note on \type{base64.hpp}.}
+The project vendors a header-only Base64 implementation at
+\path{diploma-thesis-code/backend/module_helpers/base_64/include/websocketpp/base64.hpp}.
+Its original permissive notice is preserved in-file and also duplicated in \path{third\_party\_licenses/base64\_notice.txt} for convenience.
+
+\section{Hardware and calibration artifacts}
+\label{appendix:artifacts}
+
+\subsection{Charuco board (calibration target)}
+\label{appendix:charuco}
+
+The attachment includes an A4-ready Charuco calibration target exported via OpenCV:
+\path{camera/charuco\_pattern\_A4.pdf}.
+For printing, the intended usage is to print at 100\% scale and mount the sheet on a flat rigid backing.
+\xxx{If you used any specific print settings (paper type, lamination, etc.), add one sentence; otherwise keep this generic.}
+
+The calibration module uses the following Charuco board parameters (compile-time defaults):
+\begin{itemize}
+    \item grid: $8 \times 12$ (rows $\times$ columns),
+    \item square length: $0.024\,\mathrm{m}$, marker length: $0.018\,\mathrm{m}$,
+    \item dictionary: \type{DICT\_4X4\_100},
+    \item legacy pattern enabled.
+\end{itemize}
+
+\xxx{Optionally add: these values are defined in \path{diploma-thesis-code/default_modules/robot_stereo_camera_calibration_module/include/calib/charuco_defaults.h} (verify exact filename if needed).}
+
+\subsection{Robot-mounted stereo camera mount (CAD)}
+\label{appendix:camera_mount_cad}
+
+The mechanical mount used to attach the stereo camera to the Kassow robot is provided as:
+\path{camera/stereo\_camera\_robot\_mount.step}.
+This mount realizes the ``rigid robot-mounted stereo rig'' assumption discussed in \autoref{subsec:ch4_hw_robot}.
+
+\subsection{Pen CAD and firmware}
+\label{appendix:pen_artifacts}
+
+The custom pen CAD model is provided as:
+\path{pen/pen.step}.
+
+The pen firmware is provided as:
+\path{pen/pen\_firmware.ino}.
+The firmware is derived from the upstream D-Point project (Jcparkyn/dpoint) and modified for this thesis prototype; the upstream license text is included under \path{third\_party\_licenses/}.
+\xxx{If you want to be explicit: mention that the mechanical design is only loosely inspired by D-Point, while the provided CAD is original work.}
+
+\xxx{Optional: if you include rendered images of the pen/mount in the attachment (recommended for readability),
+add a short note and the path, e.g., \path{pen/renders/}.}
+
+\subsection{Scene registry example}
+\label{appendix:scene_registry}
+
+The scene detection pipeline relies on a JSON registry describing fiducial-tagged box objects (marker ID, marker size, box dimensions, and the marker-to-object transform).
+An example registry instance used in this thesis is:
+
+\begin{verbatim}
+[
+  {
+    "markerId": 60,
+    "marker_size": 0.036,
+    "size_x": 0.048,
+    "size_y": 0.048,
+    "size_z": 0.048,
+    "T_marker_pose_": {
+      "position": {"x": 0.0, "y": 0.0, "z": -0.024},
+      "orientation": {"qx": 0.0, "qy": 0.0, "qz": 0.0, "qw": 1.0}
+    }
+  }
+]
+\end{verbatim}
+
+\xxx{Point to the exact on-disk location used by the module (e.g., configured path vs hardcoded default) once verified from \path{diploma-thesis-code/default_modules/scene_detection_stereocam_module/}.}
+
+\subsection{Example scene CAD model}
+\label{appendix:scene_cad}
+
+A simple example box model used for visualization and documentation is provided as:
+\path{scene/scene\_box.step}.
+
+\subsection{Robot-side component (CBun) and reproducibility boundary}
+\label{appendix:cbun}
+
+The prototype uses a robot-side component (CBun) that runs on the Kassow controller and bridges the robot API to the thesis-side \type{robot\_interface} protocol.
+The CBun source tree is included in the attachment under:
+\path{robot/aergo\_interface\_cbun/}.
+It is not part of the runtime module graph shown in \autoref{fig:runtime_full}; it is deployed to the robot controller separately.
+
+\minihead{Build overview.}
+The CBun build depends on Kassow-provided development libraries and is therefore built inside a preconfigured development container.
+A practical build workflow used during development is:
+
+\begin{itemize}
+    \item Open \path{robot/aergo\_interface\_cbun/} in VS Code.
+    \item Use the ``Dev Containers'' extension and ``Reopen in Container''.
+    \item Configure CMake with \path{\$\{workspaceFolder\}/backend/CMakeLists.txt} and toolchain ``GCC 8.4.0''.
+    \item Build the target using the provided build task (e.g., ``CBun: Clean Build'').
+\end{itemize}
+
+The resulting CBun bundle is produced at:
+\path{robot/aergo\_interface\_cbun/build/aergo\_adapter.cbun}.
+Deployment then consists of copying this bundle to removable media and installing it on the robot controller.
+\xxx{Keep detailed robot-side installation steps in Chapter~\ref{chapter:ch5_user_workflow} (operator procedure), and keep this appendix limited to build and artifact location.}
+
+\minihead{Reproducibility limitation.}
+Executing the full end-to-end system requires either access to a physical Kassow robot or a compatible offline environment (e.g., REMII).
+At the time of development, access to REMII is restricted to Kassow partners/users.
+\xxx{If you decide to include the REMII link in the thesis, add it here as a sentence with \url{...}.}

@@ -25,11 +25,19 @@
 
 \xxx{What must be configured: module binaries available, default config paths, network reachability for robot plugin.}
 
+\xxx{Robot controller must have the Aergo CBun adapter installed and enabled (\path{robot/aergo_interface_cbun/}); the PC running the thesis runtime must have IP connectivity to the robot controller and the adapter’s TCP endpoint (IP/port).}
+
+\xxx{End-to-end execution requires either a physical Kassow robot or a compatible offline environment (REMII). Access to REMII may be restricted; readers without access can still build and inspect the runtime and modules, but cannot validate robot execution.}
+
 5.2 System startup
 
 \xxx{Start core + UI; confirm auto-created UI module exists (if applicable).}
 
 \xxx{Load the intended configuration (either by building graph manually or by loading a saved \type{.aergo} setup).}
+
+\xxx{DONT FORGET: we need to somewhere say how to install the CBun!}
+
+\xxx{If the Aergo CBun adapter is not yet installed on the robot controller: build it from \path{robot/aergo_interface_cbun/} (Dev Container workflow) and deploy the produced \path{build/aergo_adapter.cbun} to the controller. Keep the detailed robot-side installation procedure brief here; the build/deploy artifact locations are documented in \autoref{appendix:cbun}.}
 
 5.3 Graph instantiation and wiring
 
