@@ -15,3 +15,62 @@
 \xxx{\autoref{sec:ch3_ui_orchestration} for UI screens and actions,}
 
 \xxx{\autoref{fig:runtime_full} for “what modules are involved when you press X”.}
+
+
+
+
+5.1 Preconditions and environment
+
+\xxx{What must exist physically: robot + mounted stereo camera, Charuco board, fiducial boxes, pen charged, system running.}
+
+\xxx{What must be configured: module binaries available, default config paths, network reachability for robot plugin.}
+
+5.2 System startup
+
+\xxx{Start core + UI; confirm auto-created UI module exists (if applicable).}
+
+\xxx{Load the intended configuration (either by building graph manually or by loading a saved \type{.aergo} setup).}
+
+5.3 Graph instantiation and wiring
+
+\xxx{Show AddModuleUi for each module with “AUTO\_ALL to UI” assumption.}
+
+\xxx{If mapping auto-selects because only one producer exists, say so explicitly and show only one full example; for the rest use a short “repeat similarly” pattern.}
+
+\xxx{Reference \autoref{fig:runtime_full} repeatedly: “this wiring corresponds to edge X”.}
+
+5.4 Activation and calibration workflow
+
+\xxx{Activate robot module: set IP/port, verify connected.}
+
+\xxx{Activate stereo camera module: select device, verify preview.}
+
+\xxx{Calibration: explain Charuco placement + moving robot through poses conceptually; describe what the UI shows during calibration (progress, success/failure).}
+
+Since no robot: \xxx{Use a “conceptual step list” + 1 diagram/screenshot from earlier logs if you have it; otherwise keep textual. Avoid claiming actual measured accuracy.}
+
+5.5 User story 1: Pick-and-place
+
+\xxx{Scene scan step.}
+
+\xxx{Pick pose capture; place pose capture; confirm command; show preview overlay.}
+
+\xxx{Run; expected motion sequence; show completion states.}
+
+\xxx{Discuss what happens if object not found / tracking lost.}
+
+5.6 User story 2: Weld
+
+\xxx{Scene scan step; draw trajectory; confirm; preview overlay.}
+
+\xxx{Run; describe approach/start/end/depart structure.}
+
+\xxx{Discuss matching failures and how user can adjust trajectory.}
+
+5.7 Persistence workflows
+
+\xxx{Saving/loading \type{.aergo} and what it restores (graph + activation params).}
+
+\xxx{Saving/loading \type{.paergo} and the “missing use case id fails safely” behavior.}
+
+\xxx{Out-of-sync commands: show “re-confirm required” behavior.}

@@ -699,10 +699,50 @@ Future work
 - run true user study - as advisor said; but this is future work as he said
 - mention maybe smoothrobotics etc. and how we are faster. Also maybe relate to the related work
 
+## Additional notes for both discussion/limitation/future work
+
+- System-level
+  - Modular architecture success: swapping modules, explicit interfaces, graph persistence.
+  - UI orchestration is powerful but UI codebase is intentionally not a thesis focus (already addressed).
+  - Lack of quantitative evaluation due to time; discussion is qualitative and grounded in observed behavior.
+
+- Sensing & calibration
+  - Calibration assumes rigid robot-mounted stereo rig; drift/collisions can invalidate extrinsics.
+  - Charuco workflow practicality: board placement constraints, visibility, lighting.
+  - Consider future: continuous self-check / recalibration assistance; calibration quality metrics; better failure reporting.
+
+- Pen tracking
+  - Marker-only tracking limits: occlusion, lighting, corner jitter; strong dependence on marker visibility.
+  - No IMU fusion; BLE throughput limits on Windows; future: fuse IMU for short-term stability and occlusion bridging.
+  - Current multi-marker solvePnP + optimization is pragmatic; future: solveBoard / joint detection model, robust outlier rejection, temporal tracking (EKF/UKF), better quality metrics.
+
+- Scene detection
+  - Fiducial-only objects; limited generalization.
+  - Registry model is clean; future: model-based pose estimation, learned detectors, richer geometry than boxes, confidence/covariance outputs.
+
+- Robot execution & tooling
+  - Robot interface focuses on motion primitives; tool/gripper/welding control not standardized.
+  - Future: explicit tool interface contract (at least digital IO + timing), safety interlocks, better action cancellation semantics.
+  - Better feedback: sequence numbers / monotonic counters to detect drops in status streams.
+
+- Use cases
+  - Pick-and-place: object identity ambiguity if marker IDs reused; robustness depends on scene detection stability.
+  - Weld: seam inference is heuristic; matching brittleness; future: richer scene model and seam detection; user feedback during matching.
+  - Pause/stop semantics currently not fully implemented; future: cooperative cancellation at program level, pause by action cancel + resume planning.
+
+- Usability
+  - Current workflow is already “pendant-light”, but still requires calibration and artifacts.
+  - Future: guided calibration UX, per-step validation, diagnostics (tracking quality indicator, “marker visibility health”).
+
+- Extensibility & portability
+  - Designed for Windows+Linux; camera capture is the hardest cross-platform piece.
+  - Future: Linux camera backend (V4L2 / libcamera / GStreamer), unify capture layer.
+
+
 
 ## Structuring?
 
-following text is from gemini, maybe for ai, not sure if use:
+following text is from gemini, maybe for ai, not sure if use (its weak IMO):
 
 Chapter 6: System Evaluation and DiscussionThis chapter merges your E1/E2/E3 notes and your "What worked / What didn't" notes into a cohesive qualitative assessment.6.1 Qualitative System Assessment (The repurposed "Experiments")Tracking and Stability: Discuss the practical usability of the pen and scene detection. Acknowledge that while absolute accuracy is hard to prove without external ground truth, the system is stable enough for relative spatial tasks. Note the sensitivity to lighting or partial occlusion as an observational finding.Workflow Efficiency: Compare the spatial authoring experience to traditional methods. Mention that defining a trajectory (start $\rightarrow$ ready-to-execute) takes very few clicks and physical steps, highlighting the speed of the "teach pose in world" paradigm.Real Robot Deployment and Safety: Document that the system successfully controlled the Kassow robot. Clearly state the safety constraints used (conservative default speeds, operator E-STOP readiness) and note the inherent lack of certified collision checking in this research prototype.6.2 Successes and Strengths*The "Killer App" (Welding): Explain why spatial authoring shines for process tasks like welding (fast seam definition, continuous trajectory tracing) compared to discrete tasks like pick-and-place where semantic object understanding is more important than raw spatial coordinates.Modularity as a Foundation: Emphasize that the biggest success is the middleware itself. The fact that hand-tracking, MR UIs, or better cameras could be swapped in without breaking the system proves the architecture's validity.6.3 Known Limitations and System ConstraintsUI and UX Frictions: Be honest about the rough edges. Discuss the synchronous blocking during save/load (causing UI freezes and dropped messages) and the lack of robust error UX (e.g., the system reporting "success" even if the robot hits a joint limit).Visualization and State Sync: Mention the fragmented update issue where dropped UPDATE messages cause visualization desyncs, and propose your exact theoretical fix (periodic QUERY_LAST_ID checks).Robot and Motion Planning: Note the absence of obstacle avoidance and path validation infrastructure. Discuss how the Kassow trajectory commands were a limiting factor and how tool I/O is missing.Platform Constraints: Briefly mention the cross-platform discrepancies (e.g., BLE connecting differently on Linux vs. Windows).Chapter 7: Conclusion and Future WorkThis chapter wraps up the thesis by evaluating against your original goals and looking ahead.7.1 ConclusionGoal Verification: Explicitly state how the system achieved the goals (A, B, C) set out in Chapter 2.Core Takeaway: Summarize that spatial authoring combined with a highly modular, decoupled runtime offers a viable, fast-prototyping alternative to traditional teach pendants, particularly for continuous-path tasks.7.2 Future WorkInput and Intent: Discuss dropping the pen in favor of VR controllers (Quest 3 integration) or transitioning to voice combined with deictic (pointing) gestures.Sensing and Accuracy: Suggest industrial-grade scene sensing, EKF fusion (Camera + IMU), and absolute accuracy characterization.System and Middleware: Propose the addition of motion planning, collision avoidance, and a comparison study between your custom core and ROS.The Post-Thesis Vision (The "Holy Grail"): End on a strong, forward-looking note. Describe the ultimate system: AR-first visualization, LLM-driven high-level task planning, and voice-commanded spatial authoring, all running as swappable modules on the foundation you built.
 
