@@ -1,21 +1,349 @@
-\chapter{Hardware Setup and Module Implementations} \label{chapter:ch4_implementation}
+\chapter{Hardware Setup and Module Implementations}
+\label{chapter:ch4_implementation}
 
-\xxx{Implementation note: The prototype is implemented in C++ and designed to be portable across Windows and Linux by keeping most logic in platform-neutral modules and depending on cross-platform libraries. In practice, platform-specific code is concentrated in hardware-facing components (notably camera acquisition) and in the chosen UI/web stack; the remaining sensing, wrappers, use-case logic, and the core runtime are OS-agnostic. we have actually been developing on both windows and linux interchangably, but macOS was not tested.}
+This chapter describes the concrete prototype used in this thesis: the physical setup and the internal implementation of the modules that instantiate the end-to-end configuration introduced in \autoref{fig:runtime_full}.
+Unlike \autoref{chapter:ch3_system_design}, which focused on contracts and interface semantics, this chapter focuses on the concrete algorithms, parameters, and implementation decisions inside the modules.
 
-\xxx{Reading note: \autoref{chapter:ch3_system_design} defined the contracts and the intended module graph. This chapter focuses on the concrete hardware setup and the internal implementation of the modules in that graph, emphasizing the role each module plays at its interfaces rather than UI behavior (which was covered in \autoref{sec:ch3_putting_it_together}).}
+\minihead{Implementation note.}
+\xxx{State: implemented in C++ (verify from repository structure / toolchain).}
+\xxx{State: designed to run on Windows and Linux; platform-specific code is primarily in camera acquisition and the chosen UI/web stack; macOS not validated. (Verify which modules are built/used on Linux in your build system.)}
 
-\xxx{Hardware \& calibration setup (robot-mounted stereo, why; what’s calibrated).}
+\minihead{Reading note.}
+The UI module is described in Chapter~\ref{chapter:ch3_system_design} at the level of externally observable orchestration behavior (\autoref{sec:ch3_ui_orchestration}) and is not decomposed further here.
+This chapter instead focuses on the sensing, authoring, execution, and use-case modules that produce and consume the interface messages defined in Chapter~\ref{chapter:ch3_system_design}.
 
-\xxx{Sensing pipeline modules (Stereo Camera → Pose Injector → Camera Calibration → CalibratedCameraSet).}
+\minihead{Structure of this chapter.}
+We first summarize the physical setup and required calibration artifacts, then describe the module implementations in the same logical order as the runtime pipeline shown in \autoref{fig:runtime_full}.
 
-\xxx{If optimization is structurally important (e.g.\ calibration accuracy, tracking stability), mention what is optimized (objective/variables) and that it is solved as nonlinear least squares using Ceres; do not describe Ceres itself.}
+% ==========================================================
+\section{Physical setup and calibration artifacts}
+\label{sec:ch4_physical_setup}
 
-\xxx{Use a right-sized pattern: 1--2 sentences for the problem and objective (residuals, weights, parameters), then 1 sentence stating the solver choice (nonlinear least squares via Ceres), then focus on assumptions, convergence/failure modes, and which outputs feed which interface messages.}
+This section summarizes the physical components required to run the system and the calibration artifacts that the operator must provide.
+The detailed operational steps for setting up and running the system are deferred to \autoref{chapter:ch5_user_workflow}.
 
-\xxx{If optimization is incidental (a small sub-step that does not affect results), say only "we optimize ..." and omit the library name.}
+\subsection{Robot platform and execution backend}
+\label{subsec:ch4_hw_robot}
 
-\xxx{Authoring modules (Pen Tracking, Scene Detection).}
+\xxx{Describe: Kassow Robot as the target platform; REMII emulator used during development; real robot model used during validation (if known, mark uncertainty).}
+\xxx{Describe: robot-mounted stereo camera assumption (camera rigidly attached to robot flange/tool).}
+\xxx{Describe: CBun / robot-side plugin role at a high level (transport endpoint + command execution).}
+\xxx{Verify from code / docs: protocol, ports, reconnect behavior, and which features are actually implemented.}
 
-\xxx{Execution modules (Robot module, then the two “real” use cases: Pick-and-Place, Weld; optionally mention the simple motion-primitive use cases).}
+\subsection{Stereo camera hardware}
+\label{subsec:ch4_hw_camera}
 
-\xxx{Each module section starts with a tiny “role in graph” paragraph that references \autoref{fig:runtime_full} and names its main inputs/outputs (no UI behavior here).}
+\xxx{Describe: ELP OV9281 stereo module (1280x800 per sensor, global shutter, onboard sync).}
+\xxx{State the used operating mode (e.g., 2560x800@60 MJPEG) (verify from camera module defaults / parameters).}
+\xxx{State: Windows-only capture backend via Windows Media Foundation (verify).}
+\xxx{Mention: reasons for selecting this camera (global shutter, sync, working distance) without over-claiming accuracy.}
+
+\subsection{Pen input device}
+\label{subsec:ch4_hw_pen}
+
+\xxx{Describe: custom pen inspired by D-Point; key differences: larger cube, multiple markers, screw-mounted dual-color printed marker plates, extra top marker, two buttons, BLE.}
+\xxx{Describe: electronics at the level needed to understand limitations: nRF52840 Sense, INR10440 battery, charging / sleep behavior (verify from firmware).}
+\xxx{Important: state explicitly that IMU data is currently not used by the tracking module (verify from code).}
+\xxx{Point to attachments for CAD + firmware (see \autoref{sec:ch4_artifacts_and_attachments}).}
+
+\subsection{Calibration artifacts}
+\label{subsec:ch4_hw_calibration_artifacts}
+
+\xxx{Charuco board: geometry, print method, and why it is required by the calibration module.}
+\xxx{If you have a specific PDF/print file: put it into attachments and reference it.}
+\xxx{If there are fixed assumptions (board size, square size, marker size), they must match the code. Mark as (verify from code) until confirmed.}
+
+\subsection{Compute platform}
+\label{subsec:ch4_hw_compute}
+
+\xxx{Keep short: system runs on a standard PC; give representative dev machines (laptop/desktop) as non-binding reference.}
+\xxx{Avoid performance claims unless you have measured logs. If you want, present qualitative notes only.}
+
+% ==========================================================
+\section{Module implementation overview}
+\label{sec:ch4_module_overview}
+
+This section describes the concrete module implementations that instantiate the runtime configuration of \autoref{fig:runtime_full}.
+For each module, we summarize its role in the graph, the key interfaces it implements (stream vs.\ request/response, wrapper protocols), and the main implementation choices.
+
+\xxx{Conventions used below:}
+\xxx{(i) Use module \emph{display names} consistently with \autoref{fig:runtime_full}.}
+\xxx{(ii) When useful, also show the code-level \type{module\_type\_identifier} in parentheses, e.g., \texttt{(...)} (verify identifiers from ModuleInfo).}
+\xxx{(iii) Each module subsection starts with a tiny “Role in graph” paragraph referencing \autoref{fig:runtime_full}.}
+
+% ==========================================================
+\section{Sensing pipeline modules}
+\label{sec:ch4_sensing_pipeline}
+
+These modules produce the calibrated camera set consumed by downstream authoring modules (pen tracking and scene detection).
+They correspond to the sensing stages of \autoref{fig:intro__img_2__usecase_stages}.
+
+% ----------------------------
+\subsection{Stereo camera acquisition module (Windows)}
+\label{subsec:ch4_mod_stereo_camera}
+
+\minihead{Role in graph.}
+\xxx{State: produces stereo image stream consumed by pose injector and UI preview (verify exact consumers from \autoref{fig:runtime_full}).}
+
+\minihead{Implementation.}
+\xxx{Describe: Windows Media Foundation capture pipeline; device enumeration; selected format; MJPEG decode path.}
+\xxx{Describe: synchronization behavior (on-board sync) at a high level; do not claim perfect sync unless verified.}
+\xxx{Describe: activation behavior: parameters required to select the camera; what happens pre-activation vs activated. (Verify from code + activation wrapper behavior.)}
+\xxx{List key parameters exposed to activation UI (verify from parameter schema).}
+
+\minihead{Known limitations.}
+\xxx{Windows-only; compression/latency tradeoffs; failure modes and how module reports them.}
+
+\xxx{Code pointers:}
+\xxx{\path{.../stereo_camera_module_windows/...} (fill exact path).}
+
+% ----------------------------
+\subsection{Camera pose injector module}
+\label{subsec:ch4_mod_pose_injector}
+
+\minihead{Role in graph.}
+\xxx{Consumes: stereo images + robot status; produces: camera frames augmented with flange pose.}
+
+\minihead{Implementation.}
+\xxx{Describe: time association strategy between camera frames and latest robot pose (latest sample vs interpolated; verify).}
+\xxx{Describe: drop policy (e.g., drops frames until a pose is available) and why that keeps calibration inputs self-contained (matches Chapter 3).}
+
+\minihead{Why this module exists.}
+\xxx{Explain succinctly: decouples calibration module from having to query robot directly; keeps message-level inputs self-contained.}
+\xxx{Note: if this is no longer strictly necessary after activation-wrapper CUSTOM handling changes, say so as a design tradeoff (verify from code before claiming).}
+
+\xxx{Code pointers:}
+\xxx{\path{.../camera_pose_injector_module/...}.}
+
+% ----------------------------
+\subsection{Robot-mounted stereo camera calibration module}
+\label{subsec:ch4_mod_camera_calibration}
+
+\minihead{Role in graph.}
+\xxx{Consumes: camera+flange frames; produces: calibrated camera set (intrinsics + extrinsics in world) consumed by pen tracking and scene detection.}
+
+\minihead{Calibration problem statement.}
+\xxx{State precisely what is estimated: per-camera intrinsics (K,D), stereo extrinsics, and hand-eye / flange-to-camera transform.}
+\xxx{State assumptions: robot-mounted camera; Charuco board in workspace; robot moved through viewpoints.}
+
+\minihead{Implementation approach.}
+\xxx{OpenCV stages (verify exact calls): calibrateCameraCharuco per camera; stereoCalibrate; calibrateHandEye.}
+\xxx{If you run nonlinear refinement with Ceres:}
+\xxx{  - define what variables are optimized (transforms + optionally board pose);}
+\xxx{  - define objective (reprojection residuals over Charuco corners);}
+\xxx{  - one sentence: solved as nonlinear least squares using Ceres.}
+\xxx{Keep solver details minimal; focus on outputs and failure modes.}
+
+\minihead{Activation behavior and operator workflow hook.}
+\xxx{Describe: calibration runs on activation; what data must be collected before activation; how success/failure is reported.}
+\xxx{Describe: what is persisted (if any) via activation wrapper / module save. (Verify.)}
+
+\minihead{Outputs and downstream usage.}
+\xxx{Explain: how T\_world\_camera is produced from robot flange pose + calibrated flange-to-camera transform.}
+
+\xxx{Code pointers:}
+\xxx{\path{.../robot_stereo_camera_calibration_module/...}.}
+\xxx{\path{.../ceres_refinement/...} if separated.}
+
+% ==========================================================
+\section{Authoring modules}
+\label{sec:ch4_authoring_modules}
+
+These modules implement the authoring stage of \autoref{fig:intro__img_2__usecase_stages}:
+they convert calibrated sensing inputs into user intent (pen poses/trajectories) and scene context (detected objects).
+
+% ----------------------------
+\subsection{Pen tracking module (multi-camera ArUco)}
+\label{subsec:ch4_mod_pen_tracking}
+
+\minihead{Role in graph.}
+\xxx{Consumes: calibrated camera set; produces: pen raw stream + pen intent events; provides visualization overlay.}
+
+\minihead{Marker configuration and pen geometry.}
+\xxx{Describe: 5-marker cube (4 sides + top); larger marker size; why this improves detectability at working distance.}
+\xxx{State: the module uses a fixed CAD-defined marker-to-pen reference transform; no per-pen calibration currently performed (verify).}
+
+\minihead{Pose estimation pipeline.}
+\xxx{Detection: ArUco detection per camera.}
+\xxx{Initial pose candidates: solvePnP per visible marker face; produce multiple candidates across cameras (verify exact approach).}
+\xxx{Candidate selection: reprojection check across all visible markers/cameras; choose best-scoring candidate (verify scoring).}
+\xxx{Refinement: joint optimization across all observed markers in all cameras (Ceres); objective based on reprojection residuals; weights (distance normalization + marker quality) (verify).}
+\xxx{Filtering: one-euro filter applied to pose (including orientation) to reduce jitter (verify).}
+
+\minihead{Intent extraction and events.}
+\xxx{Describe: raw stream includes tip pose + button states.}
+\xxx{Describe: intent messages emitted on user actions: POSE on primary click; TRAJECTORY on press-draw-release; SPECIAL\_ACTION on secondary button.}
+\xxx{Do not claim exact thresholds/timings unless pulled from code; mark as (verify from code).}
+
+\minihead{Pen communication.}
+\xxx{Describe: BLE communication via SimpleBLE; Windows BLE throughput limitations; IMU currently ignored.}
+\xxx{If you want, explicitly mention: firmware is derived from D-Point with minimal edits; details in attachments.}
+
+\minihead{Visualization outputs.}
+\xxx{Describe what the module publishes to the 3D visualization interface (current pen pose, recent trajectory preview, etc.), and what is transient vs persistent. (Verify.)}
+
+\minihead{Known limitations.}
+\xxx{Sensitivity to lighting and partial marker corner jitter; dependence on marker visibility; no IMU fusion; no per-pen calibration.}
+
+\xxx{Code pointers:}
+\xxx{\path{.../pen_tracking_multicam_module/...}.}
+\xxx{\path{.../ble/...} and \path{.../filter/...}.}
+
+% ----------------------------
+\subsection{Scene detection module (fiducial boxes)}
+\label{subsec:ch4_mod_scene_detection}
+
+\minihead{Role in graph.}
+\xxx{Consumes: calibrated camera set; responds to scene detection requests; provides visualization overlay.}
+
+\minihead{Scene model and registry.}
+\xxx{Describe: registry loaded from JSON: marker ID, marker size, box dimensions, marker-to-box transform.}
+\xxx{State limitations: boxes only; currently a small fixed set (possibly one type).}
+\xxx{Reference the exact JSON file location / name (verify from code).}
+
+\minihead{Detection pipeline.}
+\xxx{Describe: ArUco detection in stereo pair; correspondence/matching between left/right detections (verify approach).}
+\xxx{Pose estimation + refinement per object: initial pose then optional optimization (Ceres) (verify).}
+\xxx{Returned data: list of detected objects referencing the registry entry + estimated world pose (verify message schema from Chapter 3).}
+
+\minihead{Request/response semantics.}
+\xxx{Describe: READ\_REGISTRY and READ\_SCENE behavior; caching; snapshot semantics.}
+\xxx{Describe: whether READ\_SCENE uses one frame vs multiple for averaging (verify).}
+
+\minihead{Visualization outputs.}
+\xxx{Describe: how detected objects are mirrored into the shared 3D visualization scene.}
+
+\minihead{Known limitations.}
+\xxx{Requires fiducials; limited object model; no confidence/covariance; sensitivity to pose noise.}
+
+\xxx{Code pointers:}
+\xxx{\path{.../scene_detection_stereocam_module/...}.}
+\xxx{\path{.../registry.json} (or similar).}
+
+% ==========================================================
+\section{Execution backend module}
+\label{sec:ch4_execution_backend}
+
+% ----------------------------
+\subsection{Robot communication module}
+\label{subsec:ch4_mod_robot}
+
+\minihead{Role in graph.}
+\xxx{Provides: robot execution request/response interface + status and finished streams; consumed by calibration, UI, and use cases.}
+
+\minihead{Transport and protocol.}
+\xxx{Describe: TCP connection to robot plugin (CBun); request encoding/decoding; reconnect strategy.}
+\xxx{Avoid low-level protocol details unless they are stable and documented; otherwise describe as an RPC-like command channel.}
+
+\minihead{Implemented actions (robot interface coverage).}
+\xxx{List which motion primitives are implemented: moveJ, moveL, moveA, moveT, cancel, get specs (verify exact set).}
+\xxx{Clarify which pose is reported: base pose, flange pose, TCP pose; how timestamps are handled (verify).}
+
+\minihead{Activation and parameters.}
+\xxx{Describe: activation sets target endpoint (IP/port) and timing parameters; reconnection behavior. (Verify parameter list.)}
+
+\minihead{Visualization outputs.}
+\xxx{Describe: robot arm visualization + executed trajectory preview (if implemented). (Verify.)}
+
+\minihead{Known limitations.}
+\xxx{Tool/gripper control not standardized in this thesis; current use cases simulate tool actions via delays.}
+
+\xxx{Code pointers:}
+\xxx{\path{.../kassow_robot_module/...}.}
+\xxx{If CBun is in-repo: \path{.../cbun/...}. If not, point to attachment / external repo.}
+
+% ==========================================================
+\section{Task-oriented use case modules}
+\label{sec:ch4_usecases}
+
+This section describes the two primary use cases evaluated in this thesis (pick-and-place and seam welding), implemented as plugins that consume shared sensing/authoring inputs and execute via the common robot interface.
+Their external behavior is defined by the use case wrapper contract in \autoref{sec:ch3_usecase_wrapper}.
+
+\xxx{Intro note: keep focus on (i) required inputs, (ii) command JSON content, (iii) execution procedure, (iv) preview visualization, (v) limitations. Avoid UI-level discussion.}
+
+% ----------------------------
+\subsection{Pick-and-place use case}
+\label{subsec:ch4_usecase_pick_place}
+
+\minihead{Role in graph.}
+\xxx{Consumes: pen intent + scene detection + robot interface; provides: use case wrapper requests and optional preview visualization.}
+
+\minihead{Authoring inputs and parameters.}
+\xxx{Describe: required CUSTOM inputs (pick pose, place pose) and how they are acquired.}
+\xxx{Describe: non-spatial parameters (speed/accel/lift distance/etc.) (verify schema).}
+
+\minihead{Command creation (CREATE\_COMMAND).}
+\xxx{Describe: how pick is associated with an object (distance-based match in front of pen, etc.) (verify algorithm).}
+\xxx{Describe: what is stored into command JSON: object identifier + relative transform + parameters + place pose (verify).}
+\xxx{State clearly: preview visualization is derived from the created command and may not reflect dynamic scene changes at runtime (verify).}
+
+\minihead{Execution (PROGRAM\_START\_*).}
+\xxx{Describe sequence: compute pick/place/above poses; issue robot motions; simulate gripper action (sleep) (verify).}
+\xxx{Describe: how the scene is refreshed at runtime (re-run scene detection and resolve object by ID) (verify).}
+\xxx{Stop/pause semantics: be honest; if stop only cancels the current action but the sequence continues, note as limitation and future fix.}
+
+\minihead{Known limitations and correctness caveats.}
+\xxx{No real gripper API; object identity ambiguity if multiple objects share the same marker ID; stop/pause semantics; robustness to pose noise.}
+
+\xxx{Code pointers:}
+\xxx{\path{.../usecase_pick_and_place/...}.}
+
+% ----------------------------
+\subsection{Seam welding use case}
+\label{subsec:ch4_usecase_weld}
+
+\minihead{Role in graph.}
+\xxx{Consumes: user trajectory intent + scene detection + robot interface; provides: use case wrapper requests and optional preview visualization.}
+
+\minihead{Authoring inputs and parameters.}
+\xxx{Describe: CUSTOM trajectory input; advanced parameters (movement speed, welding speed, approach distance, tool offset, etc.) (verify schema).}
+
+\minihead{Scene-derived seam model (interpretation step).}
+\xxx{Describe: seam candidates derived from detected box geometry; seam = segment + approach/tool direction (verify).}
+\xxx{Describe: trajectory-to-seam matching: distance + angular constraints + coverage thresholds (verify).}
+\xxx{Describe: projection of user trajectory onto the seam and how start/end poses are constructed (verify).}
+\xxx{Avoid strong claims about robustness; present as a pragmatic heuristic pipeline.}
+
+\minihead{Command creation and execution.}
+\xxx{Describe: what is stored in JSON (start/end poses, approach/depart, offsets, speeds) (verify).}
+\xxx{Describe: runtime sequence (approach -> start -> weld move -> depart) and simulated welding on/off delays.}
+\xxx{Clarify: static vs dynamic: whether command adapts to changed scene at runtime (based on your note, it does not; verify).}
+
+\minihead{Known limitations and open issues.}
+\xxx{Matching brittleness; lack of true welding tool control; stop/pause semantics; seam definition limited to simple box scenes.}
+
+\xxx{Code pointers:}
+\xxx{\path{.../usecase_weld/...}.}
+
+% ==========================================================
+\section{Motion-primitive use cases (optional)}
+\label{sec:ch4_usecases_primitives}
+
+Besides the two task-oriented use cases, the system includes simple motion-primitive use cases that mirror the robot execution interface.
+They serve as lightweight examples of extensibility and as debugging tools.
+
+\subsection{Overview}
+\label{subsec:ch4_usecases_primitives_overview}
+
+\xxx{List which primitives exist (MoveJ/MoveL/Arc/Trajectory) and what each demonstrates.}
+\xxx{State: these are not central to the evaluation, but useful for completeness and testing.}
+
+\subsection{Implementation notes}
+\label{subsec:ch4_usecases_primitives_impl}
+
+\xxx{For each primitive: required inputs (pose/trajectory/joints), JSON content, execution call to robot wrapper.}
+\xxx{If you plan to implement pause properly anywhere, this is the best place: demonstrate pause/resume on a simple MoveL or trajectory use case (see code fixes list).}
+
+% ==========================================================
+\section{Artifacts, attachments, and reproducibility notes}
+\label{sec:ch4_artifacts_and_attachments}
+
+This thesis focuses on the system design and behavior; nevertheless, several practical artifacts (CAD, calibration files, firmware, and configuration JSON) are necessary to reproduce the prototype setup.
+
+\xxx{Create Appendix sections and reference them here. Suggested structure:}
+\xxx{- Pen CAD files (STL/STEP), marker plate generator, assembly notes.}
+\xxx{- Pen firmware source (derived from D-Point; include license notes).}
+\xxx{- Charuco board PDF / dimensions and printing instructions.}
+\xxx{- Scene registry JSON example(s).}
+\xxx{- Robot-side plugin (CBun) build/deploy notes (or link if external).}
+\xxx{- Third-party libraries list + licenses (if required by faculty rules).}
