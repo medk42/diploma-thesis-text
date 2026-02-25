@@ -630,6 +630,11 @@ SEE FUTURE WORK FOR MORE RESOURCES
 - Big issue / limitation is the fragmented updates. It's meant to minimize communication, but it has issues when messages are dropped. Mostly it is fine and this could be fixed with an extra message ID and periodic checking of modules for the last sent ID (if UI receives an update with ID that is NOT last_id + 1, then it requests READ_SCENE; UI periodically (once per second) sends QUERY_LAST_ID that would return the last_id - if not matching -> READ_SCENE). 
 - UI on save/load (particularly save) - freezes (and other stuff too!), its sync blocking, shouldnt be. This causes dropped messages -> visualization issues for example
 - re-adding camera module will not be visualized
+- pen issues like weight distribution or no battery management or usb c hidden
+- we do solvepnp instead of solveboard for the initial per-camera pose estimate of the pen, with solveboard we wouldnt have many possible options, but only one per camera. And one that would be better than solvepnp ones
+- we should do much more complicated usecases, these truly are demos - see the module implementation
+- run true user study - as advisor said; but this is future work as he said
+- mention maybe smoothrobotics etc. and how we are faster. Also maybe relate to the related work
 
 ---
 
@@ -688,6 +693,19 @@ Future work
     - also talk limitations - main issue is robot, gripper, camera, welding tool etc. compatibility
         - we would need to build a system that can be extended by these tools in a way that the system understands all these tools (system has to be able to understand tools) -> general interfaces and some general hooks into the LLM's for user speech and gesture based programming
     - would require motion planning, path validation, proper full path visualization, 
+- pen issues like weight distribution or no battery management or usb c hidden    
+- we do solvepnp instead of solveboard
+- we should do much more complicated usecases, these truly are demos - see the module implementation
+- run true user study - as advisor said; but this is future work as he said
+- mention maybe smoothrobotics etc. and how we are faster. Also maybe relate to the related work
+
+
+## Structuring?
+
+following text is from gemini, maybe for ai, not sure if use:
+
+Chapter 6: System Evaluation and DiscussionThis chapter merges your E1/E2/E3 notes and your "What worked / What didn't" notes into a cohesive qualitative assessment.6.1 Qualitative System Assessment (The repurposed "Experiments")Tracking and Stability: Discuss the practical usability of the pen and scene detection. Acknowledge that while absolute accuracy is hard to prove without external ground truth, the system is stable enough for relative spatial tasks. Note the sensitivity to lighting or partial occlusion as an observational finding.Workflow Efficiency: Compare the spatial authoring experience to traditional methods. Mention that defining a trajectory (start $\rightarrow$ ready-to-execute) takes very few clicks and physical steps, highlighting the speed of the "teach pose in world" paradigm.Real Robot Deployment and Safety: Document that the system successfully controlled the Kassow robot. Clearly state the safety constraints used (conservative default speeds, operator E-STOP readiness) and note the inherent lack of certified collision checking in this research prototype.6.2 Successes and Strengths*The "Killer App" (Welding): Explain why spatial authoring shines for process tasks like welding (fast seam definition, continuous trajectory tracing) compared to discrete tasks like pick-and-place where semantic object understanding is more important than raw spatial coordinates.Modularity as a Foundation: Emphasize that the biggest success is the middleware itself. The fact that hand-tracking, MR UIs, or better cameras could be swapped in without breaking the system proves the architecture's validity.6.3 Known Limitations and System ConstraintsUI and UX Frictions: Be honest about the rough edges. Discuss the synchronous blocking during save/load (causing UI freezes and dropped messages) and the lack of robust error UX (e.g., the system reporting "success" even if the robot hits a joint limit).Visualization and State Sync: Mention the fragmented update issue where dropped UPDATE messages cause visualization desyncs, and propose your exact theoretical fix (periodic QUERY_LAST_ID checks).Robot and Motion Planning: Note the absence of obstacle avoidance and path validation infrastructure. Discuss how the Kassow trajectory commands were a limiting factor and how tool I/O is missing.Platform Constraints: Briefly mention the cross-platform discrepancies (e.g., BLE connecting differently on Linux vs. Windows).Chapter 7: Conclusion and Future WorkThis chapter wraps up the thesis by evaluating against your original goals and looking ahead.7.1 ConclusionGoal Verification: Explicitly state how the system achieved the goals (A, B, C) set out in Chapter 2.Core Takeaway: Summarize that spatial authoring combined with a highly modular, decoupled runtime offers a viable, fast-prototyping alternative to traditional teach pendants, particularly for continuous-path tasks.7.2 Future WorkInput and Intent: Discuss dropping the pen in favor of VR controllers (Quest 3 integration) or transitioning to voice combined with deictic (pointing) gestures.Sensing and Accuracy: Suggest industrial-grade scene sensing, EKF fusion (Camera + IMU), and absolute accuracy characterization.System and Middleware: Propose the addition of motion planning, collision avoidance, and a comparison study between your custom core and ROS.The Post-Thesis Vision (The "Holy Grail"): End on a strong, forward-looking note. Describe the ultimate system: AR-first visualization, LLM-driven high-level task planning, and voice-commanded spatial authoring, all running as swappable modules on the foundation you built.
+
 
 ---
 

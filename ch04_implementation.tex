@@ -1,5 +1,9 @@
 \chapter{Hardware Setup and Module Implementations} \label{chapter:ch4_implementation}
 
+\xxx{Implementation note: The prototype is implemented in C++ and designed to be portable across Windows and Linux by keeping most logic in platform-neutral modules and depending on cross-platform libraries. In practice, platform-specific code is concentrated in hardware-facing components (notably camera acquisition) and in the chosen UI/web stack; the remaining sensing, wrappers, use-case logic, and the core runtime are OS-agnostic. we have actually been developing on both windows and linux interchangably, but macOS was not tested.}
+
+\xxx{Reading note: \autoref{chapter:ch3_system_design} defined the contracts and the intended module graph. This chapter focuses on the concrete hardware setup and the internal implementation of the modules in that graph, emphasizing the role each module plays at its interfaces rather than UI behavior (which was covered in \autoref{sec:ch3_putting_it_together}).}
+
 \xxx{Hardware \& calibration setup (robot-mounted stereo, why; what’s calibrated).}
 
 \xxx{Sensing pipeline modules (Stereo Camera → Pose Injector → Camera Calibration → CalibratedCameraSet).}
@@ -14,4 +18,4 @@
 
 \xxx{Execution modules (Robot module, then the two “real” use cases: Pick-and-Place, Weld; optionally mention the simple motion-primitive use cases).}
 
-\xxx{Each module subsection starts with a tiny “role in graph” paragraph that references \autoref{fig:runtime_full} and names its main inputs/outputs (no UI behavior here).}
+\xxx{Each module section starts with a tiny “role in graph” paragraph that references \autoref{fig:runtime_full} and names its main inputs/outputs (no UI behavior here).}

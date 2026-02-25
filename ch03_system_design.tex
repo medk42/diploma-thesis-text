@@ -2,7 +2,7 @@
 
 \autoref{chapter:ch2_analysis} motivated a modular architecture with explicit interfaces, so that sensing, UI, robot backends, and task logic can be exchanged without rewriting the whole system. This chapter describes the design of this modular system and the main interfaces that enable communication between its components.
 
-The system is implemented in C++, with all components built as modules that communicate exclusively through the runtime core.
+The system is implemented in C++, with all components built as modules that communicate exclusively through the runtime core. Most modules and the core are portable across Windows and Linux; platform-specific dependencies are isolated to a small set of hardware-facing components (notably camera acquisition).
 
 \section{System at a glance} \label{sec:ch3_overview}
 
