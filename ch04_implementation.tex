@@ -2,112 +2,110 @@
 \label{chapter:ch4_implementation}
 
 This chapter describes the concrete prototype used in this thesis: the physical setup and the internal implementation of the modules that instantiate the end-to-end configuration introduced in \autoref{fig:runtime_full}.
-Unlike \autoref{chapter:ch3_system_design}, which focused on contracts and interface semantics, this chapter focuses on the concrete algorithms, parameters, and implementation decisions inside the modules.
+Unlike \autoref{chapter:ch3_system_design}, which focused on contracts and interface semantics, this chapter focuses on the concrete implementation decisions inside the modules.
 
-\minihead{Scope of the accompanying code artifact.}
-\xxx{State exactly what folders are included in the submitted code archive (matches \autoref{appendix:source_code}): \path{diploma-thesis-code/backend/}, \path{diploma-thesis-code/default_modules/}, \path{diploma-thesis-code/manifests/}, \path{diploma-thesis-code/vcpkg-triplets/}; plus root-level artifacts as listed in \autoref{appendix:source_code}.}
-\xxx{State what is excluded at a high level (development-only/non-essential repository content); detailed packaging and build notes are in \autoref{appendix:source_code}.}
-\xxx{Point to Appendix for external artifacts: pen CAD + firmware and assembly notes (\autoref{appendix:pen_artifacts}), Charuco board PDF and exact dimensions (\autoref{appendix:charuco}), scene registry and example CAD (\autoref{appendix:scene_registry}, \autoref{appendix:scene_cad}), and robot-side component (CBun) sources/build notes (\autoref{appendix:cbun}).}
+\minihead{Accompanying electronic attachment.}
+The submitted electronic attachment contains (i) a pruned snapshot of the C++ source tree (\path{diploma-thesis-code/}) and (ii) the hardware and calibration artifacts required to reproduce the prototype setup (CAD, firmware, PDFs, configuration JSON).
+A complete overview of the attachment structure, build notes, and artifact file locations is provided in \autoref{appendix:source_code} and \autoref{appendix:artifacts}.
 
 \minihead{Implementation note.}
-\xxx{State: implemented in C++ (verify from repository structure / toolchain; build notes in \autoref{appendix:source_code}).}
-\xxx{State: designed to run on Windows and Linux; most logic is platform-neutral. Platform-specific code is primarily in camera acquisition (\autoref{subsec:ch4_mod_stereo_camera}) and the chosen UI/web stack; macOS not validated. (Verify which modules are built/used on Linux in your build system.)}
+The system is implemented in C++ and targets Windows and Linux (build workflow and toolchain assumptions are summarized in \autoref{appendix:source_code}).
+Most modules are platform-neutral; platform-specific code is currently concentrated in the Windows camera acquisition module (\autoref{subsec:ch4_mod_stereo_camera}).
+The web frontend is based on Wt and was used on both Windows and Linux in development.
+
+The pen tracking module utilizes a cross-platform BLE library (SimpleBLE); however, its current device discovery implementation relies on Windows-specific stack behavior where target service UUIDs are successfully exposed during the scanning phase. Running the BLE portion of this module on Linux would require adapting the discovery sequence, as the Linux Bluetooth stack typically requires an explicit connection before it populates the service list.
 
 \minihead{Reading note.}
 The UI module is described in Chapter~\ref{chapter:ch3_system_design} at the level of externally observable orchestration behavior (\autoref{sec:ch3_ui_orchestration}) and is not decomposed further here.
 This chapter instead focuses on the sensing, authoring, execution, and use-case modules that produce and consume the interface messages defined in Chapter~\ref{chapter:ch3_system_design}.
 
 \minihead{Structure of this chapter.}
-We first summarize the physical setup and required calibration artifacts, then describe the module implementations in the same logical order as the runtime pipeline shown in \autoref{fig:runtime_full}.
+We first summarize the physical setup and calibration artifacts, then describe the module implementations in the same logical order as the runtime pipeline shown in \autoref{fig:runtime_full}.
 
 % ==========================================================
 \section{Physical setup and calibration artifacts}
 \label{sec:ch4_physical_setup}
 
 This section summarizes the physical components required to run the system and the calibration artifacts that the operator must provide.
-The detailed operational steps for setting up and running the system are deferred to \autoref{chapter:ch5_user_workflow}.
-The concrete artifact files (CAD, firmware, PDFs, registry JSON) shipped with the thesis attachment are listed in \autoref{appendix:artifacts}.
+The operational steps for setup and execution are deferred to \autoref{chapter:ch5_user_workflow}; the concrete artifact files shipped with the thesis attachment are listed in \autoref{appendix:artifacts}.
 
 \subsection{Robot platform and execution backend}
 \label{subsec:ch4_hw_robot}
 
-\xxx{Describe: Kassow Robot as the target platform; REMII emulator used during development; real robot model used during validation (if known, mark uncertainty).}
-\xxx{Describe: coordinate frames assumed (world/base, flange, TCP/tool) at a conceptual level (no math yet; match Chapter~3 naming).}
-\xxx{Describe: robot-mounted stereo camera assumption (camera rigidly attached to robot flange/tool); mechanical implications (rigidity, repeatability) and why drift/collisions matter.}
-\xxx{Reference the mount CAD artifact in \autoref{appendix:camera_mount_cad} and the mount render in \autoref{fig:ch4_camera_mount}.}
-\xxx{Describe: CBun / robot-side plugin role at a high level (transport endpoint + command execution + status streaming); clarify it is not part of the module runtime graph.}
-\xxx{Note: CBun sources and build notes are provided in \autoref{appendix:cbun}; operator installation/enabling is described in \autoref{chapter:ch5_user_workflow}.}
-\xxx{Verify from code / docs: protocol, ports, reconnect behavior, and which features are actually implemented.}
+The target robot platform is a Kassow collaborative robot.
+During development, the prototype was tested primarily in the REMII offline environment, and validated on a physical robot of model KR1205.
+As motivated in \autoref{subsec:ch2_analysis_robot_interface}, robot execution is abstracted behind the shared \type{robot\_interface} contract, implemented by the thesis-side module \type{robot\_module\_kassow}.
+
+The prototype assumes a robot-mounted stereo camera rig: the camera is mechanically attached to the robot flange such that its pose is rigid with respect to the flange.
+This enables the calibration module to combine robot kinematics (flange pose) with camera observations to place both cameras in a common workspace frame, as discussed in the camera trade-offs in \autoref{subsec:ch2_analysis_camera_tradeoffs}.
+The mechanical mount used in the prototype is provided as a CAD artifact in \autoref{appendix:camera_mount_cad} and shown in \autoref{fig:ch4_camera_mount}.
+
+Robot communication is realized through a small robot-side component (CBun) installed on the Kassow controller.
+The CBun exposes the robot capabilities to the thesis runtime; the thesis-side \type{robot\_module\_kassow} consumes this endpoint and provides the \type{robot\_interface} protocol to the rest of the runtime.
+CBun sources and build notes are provided in \autoref{appendix:cbun}; the operator procedure for installation/enabling is described in \autoref{chapter:ch5_user_workflow}.
 
 \subsection{Stereo camera hardware}
 \label{subsec:ch4_hw_camera}
 
-\xxx{right after the first introductory paragraph add this figure:}
+The prototype uses a compact stereo camera module with two synchronized global-shutter sensors (OmniVision OV9281), providing $1280 \times 800$ grayscale images per sensor.
+In the prototype configuration, the camera was operated as a single side-by-side stream ($2560 \times 800$) with MJPEG compression at 60\,FPS.
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.85\linewidth]{img/ch4_implementation/camera_mount_bg.png}
-    \caption{Robot-mounted stereo camera flange mount used in the prototype (CAD render).}
+    \includegraphics[width=0.8\linewidth]{img/ch4_implementation/camera_mount_bg.png}
+    \caption[Robot-mounted camera mount]{Robot-mounted stereo camera flange mount used in the prototype (CAD render).}
     \label{fig:ch4_camera_mount}
 \end{figure}
 
-\xxx{Then, Add one referencing sentence at the end of that subsection’s intro paragraph (or add a new sentence directly after it): "The mechanical camera mount used in the prototype is shown in \autoref{fig:ch4_camera_mount}."}
-
-\xxx{Describe: ELP OV9281 stereo module (1280x800 per sensor, global shutter, onboard sync).}
-\xxx{State the used operating mode (e.g., 2560x800@60 MJPEG) (verify from camera module defaults / parameters).}
-\xxx{State: Windows-only capture backend via Windows Media Foundation (verify).}
-\xxx{Mention: reasons for selecting this camera (global shutter, sync, working distance) without over-claiming accuracy.}
-\xxx{Mention: downstream modules remain OS-agnostic because they consume only shared camera message formats (verify message types match Chapter~3).}
+The mechanical camera mount used in the prototype is shown in \autoref{fig:ch4_camera_mount}.
+Camera acquisition in the submitted implementation is currently Windows-only (\autoref{subsec:ch4_mod_stereo_camera}); downstream processing remains OS-agnostic because it consumes only the shared camera message formats defined in \autoref{sec:ch3_supporting_messages}.
 
 \subsection{Pen input device}
 \label{subsec:ch4_hw_pen}
 
-\xxx{after the first paragraph that describes the pen at a high level, add this figure:}
+As motivated in \autoref{subsec:ch2_analysis_6D_input_interface}, spatial authoring in the prototype is driven by a hand-held 6D input device.
+The prototype uses a custom tracked pen inspired by D-Point, extended for the needs of robot-mounted stereo viewing: a larger marker cube with five marker faces (four sides and a top marker) and two physical buttons for discrete intent events.
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.9\linewidth]{img/ch4_implementation/pen_full_bg.png}
-    \caption{Tracked pen used for spatial authoring (CAD render). The cube carries multiple fiducial markers; buttons on the handle provide discrete intent events.}
+    \includegraphics[width=0.8\linewidth]{img/ch4_implementation/pen_full_bg.png}
+    \caption[Tracked pen]{Tracked pen used for spatial authoring (CAD render). The cube carries multiple fiducial markers; buttons on the handle provide discrete intent events.}
     \label{fig:ch4_pen_full}
 \end{figure}
 
-\xxx{Then, Add one referencing sentence right where you first mention “custom pen … multiple markers … two buttons”: "The prototype pen design is shown in \autoref{fig:ch4_pen_full}."}
-
-\xxx{Describe: custom pen inspired by D-Point; key differences: larger cube, multiple markers, screw-mounted dual-color printed marker plates, extra top marker, two buttons, BLE.}
-\xxx{Explain briefly: multi-marker cube (5 faces) chosen for robustness at larger distances and top-down viewing.}
-\xxx{Describe: electronics at the level needed to understand limitations: nRF52840 Sense, INR10440 battery, charging / sleep behavior (verify from firmware).}
-\xxx{Important: state explicitly that IMU data is currently not used by the tracking module (verify from code).}
-\xxx{Reference the concrete CAD/firmware artifacts and reproducibility notes in \autoref{appendix:pen_artifacts} (including the internal layout render and assembly notes).}
-\xxx{Briefly mention D-Point license attribution boundary as documented in the appendix (see \autoref{appendix:pen_artifacts}).}
+The prototype pen design is shown in \autoref{fig:ch4_pen_full}.
+Electronics are based on a \type{Seeed Studio XIAO nRF52840 Sense} with a single-cell Li-ion battery (\type{INR10440}), providing BLE connectivity and button reporting.
+Although the pen firmware transmits IMU samples, the current tracking module does not fuse IMU data; pose estimation is performed purely from camera observations.
+The exact CAD, firmware, and assembly notes (including wiring and screw lengths) are provided in \autoref{appendix:pen_artifacts}, including the license attribution boundary to the upstream D-Point firmware.
 
 \subsection{Workspace scene objects (fiducial boxes)}
 \label{subsec:ch4_hw_scene}
 
-\xxx{one short paragraph saying you used fiducial-tagged boxes configured by a JSON registry.}
-\xxx{Reference the registry and example CAD artifacts in \autoref{appendix:scene_registry} and \autoref{appendix:scene_cad}.}
-\xxx{Reference \autoref{fig:ch4_scene_box}.}
+To support the scene detection requirements in \autoref{subsec:ch2_analysis_scene_detection}, the prototype scene model consists of simple fiducial-tagged box objects.
+Each object carries a single ArUco marker and is described by a registry entry (marker ID and size, box dimensions, and marker-to-box transform).
+The registry and an example box CAD model are shipped with the attachment (\autoref{appendix:scene_registry}, \autoref{appendix:scene_cad}).
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.55\linewidth]{img/ch4_implementation/scene_box_bg.png}
-    \caption{Example fiducial-tagged box model used as a scene object in the prototype (illustration).}
+    \includegraphics[width=0.8\linewidth]{img/ch4_implementation/scene_box_bg.png}
+    \caption[Example scene box]{Example fiducial-tagged box model used as a scene object in the prototype (illustration).}
     \label{fig:ch4_scene_box}
 \end{figure}
 
-\xxx{Add one referencing sentence: "An example box object used in the prototype is illustrated in \autoref{fig:ch4_scene_box}."}
+An example box object used in the prototype is illustrated in \autoref{fig:ch4_scene_box}.
 
 \subsection{Calibration artifacts}
 \label{subsec:ch4_hw_calibration_artifacts}
 
-\xxx{Charuco board: geometry, print method, and why it is required by the calibration module.}
-\xxx{Reference the provided PDF and exact dimensions in \autoref{appendix:charuco} (do not re-list the numeric parameters here unless needed for the narrative).}
-\xxx{Scene objects are configured via a JSON registry (see \autoref{appendix:scene_registry}); refer back to \autoref{subsec:ch4_hw_scene} for the physical objects.}
+The sensing pipeline relies on a printed Charuco board as a calibration target for intrinsics, stereo calibration, and hand--eye calibration.
+The exact calibration PDF and the compile-time board dimensions used by the calibration module are provided in \autoref{appendix:charuco}; the operator workflow for calibration is described in \autoref{chapter:ch5_user_workflow}.
 
 \subsection{Compute platform}
 \label{subsec:ch4_hw_compute}
 
-\xxx{Keep short: system runs on a standard PC; give representative dev machines (laptop/desktop) as non-binding reference.}
-\xxx{Avoid performance claims unless you have measured logs. If you want, present qualitative notes only.}
+The prototype is intended to run on a standard PC with a modern C++ toolchain.
+In development, the system was built and tested on both a laptop-class machine (Ryzen~9~5980HS, 32\,GB RAM) and a desktop-class machine (Ryzen~9800X3D, 64\,GB RAM).
+These are representative development machines rather than hard requirements; the system does not rely on specialized compute hardware.
 
 % ==========================================================
 \section{Module implementation overview}
