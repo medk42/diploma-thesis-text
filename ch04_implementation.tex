@@ -17,7 +17,7 @@ The pen tracking module utilizes a cross-platform BLE library (SimpleBLE); howev
 
 \minihead{Reading note.}
 The UI module is described in Chapter~\ref{chapter:ch3_system_design} at the level of externally observable orchestration behavior (\autoref{sec:ch3_ui_orchestration}) and is not decomposed further here.
-This chapter instead focuses on the sensing, authoring, execution, and use-case modules that produce and consume the interface messages defined in Chapter~\ref{chapter:ch3_system_design}.
+This chapter instead focuses on the sensing, authoring, execution, and use case modules that produce and consume the interface messages defined in Chapter~\ref{chapter:ch3_system_design}.
 
 \minihead{Structure of this chapter.}
 We first summarize the physical setup and calibration artifacts, then describe the module implementations in the same logical order as the runtime pipeline shown in \autoref{fig:runtime_full}.
@@ -223,23 +223,22 @@ During collection, the Charuco board must remain fixed in the workspace and the 
 Conceptually, each sample provides:
 (i) a board observation in the camera frame (from Charuco detection) and
 (ii) a flange pose in the world/base frame (from the robot status stream).
-The hand-eye estimation step requires motion diversity: if the robot does not change its pose between captures (or changes only in a degenerate way), the relative motions are insufficient to constrain the rigid flange-to-camera transform.
+The hand--eye estimation step requires motion diversity: if the robot does not change its pose between captures (or changes only in a degenerate way), the relative motions are insufficient to constrain the rigid flange-to-camera transform.
 Therefore, the user should collect a set of captures across distinct robot configurations (translations and rotations), while keeping the calibration target unmoved, so that the algorithm can relate changes in the robot pose to changes in the observed board pose.
 
-In the implementation, the activation wrapper enforces only a minimum sample count (10 samples); the practical requirement is that the samples contain enough successful Charuco detections from varied viewpoints to support intrinsics, stereo, and hand-eye calibration (see \autoref{appendix:charuco} for the exact board used).
+In the implementation, the activation wrapper enforces only a minimum sample count (10 samples); the practical requirement is that the samples contain enough successful Charuco detections from varied viewpoints to support intrinsics, stereo, and hand--eye calibration (see \autoref{appendix:charuco} for the exact board used).
 
 \minihead{Calibration problem statement.}
 The calibration estimates:
 (i) intrinsics for both cameras (matrix $K$ and distortion $D$),
 (ii) stereo extrinsics (Right $\leftarrow$ Left),
-(iii) the rigid hand-eye transform between the robot flange and the left camera.
+(iii) the rigid hand--eye transform between the robot flange and the left camera.
 This corresponds to the robot-mounted sensing configuration motivated in \autoref{subsec:ch2_analysis_camera_tradeoffs}. The Charuco board print and the exact board parameters used in the implementation are provided in \autoref{appendix:charuco}.
 
 \minihead{Implementation approach.}
-For each captured stereo pair, the module detects the Charuco board, calibrates intrinsics independently for the left and right camera (\texttt{calibrateCameraCharuco}), estimates stereo extrinsics with fixed intrinsics (\texttt{stereoCalibrate}), and computes the flange-camera transform using OpenCV hand-eye calibration (\texttt{calibrateHandEye}, Tsai method). Finally, a small nonlinear refinement step implemented using Ceres jointly refines the stereo and hand-eye parameters by minimizing reprojection residuals (Huber loss).
-
+For each captured stereo pair, the module detects the Charuco board, calibrates intrinsics independently for the left and right camera (\texttt{calibrateCameraCharuco}), estimates stereo extrinsics with fixed intrinsics (\texttt{stereoCalibrate}), and computes the flange--camera transform using OpenCV hand--eye calibration (\texttt{calibrateHandEye}, Tsai method). Finally, a small nonlinear refinement step implemented using Ceres jointly refines the stereo and hand--eye parameters by minimizing reprojection residuals (Huber loss).
 \minihead{Output and downstream usage.}
-After a successful activation, every incoming camera+flange message is converted into a calibrated message by combining the current flange pose with the calibrated flange-camera transform, yielding the current world poses of the left and right camera. The image blobs are forwarded unchanged; downstream modules therefore consume the same image data, now accompanied by consistent world poses and intrinsics.
+After a successful activation, every incoming camera+flange message is converted into a calibrated message by combining the current flange pose with the calibrated flange--camera transform, yielding the current world poses of the left and right camera. The image blobs are forwarded unchanged; downstream modules therefore consume the same image data, now accompanied by consistent world poses and intrinsics.
 
 \minihead{Failure modes and limitations.}
 Activation fails if the Charuco board cannot be detected reliably across enough views (too few corners/pairs) or if the captured viewpoints are degenerate. The calibration assumes a rigid robot-mounted stereo rig; if the mount is disturbed (e.g., collision), the extrinsics should be considered invalid and the module should be reactivated.
