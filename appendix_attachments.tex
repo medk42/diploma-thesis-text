@@ -14,15 +14,15 @@ The electronic attachment submitted with this thesis contains a pruned snapshot 
 \minihead{Top-level structure of the submitted attachment.}
 The attachment package is organized as follows (paths are relative to the attachment root):
 
-\begin{verbatim}
-camera/                  Calibration artifacts (Charuco PDF, camera mount CAD)
-diploma-thesis-code/      Pruned C++ source tree (core + helpers + modules)
-pen/                     Pen CAD + firmware
-robot/aergo_interface_cbun/ Robot-side component (CBun) source tree
-scene/                   Example scene CAD model(s)
-third_party_licenses/    License texts for vendored components
-LICENSE, NOTICE, README.md, THIRD_PARTY_NOTICES.md
-\end{verbatim}
+\begin{description}
+  \item[\path{camera/}] Calibration artifacts (Charuco PDF, camera mount CAD).
+  \item[\path{diploma-thesis-code/}] Pruned C++ source tree (core + helpers + modules).
+  \item[\path{pen/}] Pen CAD + firmware.
+  \item[\path{robot/aergo_interface_cbun/}] Robot-side component (CBun) source tree.
+  \item[\path{scene/}] Example scene CAD model(s).
+  \item[\path{third_party_licenses/}] License texts for vendored components.
+  \item[\path{LICENSE}, \path{NOTICE}, \path{README.md}, \path{THIRD_PARTY_NOTICES.md}] Root metadata and notices.
+\end{description}
 
 \minihead{Included vs.\ excluded code scope.}
 The submitted code snapshot includes:
@@ -49,11 +49,15 @@ A typical build workflow is:
 
 \minihead{Configure and build.}
 From \path{diploma-thesis-code/}:
+
 \begin{verbatim}
 cmake --list-presets
-cmake --preset core-windows    # or: core-linux
-cmake --build --preset core-windows-Release   # or: -Debug / core-linux-*
+cmake --preset core-windows
+cmake --build --preset core-windows-Release
 \end{verbatim}
+
+Alternatively build Debug via \texttt{core-windows-Debug}. On Linux, use \texttt{core-linux} instead of \texttt{core-windows} and the corresponding build presets
+(\texttt{core-linux-Release}, \texttt{core-linux-Debug}).
 
 \minihead{Install step (required runtime layout).}
 After building, the install step assembles a self-contained runtime tree under \path{binaries/}
@@ -134,8 +138,44 @@ The pen firmware is provided as:
 The firmware is derived from the upstream D-Point project (Jcparkyn/dpoint) and modified for this thesis prototype; the upstream license text is included under \path{third\_party\_licenses/}.
 \xxx{If you want to be explicit: mention that the mechanical design is only loosely inspired by D-Point, while the provided CAD is original work.}
 
+\xxx{in appendix section subsection Pen CAD and firmware  (or whatever subsection you already have for pen artifacts), after the paragraph that lists pen.step and pen\_firmware.ino., add the following two figures with captions:}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{img/appendix/pen_internals_bg.png}
+    \caption{Pen internal layout (CAD render).}
+    \label{fig:app_pen_internals}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{img/appendix/pen_partial_internals_bg.png}
+    \caption{Pen partial internal view highlighting the electronics compartment (CAD render).}
+    \label{fig:app_pen_partial_internals}
+\end{figure}
+
+\xxx{Add one referencing sentence immediately before the first figure (or immediately after the artifact listing sentence): "For reference, the internal layout is shown in \autoref{fig:app_pen_internals} and \autoref{fig:app_pen_partial_internals}."}
+
 \xxx{Optional: if you include rendered images of the pen/mount in the attachment (recommended for readability),
 add a short note and the path, e.g., \path{pen/renders/}.}
+
+\xxx{in appendix subsection where you mention manufacturing/printing (or create a short one, e.g., subsection "3D printing layout (informative)"), right after the first sentence., add the following figure with caption:}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{img/appendix/pen_slice_top.png}
+    \caption{3D printing plate layout (top view).}
+    \label{fig:app_print_layout_top}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{img/appendix/pen_slice_side.png}
+    \caption{3D printing plate layout (perspective view).}
+    \label{fig:app_print_layout_persp}
+\end{figure}
+
+\xxx{Add one referencing sentence right before the first figure: "The print plate arrangement used for manufacturing the pen parts is shown in \autoref{fig:app_print_layout_top} and \autoref{fig:app_print_layout_persp}."}
 
 \subsection{Scene registry example}
 \label{appendix:scene_registry}

@@ -40,6 +40,17 @@ The detailed operational steps for setting up and running the system are deferre
 \subsection{Stereo camera hardware}
 \label{subsec:ch4_hw_camera}
 
+\xxx{right after the first introductory paragraph add this figure:}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.85\linewidth]{img/ch4_implementation/camera_mount_bg.png}
+    \caption{Robot-mounted stereo camera flange mount used in the prototype (CAD render).}
+    \label{fig:ch4_camera_mount}
+\end{figure}
+
+\xxx{Then, Add one referencing sentence at the end of that subsection’s intro paragraph (or add a new sentence directly after it): "The mechanical camera mount used in the prototype is shown in \autoref{fig:ch4_camera_mount}."}
+
 \xxx{Describe: ELP OV9281 stereo module (1280x800 per sensor, global shutter, onboard sync).}
 \xxx{State the used operating mode (e.g., 2560x800@60 MJPEG) (verify from camera module defaults / parameters).}
 \xxx{State: Windows-only capture backend via Windows Media Foundation (verify).}
@@ -48,6 +59,17 @@ The detailed operational steps for setting up and running the system are deferre
 
 \subsection{Pen input device}
 \label{subsec:ch4_hw_pen}
+
+\xxx{after the first paragraph that describes the pen at a high level, add this figure:}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/ch4_implementation/pen_full_bg.png}
+    \caption{Tracked pen used for spatial authoring (CAD render). The cube carries multiple fiducial markers; buttons on the handle provide discrete intent events.}
+    \label{fig:ch4_pen_full}
+\end{figure}
+
+\xxx{Then, Add one referencing sentence right where you first mention “custom pen … multiple markers … two buttons”: "The prototype pen design is shown in \autoref{fig:ch4_pen_full}."}
 
 \xxx{Describe: custom pen inspired by D-Point; key differences: larger cube, multiple markers, screw-mounted dual-color printed marker plates, extra top marker, two buttons, BLE.}
 \xxx{Explain briefly: multi-marker cube (5 faces) chosen for robustness at larger distances and top-down viewing.}
@@ -62,6 +84,18 @@ The detailed operational steps for setting up and running the system are deferre
 \xxx{If you have a specific PDF/print file: put it into attachments and reference it.}
 \xxx{If there are fixed assumptions (board size, square size, marker size), they must match the code. Mark as (verify from code) until confirmed.}
 \xxx{Scene registry artifact: fiducial boxes configured via a JSON registry; mention what the operator must provide and where it is loaded from (verify file path/name).}
+
+\xxx{after the sentence where you mention “fiducial boxes / registry”., add this figure:}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.55\linewidth]{img/ch4_implementation/scene_box_bg.png}
+    \caption{Example fiducial-tagged box model used as a scene object in the prototype (illustration).}
+    \label{fig:ch4_scene_box}
+\end{figure}
+
+\xxx{Add one referencing sentence right after the “Scene registry artifact…” line: "An example box object used in the prototype is illustrated in \autoref{fig:ch4_scene_box}."}
+\xxx{This and all the other figures could also be in the specific modules!}
 
 \subsection{Compute platform}
 \label{subsec:ch4_hw_compute}
