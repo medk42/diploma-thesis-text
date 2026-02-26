@@ -5,13 +5,13 @@ This chapter describes the concrete prototype used in this thesis: the physical 
 Unlike \autoref{chapter:ch3_system_design}, which focused on contracts and interface semantics, this chapter focuses on the concrete algorithms, parameters, and implementation decisions inside the modules.
 
 \minihead{Scope of the accompanying code artifact.}
-\xxx{State exactly what folders are included in the submitted code archive (e.g., \path{backend/}, \path{module_common/}, \path{module_helpers/}, \path{default_modules/}, vcpkg manifests/triplets).}
-\xxx{State what is excluded (e.g., \path{demos/}, \path{default_modules_retired/}, \path{sources/}).}
-\xxx{Point to Appendix for external artifacts: pen CAD + firmware, Charuco board PDF, robot-side component (CBun) / emulator notes, and a GitHub link for full history (if applicable).}
+\xxx{State exactly what folders are included in the submitted code archive (matches \autoref{appendix:source_code}): \path{diploma-thesis-code/backend/}, \path{diploma-thesis-code/default_modules/}, \path{diploma-thesis-code/manifests/}, \path{diploma-thesis-code/vcpkg-triplets/}; plus root-level artifacts as listed in \autoref{appendix:source_code}.}
+\xxx{State what is excluded at a high level (development-only/non-essential repository content); detailed packaging and build notes are in \autoref{appendix:source_code}.}
+\xxx{Point to Appendix for external artifacts: pen CAD + firmware and assembly notes (\autoref{appendix:pen_artifacts}), Charuco board PDF and exact dimensions (\autoref{appendix:charuco}), scene registry and example CAD (\autoref{appendix:scene_registry}, \autoref{appendix:scene_cad}), and robot-side component (CBun) sources/build notes (\autoref{appendix:cbun}).}
 
 \minihead{Implementation note.}
-\xxx{State: implemented in C++ (verify from repository structure / toolchain).}
-\xxx{State: designed to run on Windows and Linux; most logic is platform-neutral. Platform-specific code is primarily in camera acquisition and the chosen UI/web stack; macOS not validated. (Verify which modules are built/used on Linux in your build system.)}
+\xxx{State: implemented in C++ (verify from repository structure / toolchain; build notes in \autoref{appendix:source_code}).}
+\xxx{State: designed to run on Windows and Linux; most logic is platform-neutral. Platform-specific code is primarily in camera acquisition (\autoref{subsec:ch4_mod_stereo_camera}) and the chosen UI/web stack; macOS not validated. (Verify which modules are built/used on Linux in your build system.)}
 
 \minihead{Reading note.}
 The UI module is described in Chapter~\ref{chapter:ch3_system_design} at the level of externally observable orchestration behavior (\autoref{sec:ch3_ui_orchestration}) and is not decomposed further here.
@@ -26,6 +26,7 @@ We first summarize the physical setup and required calibration artifacts, then d
 
 This section summarizes the physical components required to run the system and the calibration artifacts that the operator must provide.
 The detailed operational steps for setting up and running the system are deferred to \autoref{chapter:ch5_user_workflow}.
+The concrete artifact files (CAD, firmware, PDFs, registry JSON) shipped with the thesis attachment are listed in \autoref{appendix:artifacts}.
 
 \subsection{Robot platform and execution backend}
 \label{subsec:ch4_hw_robot}
@@ -33,10 +34,10 @@ The detailed operational steps for setting up and running the system are deferre
 \xxx{Describe: Kassow Robot as the target platform; REMII emulator used during development; real robot model used during validation (if known, mark uncertainty).}
 \xxx{Describe: coordinate frames assumed (world/base, flange, TCP/tool) at a conceptual level (no math yet; match Chapter~3 naming).}
 \xxx{Describe: robot-mounted stereo camera assumption (camera rigidly attached to robot flange/tool); mechanical implications (rigidity, repeatability) and why drift/collisions matter.}
-\xxx{This is mentioned in appendix \autoref{appendix:camera_mount_cad}: This mount realizes the ``rigid robot-mounted stereo rig'' assumption discussed in \autoref{subsec:ch4_hw_robot}.}
+\xxx{Reference the mount CAD artifact in \autoref{appendix:camera_mount_cad} and the mount render in \autoref{fig:ch4_camera_mount}.}
 \xxx{Describe: CBun / robot-side plugin role at a high level (transport endpoint + command execution + status streaming); clarify it is not part of the module runtime graph.}
+\xxx{Note: CBun sources and build notes are provided in \autoref{appendix:cbun}; operator installation/enabling is described in \autoref{chapter:ch5_user_workflow}.}
 \xxx{Verify from code / docs: protocol, ports, reconnect behavior, and which features are actually implemented.}
-\xxx{If CBun/emulator is external to the submitted code archive, point to Appendix attachment/link.}
 
 \subsection{Stereo camera hardware}
 \label{subsec:ch4_hw_camera}
@@ -76,14 +77,15 @@ The detailed operational steps for setting up and running the system are deferre
 \xxx{Explain briefly: multi-marker cube (5 faces) chosen for robustness at larger distances and top-down viewing.}
 \xxx{Describe: electronics at the level needed to understand limitations: nRF52840 Sense, INR10440 battery, charging / sleep behavior (verify from firmware).}
 \xxx{Important: state explicitly that IMU data is currently not used by the tracking module (verify from code).}
-\xxx{Point to attachments for CAD + firmware and marker plates; briefly mention D-Point license attribution if firmware is derived (see \autoref{sec:ch4_artifacts_and_attachments}).}
+\xxx{Reference the concrete CAD/firmware artifacts and reproducibility notes in \autoref{appendix:pen_artifacts} (including the internal layout render and assembly notes).}
+\xxx{Briefly mention D-Point license attribution boundary as documented in the appendix (see \autoref{appendix:pen_artifacts}).}
 
 \subsection{Workspace scene objects (fiducial boxes)}
 \label{subsec:ch4_hw_scene}
 
 \xxx{one short paragraph saying you used fiducial-tagged boxes configured by a JSON registry.}
-
-\xxx{reference \autoref{fig:ch4_scene_box} and appendix registry subsection.}
+\xxx{Reference the registry and example CAD artifacts in \autoref{appendix:scene_registry} and \autoref{appendix:scene_cad}.}
+\xxx{Reference \autoref{fig:ch4_scene_box}.}
 
 \begin{figure}[t]
     \centering
@@ -92,21 +94,14 @@ The detailed operational steps for setting up and running the system are deferre
     \label{fig:ch4_scene_box}
 \end{figure}
 
-\xxx{Add one referencing sentence right after the “Scene registry artifact…” line: "An example box object used in the prototype is illustrated in \autoref{fig:ch4_scene_box}."}
-
-\xxx{Then in Calibration artifacts, keep only Charuco + “scene registry JSON exists”, and refer back: "Scene objects are configured via a JSON registry (see \autoref{appendix:scene_registry})."}
-
-\xxx{Also: later in the scene detection module subsection, you can reference the same figure once (“Example object in \autoref{fig:ch4_scene_box}”) without duplicating images. THIS GOES FOR ALL IMAGES!}
-
+\xxx{Add one referencing sentence: "An example box object used in the prototype is illustrated in \autoref{fig:ch4_scene_box}."}
 
 \subsection{Calibration artifacts}
 \label{subsec:ch4_hw_calibration_artifacts}
 
 \xxx{Charuco board: geometry, print method, and why it is required by the calibration module.}
-\xxx{If you have a specific PDF/print file: put it into attachments and reference it.}
-\xxx{If there are fixed assumptions (board size, square size, marker size), they must match the code. Mark as (verify from code) until confirmed.}
-\xxx{Scene registry artifact: fiducial boxes configured via a JSON registry; mention what the operator must provide and where it is loaded from (verify file path/name).}
-
+\xxx{Reference the provided PDF and exact dimensions in \autoref{appendix:charuco} (do not re-list the numeric parameters here unless needed for the narrative).}
+\xxx{Scene objects are configured via a JSON registry (see \autoref{appendix:scene_registry}); refer back to \autoref{subsec:ch4_hw_scene} for the physical objects.}
 
 \subsection{Compute platform}
 \label{subsec:ch4_hw_compute}
@@ -168,7 +163,7 @@ They correspond to the sensing stages of \autoref{fig:intro__img_2__usecase_stag
 \xxx{Windows-only; compression/latency tradeoffs; device missing/wrong format/decode failure; describe how failure is surfaced (activation fail vs runtime errors).}
 
 \minihead{Code pointers.}
-\xxx{\path{.../stereo_camera_module_windows/...} (fill exact path).}
+\xxx{\path{diploma-thesis-code/default_modules/stereo_camera_module_windows/}.}
 
 % ----------------------------
 \subsection{Camera pose injector module}
@@ -195,7 +190,7 @@ They correspond to the sensing stages of \autoref{fig:intro__img_2__usecase_stag
 \xxx{Pose stream missing/stale; timebase mismatch; behavior when robot connection drops (verify and describe).}
 
 \minihead{Code pointers.}
-\xxx{\path{.../camera_pose_injector_module/...}.}
+\xxx{\path{diploma-thesis-code/default_modules/camera_pose_injector_module/}.}
 
 % ----------------------------
 \subsection{Robot-mounted stereo camera calibration module}
@@ -214,6 +209,7 @@ They correspond to the sensing stages of \autoref{fig:intro__img_2__usecase_stag
 \minihead{Calibration problem statement.}
 \xxx{State precisely what is estimated: per-camera intrinsics (K,D), stereo extrinsics, and hand-eye / flange-to-camera transform.}
 \xxx{State assumptions: robot-mounted camera; Charuco board in workspace; robot moved through viewpoints.}
+\xxx{Reference the exact Charuco parameters and provided PDF in \autoref{appendix:charuco} rather than duplicating numeric values here.}
 
 \minihead{Implementation approach.}
 \xxx{OpenCV stages (verify exact calls): calibrateCameraCharuco per camera; stereoCalibrate; calibrateHandEye.}
@@ -231,8 +227,7 @@ They correspond to the sensing stages of \autoref{fig:intro__img_2__usecase_stag
 \xxx{Scope limitation: robot-mounted stereo assumption; drift/collisions invalidate extrinsics until recalibrated.}
 
 \minihead{Code pointers.}
-\xxx{\path{.../robot_stereo_camera_calibration_module/...}.}
-\xxx{\path{.../ceres_refinement/...} if separated.}
+\xxx{\path{diploma-thesis-code/default_modules/robot_stereo_camera_calibration_module/}.}
 
 % ==========================================================
 \section{Authoring modules}
@@ -258,6 +253,7 @@ they convert calibrated sensing inputs into user intent (pen poses/trajectories)
 
 \minihead{Marker configuration and pen geometry.}
 \xxx{Describe: 5-marker cube (4 sides + top); larger marker size; why this improves detectability at working distance.}
+\xxx{Reference the physical pen artifact and marker cube context in \autoref{subsec:ch4_hw_pen} and the detailed CAD/firmware notes in \autoref{appendix:pen_artifacts} rather than re-describing assembly here.}
 \xxx{State: the module uses a fixed CAD-defined marker-to-pen reference transform; no per-pen calibration currently performed (verify).}
 
 \minihead{Pose estimation pipeline.}
@@ -275,7 +271,7 @@ they convert calibrated sensing inputs into user intent (pen poses/trajectories)
 
 \minihead{Pen communication.}
 \xxx{Describe: BLE communication via SimpleBLE; Windows BLE throughput limitations; IMU currently ignored.}
-\xxx{If you want, explicitly mention: firmware is derived from D-Point with minimal edits; details in attachments + license attribution.}
+\xxx{Mention: firmware is derived from D-Point; license attribution and the concrete firmware artifact are documented in \autoref{appendix:pen_artifacts}.}
 
 \minihead{Visualization outputs.}
 \xxx{Describe what the module publishes to the 3D visualization interface (current pen pose, recent trajectory preview, etc.), and what is transient vs persistent. (Verify.)}
@@ -285,8 +281,7 @@ they convert calibrated sensing inputs into user intent (pen poses/trajectories)
 \xxx{Describe what happens on lost tracking (last value hold vs invalid state) and how that is encoded (verify).}
 
 \minihead{Code pointers.}
-\xxx{\path{.../pen_tracking_multicam_module/...}.}
-\xxx{\path{.../ble/...} and \path{.../filter/...}.}
+\xxx{\path{diploma-thesis-code/default_modules/pen_tracking_multicam_module/}.}
 
 % ----------------------------
 \subsection{Scene detection module (fiducial boxes)}
@@ -306,8 +301,8 @@ they convert calibrated sensing inputs into user intent (pen poses/trajectories)
 
 \minihead{Scene model and registry.}
 \xxx{Describe: registry loaded from JSON: marker ID, marker size, box dimensions, marker-to-box transform.}
+\xxx{Reference the shipped registry location in \autoref{appendix:scene_registry} and the example object in \autoref{fig:ch4_scene_box}.}
 \xxx{State limitations: boxes only; currently a small fixed set (possibly one type).}
-\xxx{Reference the exact JSON file location / name (verify from code).}
 
 \minihead{Detection pipeline.}
 \xxx{Describe: ArUco detection in stereo pair; correspondence/matching between left/right detections (verify approach).}
@@ -326,10 +321,7 @@ they convert calibrated sensing inputs into user intent (pen poses/trajectories)
 \xxx{Describe behavior when partial detections occur and how missing objects are represented (verify).}
 
 \minihead{Code pointers.}
-\xxx{\path{.../scene_detection_stereocam_module/...}.}
-\xxx{\path{.../registry.json} (or similar).}
-
-\xxx{Also: later in the scene detection module subsection, you can reference the same figure once (“Example object in \autoref{fig:ch4_scene_box}”) without duplicating images. THIS GOES FOR ALL IMAGES!}
+\xxx{\path{diploma-thesis-code/default_modules/scene_detection_stereocam_module/}.}
 
 % ==========================================================
 \section{Execution backend module}
@@ -351,6 +343,7 @@ they convert calibrated sensing inputs into user intent (pen poses/trajectories)
 
 \minihead{Transport and protocol.}
 \xxx{Describe: TCP connection to robot plugin (CBun); request encoding/decoding; reconnect strategy.}
+\xxx{Clarify: CBun sources/build notes are provided in \autoref{appendix:cbun}; this subsection documents the thesis-side transport behavior and the implemented \type{robot\_interface} coverage.}
 \xxx{Avoid low-level protocol details unless they are stable and documented; otherwise describe as an RPC-like command channel.}
 
 \minihead{Implemented actions (robot interface coverage).}
@@ -366,8 +359,7 @@ they convert calibrated sensing inputs into user intent (pen poses/trajectories)
 \xxx{Tool/gripper control not standardized in this thesis; current use cases simulate tool actions via delays.}
 
 \minihead{Code pointers.}
-\xxx{\path{.../kassow_robot_module/...}.}
-\xxx{If CBun is in-repo: \path{.../cbun/...}. If not, point to attachment / external repo.}
+\xxx{\path{diploma-thesis-code/default_modules/robot_module_kassow/}.}
 
 % ==========================================================
 \section{Task-oriented use case modules}
@@ -394,6 +386,7 @@ Their external behavior is defined by the use case wrapper contract in \autoref{
 \minihead{Authoring inputs and parameters.}
 \xxx{Describe: required CUSTOM inputs (pick pose, place pose) and how they are acquired.}
 \xxx{Describe: non-spatial parameters (speed/accel/lift distance/etc.) (verify schema).}
+\xxx{Reference the scene object model/registry context in \autoref{subsec:ch4_hw_scene} and \autoref{appendix:scene_registry} as the concrete implementation boundary.}
 
 \minihead{Command creation (CREATE\_COMMAND).}
 \xxx{Describe: how pick is associated with an object (distance-based match in front of pen, etc.) (verify algorithm).}
@@ -410,7 +403,7 @@ Their external behavior is defined by the use case wrapper contract in \autoref{
 \xxx{No collision checking; assumes clear workspace (if true; verify).}
 
 \minihead{Code pointers.}
-\xxx{\path{.../usecase_pick_and_place/...}.}
+\xxx{\path{diploma-thesis-code/default_modules/usecase_pick_and_place/}.}
 
 % ----------------------------
 \subsection{Seam welding use case}
@@ -427,6 +420,7 @@ Their external behavior is defined by the use case wrapper contract in \autoref{
 
 \minihead{Authoring inputs and parameters.}
 \xxx{Describe: CUSTOM trajectory input; advanced parameters (movement speed, welding speed, approach distance, tool offset, etc.) (verify schema).}
+\xxx{Reference the scene object model/registry context in \autoref{subsec:ch4_hw_scene} and \autoref{appendix:scene_registry} as the concrete implementation boundary.}
 
 \minihead{Scene-derived seam model (interpretation step).}
 \xxx{Describe: seam candidates derived from detected box geometry; seam = segment + approach/tool direction (verify).}
@@ -443,7 +437,7 @@ Their external behavior is defined by the use case wrapper contract in \autoref{
 \xxx{Matching brittleness; lack of true welding tool control; stop/pause semantics; seam definition limited to simple box scenes.}
 
 \minihead{Code pointers.}
-\xxx{\path{.../usecase_weld/...}.}
+\xxx{\path{diploma-thesis-code/default_modules/usecase_weld/}.}
 
 % ==========================================================
 \section{Motion-primitive use cases (optional)}
@@ -463,19 +457,15 @@ They serve as lightweight examples of extensibility and as debugging tools.
 
 \xxx{For each primitive: required inputs (pose/trajectory/joints), JSON content, execution call to robot wrapper.}
 \xxx{If you plan to implement pause properly anywhere, this is the best place: demonstrate pause/resume on a simple MoveL or trajectory use case (see code fixes list).}
-\xxx{Add code pointers for the primitive use cases (paths) in one consolidated list (verify exact folders).}
+\xxx{Add code pointers for the primitive use cases in one consolidated list:}
+\xxx{\path{diploma-thesis-code/default_modules/usecase_move_joint/}, \path{diploma-thesis-code/default_modules/usecase_move_linear/}, \path{diploma-thesis-code/default_modules/usecase_move_arc/}, \path{diploma-thesis-code/default_modules/usecase_move_trajectory/}.}
 
 % ==========================================================
 \section{Artifacts, attachments, and reproducibility notes}
 \label{sec:ch4_artifacts_and_attachments}
 
 This thesis focuses on the system design and behavior; nevertheless, several practical artifacts (CAD, calibration files, firmware, and configuration JSON) are necessary to reproduce the prototype setup.
+All concrete artifact files shipped with the thesis attachment are documented in \autoref{appendix:artifacts}, and build/installation notes for the submitted source snapshot are documented in \autoref{appendix:source_code}.
 
-\xxx{Create Appendix sections and reference them here. Suggested structure:}
-\xxx{- Pen CAD files (STL/STEP), marker plate generator, assembly notes.}
-\xxx{- Pen firmware source (derived from D-Point; include license notes).}
-\xxx{- Charuco board PDF / dimensions and printing instructions.}
-\xxx{- Scene registry JSON example(s).}
-\xxx{- Robot-side plugin (CBun) build/deploy notes (or link if external).}
-\xxx{- Build environment notes: vcpkg manifests/triplets; minimal build instructions for the submitted archive.}
-\xxx{- Third-party libraries list + licenses (if required by faculty rules).}
+\xxx{Keep this section short: point to the appendix sections rather than duplicating filenames and numeric parameters.}
+\xxx{Suggested forward references: \autoref{appendix:charuco}, \autoref{appendix:camera_mount_cad}, \autoref{appendix:pen_artifacts}, \autoref{appendix:scene_registry}, \autoref{appendix:scene_cad}, \autoref{appendix:cbun}, and \autoref{appendix:source_code}.}
