@@ -33,6 +33,7 @@ The detailed operational steps for setting up and running the system are deferre
 \xxx{Describe: Kassow Robot as the target platform; REMII emulator used during development; real robot model used during validation (if known, mark uncertainty).}
 \xxx{Describe: coordinate frames assumed (world/base, flange, TCP/tool) at a conceptual level (no math yet; match Chapter~3 naming).}
 \xxx{Describe: robot-mounted stereo camera assumption (camera rigidly attached to robot flange/tool); mechanical implications (rigidity, repeatability) and why drift/collisions matter.}
+\xxx{This is mentioned in appendix \autoref{appendix:camera_mount_cad}: This mount realizes the ``rigid robot-mounted stereo rig'' assumption discussed in \autoref{subsec:ch4_hw_robot}.}
 \xxx{Describe: CBun / robot-side plugin role at a high level (transport endpoint + command execution + status streaming); clarify it is not part of the module runtime graph.}
 \xxx{Verify from code / docs: protocol, ports, reconnect behavior, and which features are actually implemented.}
 \xxx{If CBun/emulator is external to the submitted code archive, point to Appendix attachment/link.}
@@ -77,15 +78,12 @@ The detailed operational steps for setting up and running the system are deferre
 \xxx{Important: state explicitly that IMU data is currently not used by the tracking module (verify from code).}
 \xxx{Point to attachments for CAD + firmware and marker plates; briefly mention D-Point license attribution if firmware is derived (see \autoref{sec:ch4_artifacts_and_attachments}).}
 
-\subsection{Calibration artifacts}
-\label{subsec:ch4_hw_calibration_artifacts}
+\subsection{Workspace scene objects (fiducial boxes)}
+\label{subsec:ch4_hw_scene}
 
-\xxx{Charuco board: geometry, print method, and why it is required by the calibration module.}
-\xxx{If you have a specific PDF/print file: put it into attachments and reference it.}
-\xxx{If there are fixed assumptions (board size, square size, marker size), they must match the code. Mark as (verify from code) until confirmed.}
-\xxx{Scene registry artifact: fiducial boxes configured via a JSON registry; mention what the operator must provide and where it is loaded from (verify file path/name).}
+\xxx{one short paragraph saying you used fiducial-tagged boxes configured by a JSON registry.}
 
-\xxx{after the sentence where you mention “fiducial boxes / registry”., add this figure:}
+\xxx{reference \autoref{fig:ch4_scene_box} and appendix registry subsection.}
 
 \begin{figure}[t]
     \centering
@@ -95,7 +93,20 @@ The detailed operational steps for setting up and running the system are deferre
 \end{figure}
 
 \xxx{Add one referencing sentence right after the “Scene registry artifact…” line: "An example box object used in the prototype is illustrated in \autoref{fig:ch4_scene_box}."}
-\xxx{This and all the other figures could also be in the specific modules!}
+
+\xxx{Then in Calibration artifacts, keep only Charuco + “scene registry JSON exists”, and refer back: "Scene objects are configured via a JSON registry (see \autoref{appendix:scene_registry})."}
+
+\xxx{Also: later in the scene detection module subsection, you can reference the same figure once (“Example object in \autoref{fig:ch4_scene_box}”) without duplicating images. THIS GOES FOR ALL IMAGES!}
+
+
+\subsection{Calibration artifacts}
+\label{subsec:ch4_hw_calibration_artifacts}
+
+\xxx{Charuco board: geometry, print method, and why it is required by the calibration module.}
+\xxx{If you have a specific PDF/print file: put it into attachments and reference it.}
+\xxx{If there are fixed assumptions (board size, square size, marker size), they must match the code. Mark as (verify from code) until confirmed.}
+\xxx{Scene registry artifact: fiducial boxes configured via a JSON registry; mention what the operator must provide and where it is loaded from (verify file path/name).}
+
 
 \subsection{Compute platform}
 \label{subsec:ch4_hw_compute}
@@ -317,6 +328,8 @@ they convert calibrated sensing inputs into user intent (pen poses/trajectories)
 \minihead{Code pointers.}
 \xxx{\path{.../scene_detection_stereocam_module/...}.}
 \xxx{\path{.../registry.json} (or similar).}
+
+\xxx{Also: later in the scene detection module subsection, you can reference the same figure once (“Example object in \autoref{fig:ch4_scene_box}”) without duplicating images. THIS GOES FOR ALL IMAGES!}
 
 % ==========================================================
 \section{Execution backend module}
