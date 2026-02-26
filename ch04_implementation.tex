@@ -97,7 +97,7 @@ An example box object used in the prototype is illustrated in \autoref{fig:ch4_s
 \subsection{Calibration artifacts}
 \label{subsec:ch4_hw_calibration_artifacts}
 
-The sensing pipeline relies on a printed Charuco board as a calibration target for intrinsics, stereo calibration, and hand--eye calibration.
+The sensing pipeline relies on a printed Charuco board as a calibration target for intrinsics, stereo calibration, and hand-eye calibration.
 The exact calibration PDF and the compile-time board dimensions used by the calibration module are provided in \autoref{appendix:charuco}; the operator workflow for calibration is described in \autoref{chapter:ch5_user_workflow}.
 
 \subsection{Compute platform}
@@ -203,38 +203,49 @@ This is sufficient for the workflow used in this thesis, where frames are collec
 \subsection{Robot-mounted stereo camera calibration module}
 \label{subsec:ch4_mod_camera_calibration}
 
+This module (\emph{Stereo Camera Calibration (Robot)}, \type{robot\_stereo\_camera\_calibration\_module}) performs one-time calibration of the robot-mounted stereo rig and then publishes a calibrated stereo stream for downstream modules.
+
 \minihead{Role in graph.}
-\xxx{Consumes: camera+flange frames; produces: calibrated camera set (intrinsics + extrinsics in world) consumed by pen tracking and scene detection.}
+As shown in \autoref{fig:runtime_full}, the module consumes stereo frames augmented with the robot flange pose (from \emph{Camera Pose Injector}) and publishes a \emph{calibrated camera set} that is consumed by \emph{Pen Tracking} and \emph{Scene Detection}.
 
 \minihead{Interface-level I/O.}
-\xxx{Consumes: camera+flange frames; publishes \type{CalibratedCameraSet} (stream vs on-change; verify) and/or responds to calibration requests if implemented (verify).}
+The input is a camera message together with a flange pose (see \autoref{sec:ch3_supporting_messages}). The output is a \type{CalibratedCameraSet} message carrying (i) the original camera header and image blobs and (ii) per-camera calibration data (world pose and intrinsics for the left and right camera).
 
 \minihead{Activation and configuration.}
-\xxx{Describe: calibration runs on activation; what data must be collected before activation; how success/failure is reported.}
-\xxx{Describe: what is persisted (if any) via activation wrapper / module save. (Verify.)}
+Calibration is executed during activation via the activation wrapper.
+During activation, the calibration progress is reported as an integer progress bar.
+On success, the calibrated parameters are stored in the module instance and can be serialized as part of the graph state (the module implements \texttt{save()/load()}).
+
+\minihead{Calibration data requirements.}
+The activation input is a list of stereo image pairs with an associated robot flange pose, all observing the same \emph{static} Charuco calibration target.
+During collection, the Charuco board must remain fixed in the workspace and the robot should be moved between captures to obtain multiple, sufficiently different viewpoints.
+
+Conceptually, each sample provides:
+(i) a board observation in the camera frame (from Charuco detection) and
+(ii) a flange pose in the world/base frame (from the robot status stream).
+The hand-eye estimation step requires motion diversity: if the robot does not change its pose between captures (or changes only in a degenerate way), the relative motions are insufficient to constrain the rigid flange-to-camera transform.
+Therefore, the user should collect a set of captures across distinct robot configurations (translations and rotations), while keeping the calibration target unmoved, so that the algorithm can relate changes in the robot pose to changes in the observed board pose.
+
+In the implementation, the activation wrapper enforces only a minimum sample count (10 samples); the practical requirement is that the samples contain enough successful Charuco detections from varied viewpoints to support intrinsics, stereo, and hand-eye calibration (see \autoref{appendix:charuco} for the exact board used).
 
 \minihead{Calibration problem statement.}
-\xxx{State precisely what is estimated: per-camera intrinsics (K,D), stereo extrinsics, and hand-eye / flange-to-camera transform.}
-\xxx{State assumptions: robot-mounted camera; Charuco board in workspace; robot moved through viewpoints.}
-\xxx{Reference the exact Charuco parameters and provided PDF in \autoref{appendix:charuco} rather than duplicating numeric values here.}
+The calibration estimates:
+(i) intrinsics for both cameras (matrix $K$ and distortion $D$),
+(ii) stereo extrinsics (Right $\leftarrow$ Left),
+(iii) the rigid hand-eye transform between the robot flange and the left camera.
+This corresponds to the robot-mounted sensing configuration motivated in \autoref{subsec:ch2_analysis_camera_tradeoffs}. The Charuco board print and the exact board parameters used in the implementation are provided in \autoref{appendix:charuco}.
 
 \minihead{Implementation approach.}
-\xxx{OpenCV stages (verify exact calls): calibrateCameraCharuco per camera; stereoCalibrate; calibrateHandEye.}
-\xxx{If you run nonlinear refinement with Ceres:}
-\xxx{  - define what variables are optimized (transforms + optionally board pose);}
-\xxx{  - define objective (reprojection residuals over Charuco corners);}
-\xxx{  - one sentence: solved as nonlinear least squares using Ceres.}
-\xxx{Keep solver details minimal; focus on outputs and failure modes.}
+For each captured stereo pair, the module detects the Charuco board, calibrates intrinsics independently for the left and right camera (\texttt{calibrateCameraCharuco}), estimates stereo extrinsics with fixed intrinsics (\texttt{stereoCalibrate}), and computes the flange-camera transform using OpenCV hand-eye calibration (\texttt{calibrateHandEye}, Tsai method). Finally, a small nonlinear refinement step implemented using Ceres jointly refines the stereo and hand-eye parameters by minimizing reprojection residuals (Huber loss).
 
-\minihead{Outputs and downstream usage.}
-\xxx{Explain: how T\_world\_camera is produced from robot flange pose + calibrated flange-to-camera transform.}
+\minihead{Output and downstream usage.}
+After a successful activation, every incoming camera+flange message is converted into a calibrated message by combining the current flange pose with the calibrated flange-camera transform, yielding the current world poses of the left and right camera. The image blobs are forwarded unchanged; downstream modules therefore consume the same image data, now accompanied by consistent world poses and intrinsics.
 
-\minihead{Failure modes and known limitations.}
-\xxx{Insufficient detections; degenerate poses; unstable board detection; describe how activation reports failure.}
-\xxx{Scope limitation: robot-mounted stereo assumption; drift/collisions invalidate extrinsics until recalibrated.}
+\minihead{Failure modes and limitations.}
+Activation fails if the Charuco board cannot be detected reliably across enough views (too few corners/pairs) or if the captured viewpoints are degenerate. The calibration assumes a rigid robot-mounted stereo rig; if the mount is disturbed (e.g., collision), the extrinsics should be considered invalid and the module should be reactivated.
 
 \minihead{Code pointers.}
-\xxx{\path{diploma-thesis-code/default_modules/robot_stereo_camera_calibration_module/}.}
+\path{diploma-thesis-code/default_modules/robot_stereo_camera_calibration_module/}.
 
 % ==========================================================
 \section{Authoring modules}
