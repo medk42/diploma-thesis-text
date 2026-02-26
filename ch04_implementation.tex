@@ -203,9 +203,9 @@ This is sufficient for the workflow used in this thesis, where frames are collec
 \subsection{Robot-mounted stereo camera calibration module}
 \label{subsec:ch4_mod_camera_calibration}
 
-This module (\emph{Stereo Camera Calibration (Robot)}, \type{robot\_stereo\_camera\_calibration\_module}) performs one-time calibration of the robot-mounted stereo rig and then publishes a calibrated stereo stream for downstream modules.
-
 \minihead{Role in graph.}
+The \emph{Stereo Camera Calibration (Robot)} module (\type{robot\_stereo\_camera\_calibration\_module}) performs one-time calibration of the robot-mounted stereo rig and then publishes a calibrated stereo stream for downstream modules.
+
 As shown in \autoref{fig:runtime_full}, the module consumes stereo frames augmented with the robot flange pose (from \emph{Camera Pose Injector}) and publishes a \emph{calibrated camera set} that is consumed by \emph{Pen Tracking} and \emph{Scene Detection}.
 
 \minihead{Interface-level I/O.}
@@ -254,51 +254,73 @@ These modules implement the authoring stage of \autoref{fig:intro__img_2__usecas
 they convert calibrated sensing inputs into user intent (pen poses/trajectories) and scene context (detected objects).
 
 % ----------------------------
-\subsection{Pen tracking module (multi-camera ArUco)}
+\subsection{Pen Tracking (Multi-Cam)}
 \label{subsec:ch4_mod_pen_tracking}
 
 \minihead{Role in graph.}
-\xxx{Consumes: calibrated camera set; produces: pen raw stream + pen intent events; provides visualization overlay.}
+\emph{Pen Tracking (Multi-Cam)} (\type{pen\_tracking\_multicam\_module}) consumes the calibrated camera stream produced by the sensing pipeline (\autoref{fig:runtime_full}) and outputs
+(i) a continuous pen pose stream with button states and (ii) discrete intent events used by the downstream authoring logic.
+It also publishes transient visualization overlays through the 3D visualization interface.
 
 \minihead{Interface-level I/O.}
-\xxx{Consumes: \type{CalibratedCameraSet} and image streams as defined in Chapter~3 (verify exact inputs).}
-\xxx{Publishes: pen raw stream (pose + buttons) and discrete intent events (POSE/TRAJECTORY/SPECIAL\_ACTION) (verify message types/sections in Chapter~3).}
-\xxx{Publishes: visualization overlay elements to the 3D visualization interface (verify).}
+Input is the \type{CalibratedCameraSet} stream (\autoref{sec:ch3_supporting_messages}), carrying per-camera intrinsics and world poses together with the corresponding image blobs.
+The module publishes two pen outputs (\autoref{sec:ch3_supporting_messages}): a raw stream (pen tip pose and button states; \type{PenMessageRaw}) and an intent stream (user entered pose, trajectory, or a special action; \type{PenIntent}).
+For visualization, it provides the visualization-3D response endpoint and publishes updates to show the current pen pose and recent intent previews (\autoref{sec:ch3_visualization_interface}).
 
-\minihead{Activation and configuration.}
-\xxx{State whether this module has activation parameters (e.g., marker IDs/layout, filter gains) or uses fixed compiled configuration; describe how configuration is provided (hardcoded vs file) (verify).}
+\minihead{Configuration.}
+The module is not activable; it starts processing immediately once loaded.
+Configuration is compiled into the module (\path{pen_defaults.h}): the BLE service and characteristic UUIDs, the ArUco dictionary (\type{DICT\_4X4\_100}), the expected marker IDs
+(\type{\{17,38,47,56,58\}}) and their poses relative to a pen reference frame, the marker size (36\,mm), and a fixed transform from the cube reference frame to the pen tip
+($T_{\text{pen}\leftarrow\text{tip}}$).
+No per-pen calibration is currently performed; the tracking assumes the CAD-defined marker-to-pen geometry
+(\autoref{subsec:ch4_hw_pen}, \autoref{appendix:pen_artifacts}).
 
 \minihead{Marker configuration and pen geometry.}
-\xxx{Describe: 5-marker cube (4 sides + top); larger marker size; why this improves detectability at working distance.}
-\xxx{Reference the physical pen artifact and marker cube context in \autoref{subsec:ch4_hw_pen} and the detailed CAD/firmware notes in \autoref{appendix:pen_artifacts} rather than re-describing assembly here.}
-\xxx{State: the module uses a fixed CAD-defined marker-to-pen reference transform; no per-pen calibration currently performed (verify).}
+The physical pen design and marker layout are described in \autoref{subsec:ch4_hw_pen} (see also \autoref{appendix:pen_artifacts}).
+At the software level, the module assumes a fixed marker configuration: five known marker IDs with known poses in the pen reference frame, and a fixed transform from the pen frame to the tip ($T_{\text{pen}\leftarrow\text{tip}}$), all compiled into \path{pen_defaults.h}.
 
 \minihead{Pose estimation pipeline.}
-\xxx{Detection: ArUco detection per camera.}
-\xxx{Initial pose candidates: solvePnP per visible marker face; produce multiple candidates across cameras (verify exact approach).}
-\xxx{Candidate selection: reprojection check across all visible markers/cameras; choose best-scoring candidate (verify scoring).}
-\xxx{Refinement: joint optimization across all observed markers in all cameras (Ceres); objective based on reprojection residuals; weights (distance normalization + marker quality) (verify).}
-\xxx{Filtering: one-euro filter applied to pose (including orientation) to reduce jitter (verify).}
+For each incoming calibrated frame, the module:
+
+\begin{enumerate}[label=(\roman*)]
+    \item unpacks camera intrinsics and per-camera poses from \type{CalibratedCameraSet} and converts image blobs to grayscale views;
+    \item runs ArUco detection independently per camera with subpixel corner refinement;
+    \item generates pose candidates using \type{solvePnP} (\type{IPPE\_SQUARE}) for each detected marker in each camera;
+    \item scores candidates by reprojection consistency across all currently visible markers and cameras (inlier counting with a normalized reprojection threshold, plus a simple marker-shape quality score; the reprojection error is normalized by average side length in pixels to achieve scale invariance across viewing distances);
+    \item optionally refines the initial estimate by a simple multi-camera depth/scale correction when the same marker is observed in multiple cameras; and finally
+    \item runs a small (max 15 steps) joint nonlinear refinement in Ceres, optimizing the pen pose to minimize reprojection residuals over all observed marker corners across all cameras.
+\end{enumerate}
+
+The final pose is smoothed by a pose-specific one-euro filter. When tracking is temporarily lost, the filter holds the last output pose for a short period; after longer loss it resets its internal state and re-initializes on the next valid measurement.
 
 \minihead{Intent extraction and events.}
-\xxx{Describe: raw stream includes tip pose + button states.}
-\xxx{Describe: intent messages emitted on user actions: POSE on primary click; TRAJECTORY on press-draw-release; SPECIAL\_ACTION on secondary button.}
-\xxx{Do not claim exact thresholds/timings unless pulled from code; mark as (verify from code).}
-\xxx{If trajectory capture policy matters (sampling rate/end condition/blob storage), describe (verify).}
+The raw stream contains the current pen tip pose and the instantaneous primary/secondary button state.
+Intent events are derived from button transitions:
+a short primary press emits \type{POSE} (single pose),
+a longer press with motion emits \type{TRAJECTORY} (a sequence of sampled poses serialized into a blob),
+and a secondary press emits \type{SPECIAL\_ACTION}.
+
+During interaction, the module visualizes the inferred intent either as
+(i) an axes arrow at the selected pose (RGB axes for $x/y/z$) or
+(ii) a preview of the captured trajectory.
+Both visualizations are shown only temporarily and are automatically removed after a fixed timeout.
 
 \minihead{Pen communication.}
-\xxx{Describe: BLE communication via SimpleBLE; Windows BLE throughput limitations; IMU currently ignored.}
-\xxx{Mention: firmware is derived from D-Point; license attribution and the concrete firmware artifact are documented in \autoref{appendix:pen_artifacts}.}
+Button state is received over BLE using SimpleBLE. The pen firmware transmits IMU samples as well, but the tracking implementation uses only the button flags (vision-only pose estimation).
+On Linux, the BLE discovery/connection sequence would need minor adaptation, as the current implementation relies on Windows-style service exposure during scanning.
 
 \minihead{Visualization outputs.}
-\xxx{Describe what the module publishes to the 3D visualization interface (current pen pose, recent trajectory preview, etc.), and what is transient vs persistent. (Verify.)}
+The module registers simple geometric resources (a pen proxy model and axes arrow) and updates them each frame to show the pen body pose and the pen tip pose.
 
 \minihead{Failure modes and known limitations.}
-\xxx{Sensitivity to lighting and partial marker corner jitter; dependence on marker visibility; no IMU fusion; no per-pen calibration.}
-\xxx{Describe what happens on lost tracking (last value hold vs invalid state) and how that is encoded (verify).}
+Tracking quality depends on marker visibility and stable corner detection (lighting, motion blur, partial occlusions).
+When no valid pose can be estimated, the pen visualization is hidden until tracking resumes.
+No IMU fusion is implemented in this module.
+
+No per-device geometric calibration is performed; instead, the module assumes the CAD-defined marker-to-pen geometry. In the prototype, the marker plates are mechanically constrained (screw-mounted), which reduces assembly variability compared to adhesive mounting.
 
 \minihead{Code pointers.}
-\xxx{\path{diploma-thesis-code/default_modules/pen_tracking_multicam_module/}.}
+\path{diploma-thesis-code/default_modules/pen_tracking_multicam_module/}.
 
 % ----------------------------
 \subsection{Scene detection module (fiducial boxes)}
