@@ -114,11 +114,6 @@ These are representative development machines rather than hard requirements; the
 This section describes the concrete module implementations that instantiate the runtime configuration of \autoref{fig:runtime_full}.
 For each module, we summarize its role in the graph, the key interfaces it implements (stream vs.\ request/response, wrapper protocols), and the main implementation choices.
 
-\xxx{Conventions used below:}
-\xxx{(i) Use module \emph{display names} consistently with \autoref{fig:runtime_full}.}
-\xxx{(ii) When useful, also show the code-level \type{module\_type\_identifier} in parentheses, e.g., \texttt{(...)} (verify identifiers from ModuleInfo).}
-\xxx{(iii) Each module subsection starts with a tiny “Role in graph” paragraph referencing \autoref{fig:runtime_full}.}
-
 % ==========================================================
 \section{How to read the module subsections}
 \label{sec:ch4_how_to_read}
@@ -143,52 +138,66 @@ They correspond to the sensing stages of \autoref{fig:intro__img_2__usecase_stag
 \label{subsec:ch4_mod_stereo_camera}
 
 \minihead{Role in graph.}
-\xxx{State: produces stereo image stream consumed by pose injector and UI preview (verify exact consumers from \autoref{fig:runtime_full}).}
+The \emph{Stereo Camera Input Module (Windows)} (\type{stereo\_camera\_module\_windows}) is the source of the stereo image stream in \autoref{fig:runtime_full}.
+Its output is consumed by the \emph{Camera Pose Injector} (pose augmentation) and by the UI for camera preview.
 
 \minihead{Interface-level I/O.}
-\xxx{State: publishes \type{camera\_messages} (\autoref{sec:ch3_supporting_messages}); mention blob packing / stereo pair representation if applicable (verify).}
+The module publishes \type{camera\_messages} (\autoref{sec:ch3_supporting_messages}).
+Each published message contains a \type{CameraMessage} header and a shared blob that packs the stereo pair (two image descriptors + pixel data) in one allocation.
 
 \minihead{Activation and configuration.}
-\xxx{Describe: activation behavior: parameters required to select the camera; what happens pre-activation vs activated. (Verify from code + activation wrapper behavior.)}
-\xxx{List key parameters exposed to activation UI (device selection, resolution/FPS, pixel format, etc.) (verify from parameter schema).}
+The module is wrapped by the activation wrapper (\autoref{subsec:ch3_activation_interface}): while deactivated, it does not publish camera frames.
+Activation exposes a small set of operator-facing parameters:
+\begin{itemize}
+    \item stereo resolution (total width/height, side-by-side layout),
+    \item target framerate with a tolerance window (to match device-reported modes),
+    \item camera index among devices that satisfy the requested mode,
+    \item exposure mode (auto vs.\ manual) and a manual exposure value.
+\end{itemize}
+These parameters are also persisted in the module save state, so a loaded setup can restore the configured capture settings.
 
 \minihead{Implementation.}
-\xxx{Describe: Windows Media Foundation capture pipeline; device enumeration; selected format; MJPEG decode path.}
-\xxx{Describe: synchronization behavior (on-board sync) at a high level; do not claim perfect sync unless verified.}
-\xxx{Queueing/latency note if relevant (verify).}
+On activation, the module enumerates available capture devices and selects a matching MJPEG-capable video mode based on the requested resolution and framerate tolerance.
+Captured frames are converted to an uncompressed 4-channel format and split into left/right images by treating the input as a side-by-side stereo frame.
+Frames are published continuously from a dedicated capture thread; each message allocates its payload from a fixed-size buffer allocator to avoid per-frame heap allocations.
 
 \minihead{Failure modes and known limitations.}
-\xxx{Windows-only; compression/latency tradeoffs; device missing/wrong format/decode failure; describe how failure is surfaced (activation fail vs runtime errors).}
+This is a Windows-only module (it uses Windows capture APIs and is not built on non-Windows platforms).
+Activation can fail if no device/mode matches the requested parameters or if manual exposure cannot be applied; such failures are surfaced as activation failure (with diagnostic logging).
 
 \minihead{Code pointers.}
-\xxx{\path{diploma-thesis-code/default_modules/stereo_camera_module_windows/}.}
+\path{diploma-thesis-code/default_modules/stereo_camera_module_windows/}.
 
 % ----------------------------
 \subsection{Camera pose injector module}
 \label{subsec:ch4_mod_pose_injector}
 
 \minihead{Role in graph.}
-\xxx{Consumes: stereo images + robot status; produces: camera frames augmented with flange pose.}
+The \emph{Camera Pose Injector} (\type{camera\_pose\_injector\_module}) joins the camera stream with the robot status stream in \autoref{fig:runtime_full}.
+It consumes stereo camera images and robot status, and publishes camera frames augmented with the latest robot flange pose for calibration.
 
 \minihead{Interface-level I/O.}
-\xxx{Consumes: stereo images + robot status stream; publishes: camera+flange pose message (\autoref{sec:ch3_supporting_messages}) (verify exact message types).}
+The module consumes \type{camera\_messages} (\autoref{sec:ch3_supporting_messages}) and the robot interface status stream (\autoref{sec:ch3_robot_interface}).
+It publishes \type{camera\_pose\_helper} messages (\type{CameraWithFlangePose}) as described in \autoref{sec:ch3_supporting_messages}.
 
 \minihead{Activation and configuration.}
-\xxx{State whether this module has activation parameters or is configuration-free; describe what “activation” changes (verify).}
+The module is configuration-free and does not use the activation wrapper.
+It operates continuously, but it drops camera frames until at least one robot status message has been received (so that a flange pose is available).
 
 \minihead{Implementation.}
-\xxx{Describe: time association strategy between camera frames and latest robot pose (latest sample vs interpolated; verify).}
-\xxx{Describe: drop policy (e.g., drops frames until a pose is available) and why that keeps calibration inputs self-contained (matches Chapter~3).}
-
-\minihead{Design rationale.}
-\xxx{Explain succinctly: decouples calibration module from having to query robot directly; keeps message-level inputs self-contained.}
-\xxx{Note: if this is no longer strictly necessary after activation-wrapper CUSTOM handling changes, say so as a design tradeoff (verify from code before claiming).}
+The module maintains a cached \emph{latest} flange pose extracted from incoming robot status messages (robot control feature).
+For each incoming camera frame, it attaches the most recent cached pose and republishes the message with the original image blob.
+Queueing is tuned for real-time behavior: camera input is handled as ``latest-only'' (older frames are replaced), while robot status messages are allowed to queue briefly and may drop the oldest entries if overloaded.
 
 \minihead{Failure modes and known limitations.}
-\xxx{Pose stream missing/stale; timebase mismatch; behavior when robot connection drops (verify and describe).}
+If robot status is missing or does not carry the required robot-control payload, camera frames are dropped and no augmented stream is produced.
+Time association is implemented as ``latest sample'': each incoming camera frame is augmented with the most recently received flange pose from the robot status stream (no buffering, timestamp alignment, or interpolation).
+
+As a consequence, the camera frames and poses are not synchronized in the general case.
+This is sufficient for the workflow used in this thesis, where frames are collected only while the robot is stationary, so the flange pose is effectively constant over the capture window.
 
 \minihead{Code pointers.}
-\xxx{\path{diploma-thesis-code/default_modules/camera_pose_injector_module/}.}
+\path{diploma-thesis-code/default_modules/camera_pose_injector_module/}.
 
 % ----------------------------
 \subsection{Robot-mounted stereo camera calibration module}
