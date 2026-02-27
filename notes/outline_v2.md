@@ -635,6 +635,7 @@ SEE FUTURE WORK FOR MORE RESOURCES
 - we should do much more complicated usecases, these truly are demos - see the module implementation
 - run true user study - as advisor said; but this is future work as he said
 - mention maybe smoothrobotics etc. and how we are faster. Also maybe relate to the related work
+- we currently custom load which hides the visualziation (popup "loading custom value" partially covers the scene and disables all interaction except cancel). 
 
 ---
 
@@ -698,6 +699,7 @@ Future work
 - we should do much more complicated usecases, these truly are demos - see the module implementation
 - run true user study - as advisor said; but this is future work as he said
 - mention maybe smoothrobotics etc. and how we are faster. Also maybe relate to the related work
+- we currently custom load which hides the visualziation (popup "loading custom value" partially covers the scene and disables all interaction except cancel). 
 
 ## Additional notes for both discussion/limitation/future work
 
