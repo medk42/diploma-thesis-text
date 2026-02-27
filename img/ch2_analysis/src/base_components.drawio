@@ -1,10 +1,10 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0" version="29.3.8">
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.6 Chrome/140.0.7339.249 Electron/38.8.0 Safari/537.36" version="29.3.6">
   <diagram name="Page-1" id="_8amfXtFaIM2h6hYIl6k">
-    <mxGraphModel dx="473" dy="300" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="1090" dy="1185" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="vtX3d3i48vMxLM3FpMFU-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;" value="6D input" vertex="1">
+        <mxCell id="vtX3d3i48vMxLM3FpMFU-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;" value="6DoF input" vertex="1">
           <mxGeometry height="40" width="80" x="110" y="300" as="geometry" />
         </mxCell>
         <mxCell id="vtX3d3i48vMxLM3FpMFU-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;" value="Scene" vertex="1">

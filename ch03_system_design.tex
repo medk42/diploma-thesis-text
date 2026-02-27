@@ -32,7 +32,7 @@ The system is organized into four conceptual parts, shown in \autoref{fig:ch3_fo
     On top of the generic module communication, we define standard interfaces for our application domain (e.g., robot control, scene data, camera image) and for UI interaction (e.g., activation, use case execution, 3D visualization). These interfaces define \emph{what} messages mean and what behavior other modules can rely on, independent of a specific module's implementation of the required functionality.
 
     \item \textbf{Modules.}
-    Finally, the concrete functionality is implemented as modules: camera acquisition, calibration, 6D pen input, scene detection, use cases, and robot execution. UI itself is also implemented as a module, since it is just another component that interacts with others through the defined interfaces.
+    Finally, the concrete functionality is implemented as modules: camera acquisition, calibration, 6DoF pen input, scene detection, use cases, and robot execution. UI itself is also implemented as a module, since it is just another component that interacts with others through the defined interfaces.
     These modules use the standard interfaces and are hosted by the runtime core.
     As long as the interfaces are respected, modules can be added, removed, or replaced with minimal impact on the rest of the system.
 \end{enumerate}
@@ -1118,7 +1118,7 @@ If you need non-blocking control (e.g., to perform cleanup before exiting), \typ
 
 \minihead{Purpose.}
 \reqref{req:ui_use_case_selection} implies that the UI should visualize the programmed tasks, and \autoref{subsec:ch2_analysis_ui} suggests doing so using a simple shared 3D scene view (e.g., pose markers and trajectories in the workspace).
-Instead of embedding module-specific rendering rules in the UI (e.g., special-casing a particular robot model or a concrete 6D input device), the 3D visualization interface lets \emph{producer modules} describe what should appear in the shared scene. This keeps the 3D visualization extensible and allows modules to be replaced without updating UI code: a new tracking module simply publishes its own visualization primitives.
+Instead of embedding module-specific rendering rules in the UI (e.g., special-casing a particular robot model or a concrete 6DoF input device), the 3D visualization interface lets \emph{producer modules} describe what should appear in the shared scene. This keeps the 3D visualization extensible and allows modules to be replaced without updating UI code: a new tracking module simply publishes its own visualization primitives.
 
 All files mentioned in this section are located in \path{backend/module_helpers/visualization_3d_interface/}.
 
@@ -1309,9 +1309,9 @@ All files mentioned in this section are located in \path{backend/module_helpers/
 The contract assumes a \emph{static registry} of detectable object types and a \emph{dynamic scene} of detected instances:
 \begin{itemize}
     \item \textbf{Registry objects:} a list of \type{RegisteredBox} items (stable object \type{id} + box dimensions).
-    \item \textbf{Detected objects:} a list of \type{DetectedBox} items (object \type{id} + current 6D \type{Pose}).
+    \item \textbf{Detected objects:} a list of \type{DetectedBox} items (object \type{id} + current 6DoF \type{Pose}).
 \end{itemize}
-In this thesis, objects are intentionally represented only as simple boxes (width/height/depth), and detection returns their full 6D pose (position + orientation).
+In this thesis, objects are intentionally represented only as simple boxes (width/height/depth), and detection returns their full 6DoF pose (position + orientation).
 
 \minihead{Communication modes and channels.}
 The interface is a simple request/response pair (definitions in \path{message_types.h}):
@@ -1646,7 +1646,7 @@ It captures (i) the sensing pipeline (stereo camera, calibration, pen tracking, 
 \minihead{Mapping to analysis components and requirements.}
 The concrete configuration in \autoref{fig:runtime_full} directly instantiates the base components of \autoref{fig:ch2_analysis__base_components}:
 \begin{itemize}
-    \item \textbf{6D input interface} (\reqref{req:6D_input_interface}): realized by \type{Pen Tracking (Multi-Cam)}, which consumes the calibrated camera set and produces pen messages
+    \item \textbf{6DoF input interface} (\reqref{req:6DoF_input_interface}): realized by \type{Pen Tracking (Multi-Cam)}, which consumes the calibrated camera set and produces pen messages
     (\autoref{sec:ch3_supporting_messages}). In the authoring workflow, discrete \type{PenIntent} events encode user-defined poses/trajectories used as \type{CUSTOM} inputs.
 
     \item \textbf{Scene detection} (\reqref{req:scene_detection_logic}): realized by \type{Scene Detection (Stereo Camera)}, which consumes the calibrated camera set and exposes the scene-detection request/response contract
