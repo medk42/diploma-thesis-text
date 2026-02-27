@@ -146,13 +146,13 @@ Each published message contains a \type{CameraMessage} header and a shared blob 
 The module is activable via the activation wrapper (\autoref{subsec:ch3_activation_interface}); while deactivated, it does not publish camera frames.
 The activation parameters are:
 \begin{itemize}[nosep]
-    \item \texttt{Resolution Width [px]} (default 2560): total width of the captured frame; in the stereo side-by-side mode each eye uses width/2,
-    \item \texttt{Resolution Height [px]} (default 800): height of the captured frame,
-    \item \texttt{Framerate [FPS]} (default 60): target capture framerate,
-    \item \texttt{Framerate Tolerance [FPS]} (default 3): accepted deviation from the target framerate when matching device-reported modes,
-    \item \texttt{Camera Index} (default 0): index into the filtered list of devices/modes that match resolution and framerate constraints,
-    \item \texttt{Use Auto Exposure} (default true): enables camera auto exposure if supported,
-    \item \texttt{Manual Exposure Value} (default \texttt{-4}): used only when auto exposure is disabled; activation fails if the value is outside the device-supported range.
+    \item \type{Resolution Width [px]} (default 2560): total width of the captured frame; in the stereo side-by-side mode each eye uses width/2,
+    \item \type{Resolution Height [px]} (default 800): height of the captured frame,
+    \item \type{Framerate [FPS]} (default 60): target capture framerate,
+    \item \type{Framerate Tolerance [FPS]} (default 3): accepted deviation from the target framerate when matching device-reported modes,
+    \item \type{Camera Index} (default 0): index into the filtered list of devices/modes that match resolution and framerate constraints,
+    \item \type{Use Auto Exposure} (default true): enables camera auto exposure if supported,
+    \item \type{Manual Exposure Value} (default -4): used only when auto exposure is disabled; activation fails if the value is outside the device-supported range.
 \end{itemize}
 The selected parameters are persisted in the module save state so that a loaded graph can restore the capture settings.
 
@@ -214,7 +214,7 @@ The input is a camera message together with a flange pose (see \autoref{sec:ch3_
 \minihead{Activation and configuration.}
 Calibration is executed during activation via the activation wrapper.
 During activation, the calibration progress is reported as an integer progress bar.
-On success, the calibrated parameters are stored in the module instance and can be serialized as part of the graph state (the module implements \texttt{save()/load()}).
+On success, the calibrated parameters are stored in the module instance and can be serialized as part of the graph state (the module implements \type{save()/load()}).
 
 \minihead{Calibration data requirements.}
 The activation input is a list of stereo image pairs with an associated robot flange pose, all observing the same \emph{static} Charuco calibration target.
@@ -236,7 +236,7 @@ The calibration estimates:
 This corresponds to the robot-mounted sensing configuration motivated in \autoref{subsec:ch2_analysis_camera_tradeoffs}. The Charuco board print and the exact board parameters used in the implementation are provided in \autoref{appendix:charuco}.
 
 \minihead{Implementation approach.}
-For each captured stereo pair, the module detects the Charuco board, calibrates intrinsics independently for the left and right camera (\texttt{calibrateCameraCharuco}), estimates stereo extrinsics with fixed intrinsics (\texttt{stereoCalibrate}), and computes the flange--camera transform using OpenCV hand--eye calibration (\texttt{calibrateHandEye}, Tsai method). Finally, a small nonlinear refinement step implemented using Ceres jointly refines the stereo and hand--eye parameters by minimizing reprojection residuals (Huber loss).
+For each captured stereo pair, the module detects the Charuco board, calibrates intrinsics independently for the left and right camera (\type{calibrateCameraCharuco}), estimates stereo extrinsics with fixed intrinsics (\type{stereoCalibrate}), and computes the flange--camera transform using OpenCV hand--eye calibration (\type{calibrateHandEye}, Tsai method). Finally, a small nonlinear refinement step implemented using Ceres jointly refines the stereo and hand--eye parameters by minimizing reprojection residuals (Huber loss).
 \minihead{Output and downstream usage.}
 After a successful activation, every incoming camera+flange message is converted into a calibrated message by combining the current flange pose with the calibrated flange--camera transform, yielding the current world poses of the left and right camera. The image blobs are forwarded unchanged; downstream modules therefore consume the same image data, now accompanied by consistent world poses and intrinsics.
 
@@ -402,18 +402,18 @@ Finished messages report completion of a previously started action (success/fail
 The module is activable (\autoref{subsec:ch3_activation_interface}). On activation it reads parameters, attempts to connect to the CBun, and starts a polling thread that forwards asynchronous status/finished messages.
 The activation parameters are:
 \begin{itemize}[nosep]
-    \item \texttt{Host} (default \texttt{127.0.0.1}) and \texttt{Port} (default \texttt{15050}) of the CBun TCP server,
-    \item \texttt{Request Timeout (ms)} (default 200): timeout for waiting for the response after forwarding a request to CBun,
-    \item \texttt{Poll Interval (ms)} (default 10): polling period for receiving CBun-pushed status updates and finished notifications,
-    \item \texttt{Reconnect Wait (ms)} (default 500) between reconnect attempts after disconnect, and
-    \item \texttt{Robot Model} (A810/A1018/A1205/A1410/A1805) used only for visualization.
+    \item \type{Host} (default \type{127.0.0.1}) and \type{Port} (default \type{15050}) of the CBun TCP server,
+    \item \type{Request Timeout (ms)} (default 200): timeout for waiting for the response after forwarding a request to CBun,
+    \item \type{Poll Interval (ms)} (default 10): polling period for receiving CBun-pushed status updates and finished notifications,
+    \item \type{Reconnect Wait (ms)} (default 500) between reconnect attempts after disconnect, and
+    \item \type{Robot Model} (A810/A1018/A1205/A1410/A1805) used only for visualization.
 \end{itemize}
 
 \minihead{Transport and protocol.}
 The module uses a single TCP connection to the CBun for all communication.
-For each incoming \type{robot\_interface} request, it sends one RPC message to the CBun and waits for the corresponding response (up to \texttt{Request Timeout (ms)}).
-Robot status updates and action-finished notifications are sent by the CBun without a matching request; the module receives them in its polling loop (period \texttt{Poll Interval (ms)}) and forwards them as publish streams.
-If the TCP connection is lost, the module attempts to reconnect repeatedly with delay \texttt{Reconnect Wait (ms)} between attempts.
+For each incoming \type{robot\_interface} request, it sends one RPC message to the CBun and waits for the corresponding response (up to \type{Request Timeout (ms)}).
+Robot status updates and action-finished notifications are sent by the CBun without a matching request; the module receives them in its polling loop (period \type{Poll Interval (ms)}) and forwards them as publish streams.
+If the TCP connection is lost, the module attempts to reconnect repeatedly with delay \type{Reconnect Wait (ms)} between attempts.
 
 \minihead{Implemented actions (robot interface coverage).}
 The module implements the \type{RobotControl} feature of the shared \type{robot\_interface}.
@@ -423,11 +423,11 @@ Start-motion requests typically return \type{SUCCESS\_IN\_PROGRESS} together wit
 Completion is then reported through the finished stream using the same \type{action\_id}; cancellation targets the currently running motion identified by this \type{action\_id}.
 
 \minihead{Visualization outputs.}
-For operator feedback, the module mirrors robot state into the shared 3D visualization scene (\autoref{sec:ch3_visualization_interface}): a simplified robot model (selected by \texttt{Robot Model}), RGB axes ($x/y/z$) at the base, flange (TFC), and tool (TCP) poses, and a TCP trajectory polyline showing a fixed-length history of recent TCP positions.
+For operator feedback, the module mirrors robot state into the shared 3D visualization scene (\autoref{sec:ch3_visualization_interface}): a simplified robot model (selected by \type{Robot Model}), RGB axes ($x/y/z$) at the base, flange (TFC), and tool (TCP) poses, and a TCP trajectory polyline showing a fixed-length history of recent TCP positions.
 
 \minihead{Failure modes and known limitations.}
-If the module is not connected to the CBun (wrong host/port, CBun not running, or connection drop), incoming \type{robot\_interface} requests fail immediately (the request returns \texttt{success=false} and no robot command is executed).
-If the CBun is connected but does not return a response within the configured \texttt{Request Timeout (ms)}, the request fails in the same way.
+If the module is not connected to the CBun (wrong host/port, CBun not running, or connection drop), incoming \type{robot\_interface} requests fail immediately (the request returns \type{success=false} and no robot command is executed).
+If the CBun is connected but does not return a response within the configured \type{Request Timeout (ms)}, the request fails in the same way.
 While disconnected, status and finished updates are not forwarded to the runtime.
 
 Tool/gripper control is intentionally not standardized in this thesis (\autoref{subsec:ch2_analysis_robot_interface}); the current use case implementations simulate tool actions (e.g., ``open/close gripper'') by fixed delays rather than a dedicated tool-control interface.
@@ -439,45 +439,100 @@ Tool/gripper control is intentionally not standardized in this thesis (\autoref{
 \section{Task-oriented use case modules}
 \label{sec:ch4_usecases}
 
-This section describes the two primary use cases evaluated in this thesis (pick-and-place and seam welding), implemented as plugins that consume shared sensing/authoring inputs and execute via the common robot interface.
-Their external behavior is defined by the use case wrapper contract in \autoref{sec:ch3_usecase_wrapper}.
+These modules implement the \emph{interpretation} stage of \autoref{fig:intro__img_2__usecase_stages}:
+they combine authored spatial intent (poses/trajectories) with a sensed scene snapshot to construct an executable task-specific procedure.
+Each use case is implemented as a plugin module wrapped by the shared use case wrapper contract (\autoref{sec:ch3_usecase_wrapper}), which standardizes command creation (command JSON + optional preview payload) and execution control (start/stop and status).
 
-\xxx{Intro note: keep focus on (i) required inputs, (ii) command JSON content, (iii) execution procedure, (iv) preview visualization, (v) limitations. Avoid UI-level discussion.}
+The two primary use cases evaluated in this thesis are \emph{pick-and-place} and \emph{seam welding}. Both reuse the same sensing/authoring infrastructure (pen intents, scene detection) and execute through the common \type{robot\_interface} (\autoref{sec:ch3_robot_interface}), instantiating the extensibility goal of \goalref{goal:2} and the demonstration goal of \goalref{goal:3}.
 
 % ----------------------------
 \subsection{Pick-and-place use case}
 \label{subsec:ch4_usecase_pick_place}
 
 \minihead{Role in graph.}
-\xxx{Consumes: pen intent + scene detection + robot interface; provides: use case wrapper requests and optional preview visualization.}
+\emph{Usecase Pick and Place} (\type{usecase\_pick\_and\_place}) consumes pen intent events, scene detection responses, and the shared \type{robot\_interface} in \autoref{fig:runtime_full}. It implements task logic for selecting a scene object near an authored pick pose, and then executes a fixed pick--lift--transfer--place motion sequence.
 
 \minihead{Interface-level I/O.}
-\xxx{Consumes: pen intent events and scene detection responses; issues robot interface requests; exposes the use case wrapper protocol (\autoref{sec:ch3_usecase_wrapper}) (verify exact message types).}
+The module is wrapped by the use case wrapper (\autoref{sec:ch3_usecase_wrapper}) and exposes the wrapper request/response endpoint.
+It consumes:
+(i) the pen intent subscribe stream (only \type{POSE} intents are used),
+(ii) the scene detection request/response endpoint (\type{READ\_SCENE}, see \autoref{sec:ch3_scene_detection_interface}), and
+(iii) the robot interface request channel plus status/finished subscribe streams (\autoref{sec:ch3_robot_interface}).
+It produces use case wrapper responses, including a command JSON payload and an optional preview visualization payload.
 
-\minihead{Activation and configuration.}
-\xxx{State whether activation configures default parameters or loads schema/config files; describe where defaults come from (verify).}
+\minihead{Configuration.}
+The module has no activation step. All operator-facing settings are provided through wrapper parameters when creating a command:
+three \emph{auto} parameters (\emph{Scene Request}, \emph{Pick Position}, \emph{Place Position}) and four \emph{advanced} numeric parameters (speed, acceleration, pick detection distance, lift distance).
 
 \minihead{Authoring inputs and parameters.}
-\xxx{Describe: required CUSTOM inputs (pick pose, place pose) and how they are acquired.}
-\xxx{Describe: non-spatial parameters (speed/accel/lift distance/etc.) (verify schema).}
-\xxx{Reference the scene object model/registry context in \autoref{subsec:ch4_hw_scene} and \autoref{appendix:scene_registry} as the concrete implementation boundary.}
+\emph{Pick Position} and \emph{Place Position} are authored as pen \type{POSE} intents (a 6D pose in the world frame).
+\emph{Scene Request} triggers one \type{READ\_SCENE} call and supplies the detected boxes to command creation.
+Advanced parameters are:
+\begin{itemize}[nosep]
+    \item \type{Movement Speed [mm/s]} and \type{Movement Acceleration [mm/s\textsuperscript{2}]},
+    \item \type{Pick Detection Distance [mm]}: length of the search segment cast from the pick pose along its local $+z$ axis,
+    \item \type{Lift Distance [mm]}.
+\end{itemize}
+The scene model is the fiducial-tagged box registry from \autoref{subsec:ch4_hw_scene} and \autoref{appendix:scene_registry}; box dimensions used during pick detection come from the registry snapshot.
 
-\minihead{Command creation (CREATE\_COMMAND).}
-\xxx{Describe: how pick is associated with an object (distance-based match in front of pen, etc.) (verify algorithm).}
-\xxx{Describe: what is stored into command JSON: object identifier + relative transform + parameters + place pose (verify).}
-\xxx{State clearly: preview visualization is derived from the created command and may not reflect dynamic scene changes at runtime (verify).}
+\minihead{Command creation.}
+Command creation uses the scene snapshot and the authored pick pose to select a target object:
+it casts a segment from the pick pose origin in the world frame along the pick pose local $+z$ axis with length \type{Pick Detection Distance}.
+For each detected box whose ID exists in the loaded registry, it tests whether the segment intersects the oriented box volume (using registry box dimensions and the detected box pose).
+If multiple boxes intersect, it selects the one with the smallest distance from the segment start (first hit).
 
-\minihead{Execution (PROGRAM\_START\_*).}
-\xxx{Describe sequence: compute pick/place/above poses; issue robot motions; simulate gripper action (sleep) (verify).}
-\xxx{Describe: how the scene is refreshed at runtime (re-run scene detection and resolve object by ID) (verify).}
-\xxx{Stop/pause semantics: be honest; if stop only cancels the current action but the sequence continues, note as limitation and future fix.}
+The created command stores:
+\begin{itemize}[nosep]
+    \item \type{box\_id}: the selected box identifier (as reported by scene detection),
+    \item \type{T\_box\_pick}: the rigid transform $T_{\text{box}\leftarrow\text{pick}}$ (pick expressed in the box frame; stored as quaternion+translation),
+    \item \type{place\_pose}: the authored place pose in the world frame (quaternion+translation),
+    \item \type{movement\_speed\_m\_s}, \type{movement\_acceleration\_m\_s2}, \type{lift\_distance\_m}.
+\end{itemize}
+The command is therefore tied to an object ID and a relative pick transform, not to an absolute world pick pose.
+
+\minihead{Preview visualization.}
+Along with the command, the module returns a preview payload consisting of:
+(i) two 6D poses (the authored pick and place poses),
+(ii) one 3D point (the computed first intersection point on the selected box), and
+(iii) one 3D polyline with four vertices representing the nominal lift and transfer path:
+pick $\rightarrow$ above-pick $\rightarrow$ above-place $\rightarrow$ place.
+The preview is derived from the authored inputs and chosen lift distance; it does not incorporate changes in the scene after the command is created.
+
+\minihead{Execution.}
+At the start of execution, the module performs a fresh \type{READ\_SCENE} request and searches the response for a box with the stored \type{box\_id}.
+If multiple boxes with the same \type{box\_id} are present in the scene response, it uses the first matching instance.
+
+If a match is found, it reconstructs the world pick pose as:
+$T_{\text{world}\leftarrow\text{pick}} = T_{\text{world}\leftarrow\text{box}} \, T_{\text{box}\leftarrow\text{pick}}$,
+then converts it to a robot-control pose.
+
+The executed motion sequence is:
+\begin{enumerate}[nosep,label=(\arabic*)]
+    \item move linearly to \emph{above pick} (pick with world $z$ increased by lift),
+    \item move linearly to \emph{pick},
+    \item simulate ``close gripper'' by a fixed 1\,s delay,
+    \item move linearly back to \emph{above pick},
+    \item move linearly to \emph{above place} (place with world $z$ increased by lift),
+    \item move linearly to \emph{place},
+    \item simulate ``open gripper'' by a fixed 1\,s delay,
+    \item move linearly back to \emph{above place}.
+\end{enumerate}
+All robot moves are executed as linear move requests via \type{RobotWrapper}, using the movement parameters stored in the created use case command JSON (\type{movement\_speed\_m\_s} and \type{movement\_acceleration\_m\_s2}).
+
+\minihead{Stop semantics.}
+Pause is not supported in this use case module; stop is supported.
+During each robot move, the module monitors stop requests while waiting for the active robot action to finish.
+If stop is requested while a move is in progress, it sends a cancel request for that action, waits until the robot reports the action as no longer active, and then terminates the program by processing the stop request at the use case wrapper level.
+Stop is also checked at explicit checkpoints: once before the first motion is started, and after each 1\,s gripper-delay step.
 
 \minihead{Failure modes and known limitations.}
-\xxx{No real gripper API; object identity ambiguity if multiple objects share the same marker ID; stop/pause semantics; robustness to pose noise.}
-\xxx{No collision checking; assumes clear workspace (if true; verify).}
+If the fresh scene snapshot at execution time does not contain the expected \type{box\_id}, execution fails before motion starts.
+Tool control is not implemented; gripper actions are simulated by fixed delays.
+No collision checking is performed; the motion sequence assumes that the lifted transfer path is free of obstacles.
+Running the command in simulation mode is rejected.
 
 \minihead{Code pointers.}
-\xxx{\path{diploma-thesis-code/default_modules/usecase_pick_and_place/}.}
+\path{diploma-thesis-code/default_modules/usecase_pick_and_place/}.
 
 % ----------------------------
 \subsection{Seam welding use case}
