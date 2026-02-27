@@ -1238,7 +1238,7 @@ Within \type{RobotFeature::ROBOT\_CONTROL}, the implemented messages cover:
 \begin{itemize}
     \item \textbf{Start requests:} joint, linear, arc, and trajectory motions (long-running tasks), plus a \emph{robot specs} query (limits, joint count and ranges; immediate response).
     \item \textbf{Update requests:} an update command for cancelling an in-progress motion (by \type{action\_id}).
-    \item \textbf{Asynchronous feedback:} periodic \type{STATUS} updates (current pose(s), joint positions, and a coarse execution state), and a \type{FINISHED} notification for long-running motions (identified by \type{action\_id}, with success/failure and an optional error detail on failure).
+    \item \textbf{Asynchronous feedback:} periodic \type{STATUS} updates (joint positions, base/tool/flange poses in the world frame, and a coarse execution state), and a \type{FINISHED} notification for long-running motions (identified by \type{action\_id}, with success/failure and an optional error detail on failure).
 \end{itemize}
 The exact payload layouts are implemented in \path{features/robot_control/messages.h} and are treated as the source of truth; this section stays at the protocol level.
 
@@ -1290,7 +1290,7 @@ A module that \emph{implements} robot control is expected to:
 \begin{itemize}
     \item \textbf{Feature gating:} unsupported capabilities are reported explicitly via \type{FEATURE\_NOT\_SUPPORTED}, allowing clients to degrade gracefully.
     \item \textbf{Asynchronous completion:} long-running operations are identified by \type{action\_id} and terminate via \type{FINISHED}; request/response does not stream progress.
-    \item \textbf{Best-effort feedback streams:} \type{STATUS} and \type{FINISHED} are asynchronous subscribe streams; if messages are dropped, a client may miss intermediate status samples, and missing \type{FINISHED} requires recovery logic (in this thesis, \type{RobotWrapper} includes practical heuristics for stale actions, but robust gap detection would require explicit sequence IDs as a future extension).
+    \item \textbf{Best-effort feedback streams:} \type{STATUS} and \type{FINISHED} are asynchronous subscribe streams; if messages are dropped, a client may miss intermediate status samples, and missing \type{FINISHED} requires recovery logic (in this thesis, \type{RobotWrapper} includes practical heuristics for stale actions (actions for which no \type{FINISHED} arrived within a timeout), but robust gap detection would require explicit sequence IDs as a future extension).
     \item \textbf{Tool control is out of scope:} the feature list reserves identifiers for tool-oriented capabilities, but this thesis implements and uses only \type{RobotFeature::ROBOT\_CONTROL}.
 \end{itemize}
 

@@ -392,6 +392,7 @@ This instantiates the robot communication requirement from \reqref{req:robot_com
 \minihead{Interface-level I/O.}
 The module provides the \type{robot\_interface} request/response endpoint and publishes the corresponding status and finished streams (\autoref{sec:ch3_robot_interface}).
 Status messages contain (i) the 7 joint positions and (ii) three poses in the world frame: robot base pose, flange pose (TFC; tool flange center), and tool pose (TCP; tool center point, i.e., the pose controlled by Cartesian motions).
+The world frame is the robot controller's reference frame and does not have to coincide with the robot base origin.
 Finished messages report completion of a previously started action (success/failure) together with its \type{action\_id}.
 
 \minihead{Activation and parameters.}
