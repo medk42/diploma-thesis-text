@@ -142,16 +142,19 @@ Its output is consumed by the \emph{Camera Pose Injector} (pose augmentation) an
 The module publishes \type{camera\_messages} (\autoref{sec:ch3_supporting_messages}).
 Each published message contains a \type{CameraMessage} header and a shared blob that packs the stereo pair (two image descriptors + pixel data) in one allocation.
 
-\minihead{Activation and configuration.}
-The module is wrapped by the activation wrapper (\autoref{subsec:ch3_activation_interface}): while deactivated, it does not publish camera frames.
-Activation exposes a small set of operator-facing parameters:
-\begin{itemize}
-    \item stereo resolution (total width/height, side-by-side layout),
-    \item target framerate with a tolerance window (to match device-reported modes),
-    \item camera index among devices that satisfy the requested mode,
-    \item exposure mode (auto vs.\ manual) and a manual exposure value.
+\minihead{Activation and parameters.}
+The module is activable via the activation wrapper (\autoref{subsec:ch3_activation_interface}); while deactivated, it does not publish camera frames.
+The activation parameters are:
+\begin{itemize}[nosep]
+    \item \texttt{Resolution Width [px]} (default 2560): total width of the captured frame; in the stereo side-by-side mode each eye uses width/2,
+    \item \texttt{Resolution Height [px]} (default 800): height of the captured frame,
+    \item \texttt{Framerate [FPS]} (default 60): target capture framerate,
+    \item \texttt{Framerate Tolerance [FPS]} (default 3): accepted deviation from the target framerate when matching device-reported modes,
+    \item \texttt{Camera Index} (default 0): index into the filtered list of devices/modes that match resolution and framerate constraints,
+    \item \texttt{Use Auto Exposure} (default true): enables camera auto exposure if supported,
+    \item \texttt{Manual Exposure Value} (default \texttt{-4}): used only when auto exposure is disabled; activation fails if the value is outside the device-supported range.
 \end{itemize}
-These parameters are also persisted in the module save state, so a loaded setup can restore the configured capture settings.
+The selected parameters are persisted in the module save state so that a loaded graph can restore the capture settings.
 
 \minihead{Implementation.}
 On activation, the module enumerates available capture devices and selects a matching MJPEG-capable video mode based on the requested resolution and framerate tolerance.
