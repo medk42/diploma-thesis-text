@@ -387,7 +387,7 @@ This instantiates the robot communication requirement from \reqref{req:robot_com
 \label{subsec:ch4_mod_robot}
 
 \minihead{Role in graph.}
-\emph{Kassow Robot Module} (\type{robot\_module\_kassow}) provides the shared \type{robot\_interface} used by the calibration module, the UI orchestrator, and the use case modules (\autoref{fig:runtime_full}). It executes robot-control requests and publishes robot status and action-finished notifications back into the runtime.
+\emph{Kassow Robot Module} (\type{robot\_module\_kassow}) provides the shared \type{robot\_interface} used by the calibration module, the UI orchestrator, and the use case modules (\autoref{fig:runtime_full}). It forwards robot-control requests to CBun and publishes robot status and action-finished notifications back into the runtime.
 
 \minihead{Interface-level I/O.}
 The module provides the \type{robot\_interface} request/response endpoint and publishes the corresponding status and finished streams (\autoref{sec:ch3_robot_interface}).
