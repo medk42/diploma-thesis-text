@@ -13,7 +13,7 @@ The system is implemented in C++ and targets Windows and Linux (build workflow a
 Most modules are platform-neutral; platform-specific code is currently concentrated in the Windows camera acquisition module (\autoref{subsec:ch4_mod_stereo_camera}).
 The web frontend is based on Wt and was used on both Windows and Linux in development.
 
-The pen tracking module utilizes a cross-platform BLE library (SimpleBLE); however, its current device discovery implementation relies on Windows-specific stack behavior where target service UUIDs are successfully exposed during the scanning phase. Running the BLE portion of this module on Linux would require adapting the discovery sequence, as the Linux Bluetooth stack typically requires an explicit connection before it populates the service list.
+The pen tracking module uses the cross-platform BLE library SimpleBLE. The current discovery sequence assumes that the target service UUIDs are visible already during BLE scanning (as observed on Windows); on Linux, the module would need to connect first and query services after connecting. This platform-specific note is described again in \autoref{subsec:ch4_mod_pen_tracking}.
 
 \minihead{Reading note.}
 The UI module is described in Chapter~\ref{chapter:ch3_system_design} at the level of externally observable orchestration behavior (\autoref{sec:ch3_ui_orchestration}) and is not decomposed further here.
@@ -257,7 +257,7 @@ they convert calibrated sensing inputs into user intent (pen poses/trajectories)
 \minihead{Role in graph.}
 \emph{Pen Tracking (Multi-Cam)} (\type{pen\_tracking\_multicam\_module}) consumes the calibrated camera stream produced by the sensing pipeline (\autoref{fig:runtime_full}) and outputs
 (i) a continuous pen pose stream with button states and (ii) discrete intent events used by the downstream authoring logic.
-It also publishes transient visualization overlays through the 3D visualization interface.
+For operator feedback, it publishes visualization updates that show the current pen pose and, during interaction, a pose or trajectory preview that is removed after a fixed timeout.
 
 \minihead{Interface-level I/O.}
 Input is the \type{CalibratedCameraSet} stream (\autoref{sec:ch3_supporting_messages}), carrying per-camera intrinsics and world poses together with the corresponding image blobs.
@@ -266,15 +266,14 @@ For visualization, it provides the 3D visualization response endpoint and publis
 
 \minihead{Configuration.}
 The module is not activable; it starts processing immediately once loaded.
-Configuration is compiled into the module (\path{pen_defaults.h}): the BLE service and characteristic UUIDs, the ArUco dictionary (\type{DICT\_4X4\_100}), the expected marker IDs
-(\type{\{17,38,47,56,58\}}) and their poses relative to a pen reference frame, the marker size (36\,mm), and a fixed transform from the cube reference frame to the pen tip
+Configuration is compiled into the module (\path{pen_defaults.h}): the BLE service and characteristic UUIDs, the ArUco dictionary (\type{DICT\_4X4\_100}), the expected marker IDs (\type{\{17,38,47,56,58\}}) and their poses relative to a pen reference frame (defined at the marker cube center), the marker size (36\,mm), and a fixed transform from the pen reference frame to the pen tip
 ($T_{\text{pen}\leftarrow\text{tip}}$).
 No per-pen calibration is currently performed; the tracking assumes the CAD-defined marker-to-pen geometry
 (\autoref{subsec:ch4_hw_pen}, \autoref{appendix:pen_artifacts}).
 
 \minihead{Marker configuration and pen geometry.}
 The physical pen design and marker layout are described in \autoref{subsec:ch4_hw_pen} (see also \autoref{appendix:pen_artifacts}).
-At the software level, the module assumes a fixed marker configuration: five known marker IDs with known poses in the pen reference frame, and a fixed transform from the pen frame to the tip ($T_{\text{pen}\leftarrow\text{tip}}$), all compiled into \path{pen_defaults.h}.
+At the software level, the module assumes a fixed marker configuration: five known marker IDs with known poses in the pen reference frame, and a fixed transform from the reference frame to the tip ($T_{\text{pen}\leftarrow\text{tip}}$), all compiled into \path{pen_defaults.h}.
 
 \minihead{Pose estimation pipeline.}
 For each incoming calibrated frame, the module:
@@ -307,7 +306,7 @@ Button state is received over BLE using SimpleBLE. The pen firmware transmits IM
 On Linux, the BLE discovery/connection sequence would need minor adaptation, as the current implementation relies on Windows-style service exposure during scanning.
 
 \minihead{Visualization outputs.}
-The module registers simple geometric resources (a pen proxy model and axes arrow) and updates them each frame to show the pen body pose and the pen tip pose.
+The module registers simple geometric resources (a pen proxy model and an RGB axes arrow) and updates them each frame to show the pen body pose and the pen tip pose (RGB axes for $x/y/z$).
 
 \minihead{Failure modes and known limitations.}
 Tracking quality depends on marker visibility and stable corner detection (lighting, motion blur, partial occlusions).
