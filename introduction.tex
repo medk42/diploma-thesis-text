@@ -3,7 +3,9 @@
 
 Collaborative robots are attractive for automating tasks that are repetitive but frequently changing, such as small batch production or tasks requiring frequent changeovers. In such cases, the bottleneck is often not the execution time itself, but the time and effort required to re-create robot programs for each new task.
 
-Robot programming is both time-consuming \cite{IFR2023TraditionalVsNew} and skill-intensive. This creates friction whenever tasks need to be re-taught. This thesis explores whether this friction can be reduced by changing how users specify robot tasks.
+Robot programming is both time-consuming \cite{IFR2023TraditionalVsNew} and skill-intensive. This creates friction whenever tasks need to be re-taught. This thesis explores whether this friction can be reduced by specifying spatial intent directly in the real workspace, rather than by editing motion commands and tool actions in a teach pendant or offline programming workflow.
+
+To investigate this question, this thesis presents a modular, end-to-end software system for in-workspace spatial authoring of tasks for an articulated 6- or 7-axis collaborative robot. By combining a 6D tracked pen with stereo-vision-based sensing and a shared module runtime with explicit interfaces, the system allows human operators to specify robot intent directly in the physical workspace. Users interact with a web-based interface to capture spatial intents (poses and trajectories) and compose them into executable task-oriented use cases --- such as pick-and-place and seam welding --- without writing pendant-style robot programs.
 
 \section*{Motivation}
 \addcontentsline{toc}{section}{Motivation}
@@ -73,10 +75,7 @@ Based on the high-level approach described above, we define three goals:
 \section*{Thesis structure}
 \addcontentsline{toc}{section}{Thesis structure}
 
-\minihead{System at a glance.}
-This thesis presents a modular, end-to-end software system for in-workspace spatial authoring of robot tasks. By combining a 6D tracked pen with stereo-vision-based sensing and a shared module runtime with explicit interfaces, the system allows human operators to specify robot intent directly in the physical workspace. Users interact with a web-based interface to capture spatial intents (poses and trajectories) and compose them into executable task-oriented use cases --- such as pick-and-place and seam welding --- without writing pendant-style robot programs.
-
-\minihead{Chapter overview.}
+This thesis is divided into the following chapters.
 
 \autoref{chapter:ch1_related_work} reviews the background and related work on robot programming methods, spatial authoring approaches, and relevant technologies for sensing and execution. 
 
