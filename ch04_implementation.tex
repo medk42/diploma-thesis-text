@@ -111,13 +111,10 @@ These are representative development machines rather than hard requirements; the
 \section{Module implementation overview}
 \label{sec:ch4_module_overview}
 
-This section describes the concrete module implementations that instantiate the runtime configuration of \autoref{fig:runtime_full}.
+The next sections describe the concrete module implementations that instantiate the runtime configuration of \autoref{fig:runtime_full}.
 For each module, we summarize its role in the graph, the key interfaces it implements (stream vs.\ request/response, wrapper protocols), and the main implementation choices.
 
-% ==========================================================
-\section{How to read the module subsections}
-\label{sec:ch4_how_to_read}
-
+\minihead{How to read the module subsections.}
 Each module subsection follows the same structure:
 (i) role in the instantiated graph (\autoref{fig:runtime_full}),
 (ii) inputs/outputs at the interface level (reference to Chapter~3 interface sections),
@@ -265,7 +262,7 @@ It also publishes transient visualization overlays through the 3D visualization 
 \minihead{Interface-level I/O.}
 Input is the \type{CalibratedCameraSet} stream (\autoref{sec:ch3_supporting_messages}), carrying per-camera intrinsics and world poses together with the corresponding image blobs.
 The module publishes two pen outputs (\autoref{sec:ch3_supporting_messages}): a raw stream (pen tip pose and button states; \type{PenMessageRaw}) and an intent stream (user entered pose, trajectory, or a special action; \type{PenIntent}).
-For visualization, it provides the visualization-3D response endpoint and publishes updates to show the current pen pose and recent intent previews (\autoref{sec:ch3_visualization_interface}).
+For visualization, it provides the 3D visualization response endpoint and publishes updates to show the current pen pose and recent intent previews (\autoref{sec:ch3_visualization_interface}).
 
 \minihead{Configuration.}
 The module is not activable; it starts processing immediately once loaded.
@@ -327,40 +324,57 @@ No per-device geometric calibration is performed; instead, the module assumes th
 \label{subsec:ch4_mod_scene_detection}
 
 \minihead{Role in graph.}
-\xxx{Consumes: calibrated camera set; responds to scene detection requests; provides visualization overlay.}
+\emph{Scene Detection (Stereo Camera)} (\type{scene\_detection\_stereocam\_module}) consumes the calibrated stereo stream from the sensing pipeline (\autoref{fig:runtime_full}) and provides scene snapshots on request.
+It is used to (i) expose the loaded object registry to downstream logic and (ii) return estimated object poses in the shared world frame.
+For operator feedback, it also mirrors the most recently detected boxes into the shared 3D visualization scene.
 
 \minihead{Interface-level I/O.}
-\xxx{Consumes: \type{CalibratedCameraSet} / stereo images (verify exact inputs).}
-\xxx{Responds to: scene detection request/response interface (READ\_REGISTRY, READ\_SCENE) as defined in Chapter~3 (verify section).}
-\xxx{Publishes: visualization overlay elements representing detected objects (verify).}
+Input is the \type{CalibratedCameraSet} stream (\autoref{sec:ch3_supporting_messages}); the implementation expects exactly two calibrated camera images (stereo pair) in each message.
+The module provides the scene detection request/response endpoint (\autoref{sec:ch3_scene_detection_interface}) and handles two request types: \type{READ\_REGISTRY} and \type{READ\_SCENE}.
 
-\minihead{Activation and configuration.}
-\xxx{State how the registry file is configured (activation parameter vs fixed path); describe defaults (verify).}
-\xxx{State whether any detection thresholds are configurable and where (verify).}
+\minihead{Configuration and registry file.}
+The module has no activation step; it loads its registry once during construction.
+At runtime, the registry is read from \path{binaries/data/scene_detection_stereocam_module/registered_objects.json}.
+This file is deployed by installing the module's packaged data from \path{scene_detection_stereocam_module/module_data/registered_objects.json}; the thesis attachment includes this source copy, see \autoref{appendix:scene_registry}.
+If the registry file is missing or malformed, the module refuses to start.
 
 \minihead{Scene model and registry.}
-\xxx{Describe: registry loaded from JSON: marker ID, marker size, box dimensions, marker-to-box transform.}
-\xxx{Reference the shipped registry location in \autoref{appendix:scene_registry} and the example object in \autoref{fig:ch4_scene_box}.}
-\xxx{State limitations: boxes only; currently a small fixed set (possibly one type).}
+The module operates on the fiducial-box scene model from \autoref{subsec:ch4_hw_scene}.
+The object registry defines the set of detectable objects and their geometry: marker ID, marker size, box dimensions, and a rigid transform between the box reference frame and the marker frame (example in \autoref{fig:ch4_scene_box}).
 
 \minihead{Detection pipeline.}
-\xxx{Describe: ArUco detection in stereo pair; correspondence/matching between left/right detections (verify approach).}
-\xxx{Pose estimation + refinement per object: initial pose then optional optimization (Ceres) (verify).}
-\xxx{Returned data: list of detected objects referencing the registry entry + estimated world pose (verify message schema from Chapter 3).}
+On \type{READ\_SCENE}, the module waits for one incoming calibrated image set and runs detection using only that single stereo pair.
+From this stereo pair, it:
+\begin{enumerate}[label=(\roman*)]
+    \item detects ArUco markers independently in the left and right images (\type{DICT\_4X4\_100});
+    \item estimates an initial marker pose in the world frame using \type{solvePnP} (\type{IPPE\_SQUARE}) per detected marker and per camera;
+    \item matches left/right detections by marker ID using a greedy reprojection-error selection:
+    it considers only candidate pairs with the same marker ID, computes a reprojection error for each such left--right combination, then repeatedly selects the remaining candidate with the lowest reprojection error.
+    The selected pair is accepted only if this minimum error is below a fixed reprojection-error threshold; otherwise matching stops.
+    After accepting a pair, the corresponding left and right detections are removed and the procedure repeats until no valid candidates remain or the best remaining error exceeds the reprojection-error threshold; and
+    \item refines each matched marker pair pose by a Ceres nonlinear least-squares optimization that minimizes reprojection residuals of the four marker corners in \emph{both} cameras.
+\end{enumerate}
+
+Finally, the box pose is obtained by composing the optimized marker pose with the marker-to-box transform from the registry, producing a list of \type{DetectedBox} items.
 
 \minihead{Request/response semantics.}
-\xxx{Describe: READ\_REGISTRY and READ\_SCENE behavior; caching; snapshot semantics.}
-\xxx{Describe: whether READ\_SCENE uses one frame vs multiple for averaging (verify).}
+\type{READ\_REGISTRY} returns the registry content that was loaded at module startup; the file is not reloaded automatically at runtime.
+\type{READ\_SCENE} blocks until the next calibrated stereo frame arrives, runs one detection pass on that single frame, and returns the resulting list.
+Only one \type{READ\_SCENE} request is processed at a time; concurrent requests are rejected.
 
 \minihead{Visualization outputs.}
-\xxx{Describe: how detected objects are mirrored into the shared 3D visualization scene.}
+For each registry entry, the module registers a simple box resource with the box dimensions from the registry.
+After every \type{READ\_SCENE} request, it first removes all previously displayed boxes and then adds the boxes detected in that request at their estimated world poses.
+As a result, the visualization always shows the output of the \emph{most recent} scene snapshot and remains unchanged until the next \type{READ\_SCENE} request.
 
 \minihead{Failure modes and known limitations.}
-\xxx{Requires fiducials; limited object model; no confidence/covariance; sensitivity to pose noise.}
-\xxx{Describe behavior when partial detections occur and how missing objects are represented (verify).}
+The module detects only fiducial-tagged boxes defined in the registry; it does not detect untagged objects and does not support richer geometry than boxes.
+A box is returned only if its marker is detected in \emph{both} left and right images in the same stereo frame; partial detections (marker visible in only one camera) are ignored.
+The implementation intentionally uses only a single stereo pair per \type{READ\_SCENE} request, without temporal stabilization (no multi-frame averaging and no tracking across frames), so pose estimates can be noisy when corner detection is unstable (lighting changes, motion blur, partial occlusion).
+The response contains only poses and IDs; it does not report confidence values or covariances.
 
 \minihead{Code pointers.}
-\xxx{\path{diploma-thesis-code/default_modules/scene_detection_stereocam_module/}.}
+\path{diploma-thesis-code/default_modules/scene_detection_stereocam_module/}.
 
 % ==========================================================
 \section{Execution backend module}
