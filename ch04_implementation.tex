@@ -387,16 +387,15 @@ This instantiates the robot communication requirement from \reqref{req:robot_com
 \label{subsec:ch4_mod_robot}
 
 \minihead{Role in graph.}
-\emph{Kassow Robot Module} (\type{robot\_module\_kassow}) provides the shared \type{robot\_interface} used by the calibration module, the UI orchestrator, and the use case modules (\autoref{fig:runtime_full}).
-It forwards robot-control requests to a Kassow controller through a robot-side CBun component (\autoref{appendix:cbun}) and publishes robot status and action-finished notifications back into the runtime.
+\emph{Kassow Robot Module} (\type{robot\_module\_kassow}) provides the shared \type{robot\_interface} used by the calibration module, the UI orchestrator, and the use case modules (\autoref{fig:runtime_full}). It executes robot-control requests and publishes robot status and action-finished notifications back into the runtime.
 
 \minihead{Interface-level I/O.}
 The module provides the \type{robot\_interface} request/response endpoint and publishes the corresponding status and finished streams (\autoref{sec:ch3_robot_interface}).
-Status messages contain (i) the 7 joint positions and (ii) three poses relative to world frame: robot base pose, flange pose (TFC; tool flange center), and tool pose (TCP; tool center point, i.e., the pose controlled by Cartesian motions).
+Status messages contain (i) the 7 joint positions and (ii) three poses in the world frame: robot base pose, flange pose (TFC; tool flange center), and tool pose (TCP; tool center point, i.e., the pose controlled by Cartesian motions).
 Finished messages report completion of a previously started action (success/failure) together with its \type{action\_id}.
 
 \minihead{Activation and parameters.}
-The module is activable (\autoref{subsec:ch3_activation_interface}). On activation it reads parameters, connects to the CBun over TCP, and starts a polling thread that forwards asynchronous status/finished messages.
+The module is activable (\autoref{subsec:ch3_activation_interface}). On activation it reads parameters, attempts to connect to the CBun, and starts a polling thread that forwards asynchronous status/finished messages.
 The activation parameters are:
 \begin{itemize}[nosep]
     \item \texttt{Host} (default \texttt{127.0.0.1}) and \texttt{Port} (default \texttt{15050}) of the CBun TCP server,
@@ -413,11 +412,11 @@ Robot status updates and action-finished notifications are sent by the CBun with
 If the TCP connection is lost, the module attempts to reconnect repeatedly with delay \texttt{Reconnect Wait (ms)} between attempts.
 
 \minihead{Implemented actions (robot interface coverage).}
-The module implements the \type{RobotControl} feature of the shared \type{robot\_interface} by forwarding requests to the CBun over TCP.
+The module implements the \type{RobotControl} feature of the shared \type{robot\_interface}.
 The supported actions are: query of robot specs/limits, joint-space motion, Cartesian linear motion, arc motion, trajectory motion, and motion cancellation.
 
 Start-motion requests typically return \type{SUCCESS\_IN\_PROGRESS} together with an \type{action\_id} assigned by CBun.
-CBun then reports completion by publishing a finished notification with the same \type{action\_id}; cancellation refers to the currently running motion using this \type{action\_id}.
+Completion is then reported through the finished stream using the same \type{action\_id}; cancellation targets the currently running motion identified by this \type{action\_id}.
 
 \minihead{Visualization outputs.}
 For operator feedback, the module mirrors robot state into the shared 3D visualization scene (\autoref{sec:ch3_visualization_interface}): a simplified robot model (selected by \texttt{Robot Model}), RGB axes ($x/y/z$) at the base, flange (TFC), and tool (TCP) poses, and a TCP trajectory polyline showing a fixed-length history of recent TCP positions.
