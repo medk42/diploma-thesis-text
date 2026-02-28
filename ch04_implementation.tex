@@ -585,7 +585,7 @@ The created command stores four world-frame poses (quaternion+translation):
     \item \type{weld\_end\_pose},
     \item \type{depart\_pose},
 \end{itemize}
-and three motion scalars:
+and three motion parameters:
 \type{movement\_speed\_m\_s}, \type{welding\_speed\_m\_s}, \type{acceleration\_m\_s2}.
 The advanced parameters \type{Weld Offset} and \type{Approach Distance} are applied during command creation by shifting the approach/weld/depart \emph{positions} away from the seam along the \emph{torch direction} by the requested distances.
 
@@ -633,22 +633,66 @@ Running the command in simulation mode is rejected.
 \section{Motion-primitive use cases (optional)}
 \label{sec:ch4_usecases_primitives}
 
-Besides the two task-oriented use cases, the system includes simple motion-primitive use cases that mirror the robot execution interface.
-They serve as lightweight examples of extensibility and as debugging tools.
+Besides the two task-oriented use cases (\autoref{sec:ch4_usecases}), the system includes four motion-primitive use cases that mirror the robot execution interface (\autoref{sec:ch3_robot_interface}).
+They are not central to the thesis evaluation, but they are useful for initial setup and debugging (e.g., moving the robot to a known start configuration before running a task-oriented command), and they also serve as minimal examples of adding new use case modules on top of the shared wrapper and robot interface.
 
 \subsection{Overview}
 \label{subsec:ch4_usecases_primitives_overview}
 
-\xxx{List which primitives exist (MoveJ/MoveL/Arc/Trajectory) and what each demonstrates.}
-\xxx{State: these are not central to the evaluation, but useful for completeness and testing.}
+The implemented motion primitives are:
+\begin{itemize}[nosep]
+    \item \emph{Usecase Move Joint} (\type{usecase\_move\_joint}),
+    \item \emph{Usecase Move Linear} (\type{usecase\_move\_linear}),
+    \item \emph{Usecase Move Arc} (\type{usecase\_move\_arc}),
+    \item \emph{Usecase Move Trajectory} (\type{usecase\_move\_trajectory}).
+\end{itemize}
+All four are wrapped by the use case wrapper (\autoref{sec:ch3_usecase_wrapper}) and execute by forwarding a single robot-control request (or a short fixed sequence) through \type{RobotWrapper}.
+They all support stop; pause is implemented only for the linear move primitive.
 
 \subsection{Implementation notes}
 \label{subsec:ch4_usecases_primitives_impl}
 
-\xxx{For each primitive: required inputs (pose/trajectory/joints), JSON content, execution call to robot wrapper.}
-\xxx{If you plan to implement pause properly anywhere, this is the best place: demonstrate pause/resume on a simple MoveL or trajectory use case (see code fixes list).}
-\xxx{Add code pointers for the primitive use cases in one consolidated list:}
-\xxx{\path{diploma-thesis-code/default_modules/usecase_move_joint/}, \path{diploma-thesis-code/default_modules/usecase_move_linear/}, \path{diploma-thesis-code/default_modules/usecase_move_arc/}, \path{diploma-thesis-code/default_modules/usecase_move_trajectory/}.}
+\minihead{Common structure.}
+These four motion-primitive use cases are omitted from \autoref{fig:runtime_full} for clarity (the figure shows only the two evaluated task-oriented use cases).
+Each primitive is wrapped by the use case wrapper and exposes the wrapper request/response endpoint.
+Each issues robot-control requests via \type{RobotWrapper} over the shared \type{robot\_interface} and monitors completion via the finished stream; stop cancels the active robot action.
+Primitives that take pen input also consume the pen intent subscribe stream.
+
+\minihead{Usecase Move Joint.}
+The custom input \type{Target Joints} is captured from the current robot joint configuration (robot status stream).
+The created command stores \type{joint\_positions} (array) and the motion parameters \type{joint\_speed\_rad\_s}, \type{joint\_acceleration\_rad\_s2}.
+Execution issues one joint-space move request. 
+No preview visualization is returned.
+
+\minihead{Usecase Move Linear.}
+The custom input \type{Target Pose} is captured from the pen as a \type{POSE} intent (world-frame pose).
+The created command stores \type{target\_pose} (quaternion+translation) and \type{speed\_mm\_s}, \type{acceleration\_mm\_s2}.
+Execution issues one linear move request. Pause is implemented by cancelling the active robot action, waiting for resume via the \type{BaseUsecase}, and then re-issuing the same move request (i.e., pause behaves as ``stop now and restart on resume''). 
+The preview visualization contains one 6D pose showing the target pose.
+
+\minihead{Usecase Move Arc.}
+The custom inputs \type{Arc Start}, \type{Arc Through Point}, and \type{Arc End} are captured as three pen \type{POSE} intents.
+The created command stores the three poses and the arc settings:
+\type{speed\_mm\_s}, \type{acceleration\_mm\_s2}, \type{as\_circle}, \type{circle\_degrees\_deg}, and \type{orientation\_type}.
+Execution first moves linearly to \type{Arc Start} and then issues one arc move request. 
+The preview visualization shows the arc start as a 6D pose, the through/end positions as 3D points, and a sampled 3D polyline of the arc path computed from the three poses and arc settings.
+
+\minihead{Usecase Move Trajectory.}
+The custom input \type{Trajectory} is captured from the pen as a \type{TRAJECTORY} intent (sequence of world-frame poses).
+The created command stores:
+\type{trajectory} (array of poses), \type{speed\_mm\_s}, \type{acceleration\_mm\_s2}, \type{orientation\_type}, and \type{linear\_move\_to\_first\_pose}.
+If enabled, the trajectory move is preceded by a linear move to the first pose; the trajectory move itself is always executed afterwards.
+The preview visualization shows the first trajectory pose as a 6D pose and the full captured trajectory as a 3D polyline (positions only).
+
+\minihead{Code pointers.}
+
+\path{diploma-thesis-code/default_modules/usecase_move_joint/}
+
+\path{diploma-thesis-code/default_modules/usecase_move_linear/}
+
+\path{diploma-thesis-code/default_modules/usecase_move_arc/}
+
+\path{diploma-thesis-code/default_modules/usecase_move_trajectory/}
 
 % ==========================================================
 \section{Artifacts, attachments, and reproducibility notes}

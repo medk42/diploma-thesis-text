@@ -636,6 +636,7 @@ SEE FUTURE WORK FOR MORE RESOURCES
 - run true user study - as advisor said; but this is future work as he said
 - mention maybe smoothrobotics etc. and how we are faster. Also maybe relate to the related work
 - we currently custom load which hides the visualziation (popup "loading custom value" partially covers the scene and disables all interaction except cancel). 
+- move trajectory did show us that using the captured pen poses works as an input for the trajectory move, but it can be a bit unstable at times (when the poses are jittery, the robot may not be able to handle the movement properly). 
 
 ---
 
@@ -700,6 +701,7 @@ Future work
 - run true user study - as advisor said; but this is future work as he said
 - mention maybe smoothrobotics etc. and how we are faster. Also maybe relate to the related work
 - we currently custom load which hides the visualziation (popup "loading custom value" partially covers the scene and disables all interaction except cancel). 
+- move trajectory did show us that using the captured pen poses works as an input for the trajectory move, but it can be a bit unstable at times (when the poses are jittery, the robot may not be able to handle the movement properly). 
 
 ## Additional notes for both discussion/limitation/future work
 
