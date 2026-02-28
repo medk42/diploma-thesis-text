@@ -702,6 +702,7 @@ Future work
 - mention maybe smoothrobotics etc. and how we are faster. Also maybe relate to the related work
 - we currently custom load which hides the visualziation (popup "loading custom value" partially covers the scene and disables all interaction except cancel). 
 - move trajectory did show us that using the captured pen poses works as an input for the trajectory move, but it can be a bit unstable at times (when the poses are jittery, the robot may not be able to handle the movement properly). 
+- lack of simulation mode support in the robot interface. It would be more complex because we would need to enable and disable the simulation visualization too. 
 
 ## Additional notes for both discussion/limitation/future work
 
