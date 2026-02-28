@@ -681,7 +681,7 @@ The preview visualization shows the arc start as a 6D pose, the through/end posi
 The custom input \type{Trajectory} is captured from the pen as a \type{TRAJECTORY} intent (sequence of world-frame poses).
 The created command stores:
 \type{trajectory} (array of poses), \type{speed\_mm\_s}, \type{acceleration\_mm\_s2}, \type{orientation\_type}, and \type{linear\_move\_to\_first\_pose}.
-If enabled, the trajectory move is preceded by a linear move to the first pose; the trajectory move itself is always executed afterwards.
+If enabled, execution first issues a linear move to the first trajectory pose and then issues one trajectory move request; the trajectory move request is always executed.
 The preview visualization shows the first trajectory pose as a 6D pose and the full captured trajectory as a 3D polyline (positions only).
 
 \minihead{Code pointers.}
