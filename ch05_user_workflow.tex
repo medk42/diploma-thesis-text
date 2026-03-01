@@ -119,11 +119,11 @@ If the mapping is not filled automatically, the current module set does not matc
 Bring the runtime into an operational state: start the camera and robot backends, then calibrate the robot-mounted stereo camera to produce a \emph{calibrated camera set} in the workspace frame.
 
 \minihead{Activate the robot module.}
-After instantiating the module graph, your \emph{Setup Modules} view should show all eight added modules in the left list in the same order as \autoref{fig:ch5_activate_robot}. The robot, camera and calibration modules require activation and thus appear with a red \type{unready} indicator \uicall[fig:ch5_activate_robot]{1}. 
+After instantiating the module graph, your \emph{Setup Modules} view should show all eight added modules in the left list in the same order as \autoref{fig:ch5_activate_robot}. The robot, camera, and calibration modules require activation and thus appear with a red \type{unready} indicator \uicall[fig:ch5_activate_robot]{1}. 
 
-Activate the robot module by selecting \emph{Kassow Robot Module} \uicall[fig:ch5_activate_robot]{2}, setting the \emph{Host} parameter \uicall[fig:ch5_activate_robot]{3} to the robot controller IP address, selecting the correct \emph{Robot Model} \uicall[fig:ch5_activate_robot]{4} for your hardware, and pressing \emph{Activate} \uicall[fig:ch5_activate_robot]{5}. Wait for the activation procedure to finish: the \emph{Activating Module} pop-up message will disappear, \emph{Activate} button will become disabled, and the module status indicator will turn green to indicate the module is ready.
+Activate the robot module by selecting \emph{Kassow Robot Module} \uicall[fig:ch5_activate_robot]{2}, setting the \emph{Host} parameter \uicall[fig:ch5_activate_robot]{3} to the robot controller IP address, selecting the correct \emph{Robot Model} \uicall[fig:ch5_activate_robot]{4} for your hardware, and pressing \emph{Activate} \uicall[fig:ch5_activate_robot]{5}. Wait for the activation procedure to finish: the \emph{Activating Module} pop-up message will disappear, \emph{Activate} button will become disabled, and the module status indicator should turn green to indicate the module is ready.
 
-If activation fails, verify the network connection to the robot controller and re-check the IP address. Robot model parameter is purely for visualization and does not affect the robot behavior.
+If activation fails, verify the network connection to the robot controller and re-check the IP address. The robot model parameter is purely for visualization and does not affect the robot behavior.
 
 \begin{figure}[H]
   \centering
@@ -173,7 +173,7 @@ Clear a captured value with the inner ``$\times$'' \uicall[fig:ch5_activate_cali
 To persist the current module graph and module states, press \emph{Save} in \emph{Setup Modules} view \uicall[fig:ch5_save_setup]{1}, confirm the save name in the dialog \uicall[fig:ch5_save_setup]{2}, and press \emph{Save} again \uicall[fig:ch5_save_setup]{3}. Please wait for the save procedure to finish. If you later want to restore this setup, use the \emph{Load} button \uicall[fig:ch5_save_setup]{4} in the \emph{Setup Modules} view and select the saved setup from the list.
 
 The save dialog suggests a unique name. You can change the name before saving. Saving under an existing name prompts for overwrite confirmation.
-On load, modules try to restore their activation state; if a hardware module cannot activate (robot/camera unavailable), loading may fail and restore only part of the setup.
+On load, modules try to restore their activation state; if a hardware module cannot activate (robot/camera unavailable), loading may fail and restore only part of the graph.
 Therefore, it is recommended to save with the robot and camera modules deactivated, and activate them after loading; the calibration module can remain activated.
 
 
