@@ -228,7 +228,7 @@ The \emph{secondary} button (farther from the tip) can be used to request automa
 \end{figure}
 
 \minihead{Goal.}
-Create and execute a weld command by (i) scanning the scene and (ii) drawing a pen trajectory along one intended seam between two detected boxes.
+Create and execute an approach--weld--depart weld command by (i) scanning the scene and (ii) drawing a pen trajectory along the intended seam.
 
 \minihead{Preconditions (scene and seams).}
 Place two fiducial-tagged boxes so that they \emph{touch}, as in the embedded illustration \uicall[fig:ch5_weld_before]{1}: raise one box using a spacer and bring it into contact with the other box.
@@ -256,7 +256,7 @@ The command always welds \emph{one} straight seam segment (or a subsegment of it
 
 \minihead{If confirmation fails.}
 If confirmation fails, clear the affected parameter value using the inner ``$\times$'' next to the stored \emph{Value} and capture it again (re-capture \emph{Scene Scan} and/or \emph{Welding Trajectory} as needed).
-Typical causes and fixes:
+In practice, failures are usually caused by one of:
 \begin{itemize}
   \item \textbf{No seam in the scan:} ensure the boxes \emph{touch} (edge--edge or edge--face), then re-capture \emph{Scene Scan}.
   \item \textbf{Trajectory too far from the seam:} redraw closer to the contact line (tip within roughly 10\,mm).
@@ -276,7 +276,8 @@ After successful confirmation, the weld command is confirmed in \emph{Program} \
 Unlike pick-and-place, the weld command is resolved at confirmation time into fixed world-frame poses; keep the workpiece configuration unchanged until execution.
 
 \minihead{Execute.}
-Press \emph{Start} \uicall[fig:ch5_weld_after]{4} to execute. Pause and stop are supported by this use case.
+Press \emph{Start} \uicall[fig:ch5_weld_after]{4} to execute the approach--weld--depart motion. Pause and stop are supported by this use case.
+For implementation-level details and exact execution semantics, see \autoref{subsec:ch4_usecase_weld}.
 
 
 
