@@ -182,34 +182,35 @@ Therefore, it is recommended to save with the robot and camera modules deactivat
 \section{Main view essentials (what the operator needs)}
 \label{sec:ch5_main_view}
 
-Close \emph{Setup Modules} to return to the \emph{Aergo} main view (\autoref{fig:ch5_main_view}).
-The main view shows a camera preview and a shared 3D visualization, plus the use case program panel.
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/08_main_view.pdf}
+  \caption[Main view]{Main view.}
+  \label{fig:ch5_main_view}
+\end{figure}
 
-% \begin{figure}[H]
-%   \centering
-%   \includegraphics[width=\linewidth]{img/ch5_user_workflow/fig_ch5_05_main_view_pen.pdf}
-%   \caption[Main view and pen interaction]{Main view and pen interaction.}
-%   \label{fig:ch5_main_view}
-% \end{figure}
+After setting up the module graph and activating the necessary modules, you can switch to the main view (\emph{Aergo}) by pressing \emph{Close} in the \emph{Setup Modules} view. The main view shows the camera preview, 3D visualization of the workspace, and the use case program panel. 
 
 \minihead{3D navigation.}
 Drag with the left mouse button to rotate, right mouse button to pan, and use the mouse wheel to zoom.
 
 \minihead{Wake the pen and test pose/trajectory capture.}
-Wake the pen by shaking it; it should advertise over BLE as \type{"3D Pen"}.
-Keep the marker cube visible in the camera preview; the tracked pen pose appears in the 3D view (\uicall{1}).
+Wake the pen by shaking it; it should advertise over BLE as ``\type{3D Pen}''.
+Keep the marker cube visible in the camera preview \uicall[fig:ch5_main_view]{1}; the tracked pen pose will appear in the 3D view \uicall[fig:ch5_main_view]{2}.
 \begin{itemize}
-  \item \textbf{Pose:} press the \emph{primary} button briefly to create a pose marker (\uicall{2}).
-  \item \textbf{Trajectory:} press and hold the primary button, move the pen, then release to create a trajectory preview (\uicall{3}).
+  \item \textbf{Pose:} press the \emph{primary} button (closer to the tip) briefly to create a pose marker \uicall[fig:ch5_main_view]{3}.
+  \item \textbf{Trajectory:} press and hold the primary button, move the pen, then release to create a trajectory preview \uicall[fig:ch5_main_view]{4}.
 \end{itemize}
 
-\minihead{Set Position / Move To Position (safety).}
-\emph{Set Position} stores the current robot joint configuration as a convenient home pose; \emph{Move To Position} commands a move to the stored pose.
-\xxx{Add a 1--2 sentence safety note: keep workspace clear; be ready to hit E-stop before commanding motion.}
+The \emph{secondary} button (farther from the tip) can be used to request automatic loading of \emph{use case} parameters.
 
-\minihead{Two utility actions (short notices).}
+
+\minihead{Set Position / Move To Position \uicall[fig:ch5_main_view]{5}.}
+\emph{Set Position} stores the current robot joint configuration as a convenient home pose; \emph{Move To Position} commands a move to the stored pose. \textbf{Warning:} this command will move the robot; use with caution and be ready to hit emergency stop if the robot moves unexpectedly. 
+
+\minihead{Two utility actions \uicall[fig:ch5_main_view]{6}.}
 \begin{itemize}
-  \item \textbf{Scan Scene:} refreshes the displayed box detections by triggering one scene snapshot.
+  \item \textbf{Scan Scene:} refreshes the displayed scene detection by triggering one scene snapshot.
   \item \textbf{Reload Visualization:} clears and rebuilds the UI-local visualization if stale artifacts remain visible.
 \end{itemize}
 
