@@ -13,7 +13,7 @@ The system is implemented in C++ and targets Windows and Linux (build workflow a
 Most modules are platform-neutral; platform-specific code is currently concentrated in the Windows camera acquisition module (\autoref{subsec:ch4_mod_stereo_camera}).
 The web frontend is based on Wt and was used on both Windows and Linux in development.
 
-The pen tracking module uses the cross-platform BLE library SimpleBLE. The current discovery sequence assumes that the target service UUIDs are visible already during BLE scanning (as observed on Windows); on Linux, the module would need to connect first and query services after connecting. This platform-specific note is described again in \autoref{subsec:ch4_mod_pen_tracking}.
+The pen tracking module uses the cross-platform Bluetooth Low Energy (BLE) library SimpleBLE. The current discovery sequence assumes that the target service UUIDs are visible already during BLE scanning (as observed on Windows); on Linux, the module would need to connect first and query services after connecting. This platform-specific note is described again in \autoref{subsec:ch4_mod_pen_tracking}.
 
 \minihead{Reading note.}
 The UI module is described in Chapter~\ref{chapter:ch3_system_design} at the level of externally observable orchestration behavior (\autoref{sec:ch3_ui_orchestration}) and is not decomposed further here.
