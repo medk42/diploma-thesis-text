@@ -8,6 +8,9 @@ Build and installation steps for the submitted code snapshot are described in \a
 The delivered artifact files (Charuco PDF, camera mount CAD, pen CAD/firmware, scene CAD/registry, and CBun sources) are summarized in \autoref{appendix:artifacts};
 the prototype hardware setup (including the stereo camera) is described in \autoref{sec:ch4_physical_setup}.
 
+
+
+
 % ----------------------------------------------------------
 \section{Preconditions and environment}
 \label{sec:ch5_preconditions}
@@ -30,6 +33,9 @@ This chapter assumes the installed runtime layout under \path{binaries/} as desc
 The Aergo CBun is assumed installed and enabled on the robot controller (sources/build notes in \autoref{appendix:cbun}).
 Configuring the robot controller (network settings, CBun installation) is outside the scope of this chapter.
 
+
+
+
 % ----------------------------------------------------------
 \section{System startup}
 \label{sec:ch5_startup}
@@ -41,6 +47,9 @@ cd binaries
 .\core.exe modules data
 \end{verbatim}
 Then open \url{http://localhost:8080} in a browser.
+
+
+
 
 % ----------------------------------------------------------
 \section{Instantiate the module graph}
@@ -76,8 +85,8 @@ Repeat the same steps for the following module types in the order shown:
   \item \emph{Stereo Camera Calibration (Robot)}
   \item \emph{Pen Tracking (Multi-Cam)}
   \item \emph{Scene Detection (Stereo Camera)}
-  \item \emph{Usecase Pick and Place}
   \item \emph{Usecase Weld}
+  \item \emph{Usecase Pick and Place}
 \end{enumerate}
 
 \begin{figure}[H]
@@ -92,45 +101,84 @@ Most modules consume outputs of other modules and therefore show an input mappin
 In the demonstrated configuration, each input has a single compatible producer at the time the module is added, so the mapping is filled automatically and can be left unchanged.
 If the mapping is not filled automatically, the current module set does not match this tutorial; return to \emph{Setup Modules}, remove unexpected instances, and continue by following the module list in the stated order.
 
+
+
+
 % ----------------------------------------------------------
 \section{Activation and calibration}
 \label{sec:ch5_activation_calibration}
 
-\minihead{Activate the stereo camera module.}
-In \emph{Setup Modules}, select \emph{Stereo Camera Input Module (Windows)} (\uicall{1}), keep the default parameters for the thesis hardware, and press \uicall{2} \emph{Activate} (\autoref{fig:ch5_activate_camera_robot}).
-If activation fails, verify that the OS can access the camera and re-check the selected resolution and frame rate.
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/04_activate_robot.pdf}
+  \caption[Activate the robot module]{Activate the robot module.}
+  \label{fig:ch5_activate_robot}
+\end{figure}
+
+\minihead{Goal.}
+Bring the runtime into an operational state: start the camera and robot backends, then calibrate the robot-mounted stereo camera to produce a \emph{calibrated camera set} in the workspace frame.
 
 \minihead{Activate the robot module.}
-Select \emph{Kassow Robot Module} (\uicall{3}), set \uicall{4} \emph{Host} to the robot controller IP address, and press \uicall{5} \emph{Activate} (\autoref{fig:ch5_activate_camera_robot}).
-A wired Ethernet connection is recommended.
+After instantiating the module graph, your \emph{Setup Modules} view should show all eight added modules in the left list in the same order as \autoref{fig:ch5_activate_robot}. The robot, camera and calibration modules require activation and thus appear with a red \type{unready} indicator \uicall[fig:ch5_activate_robot]{1}. 
 
-% \begin{figure}[H]
-%   \centering
-%   \includegraphics[width=\linewidth]{img/ch5_user_workflow/fig_ch5_03_activate_camera_robot.pdf}
-%   \caption[Activating camera and robot]{Activating the camera and robot modules in \emph{Setup Modules}.}
-%   \label{fig:ch5_activate_camera_robot}
-% \end{figure}
+Activate the robot module by selecting \emph{Kassow Robot Module} \uicall[fig:ch5_activate_robot]{2}, setting the \emph{Host} parameter \uicall[fig:ch5_activate_robot]{3} to the robot controller IP address, selecting the correct \emph{Robot Model} \uicall[fig:ch5_activate_robot]{4} for your hardware, and pressing \emph{Activate} \uicall[fig:ch5_activate_robot]{5}. Wait for the activation procedure to finish: the \emph{Activating Module} pop-up message will disappear, \emph{Activate} button will become disabled, and the module status indicator will turn green to indicate the module is ready.
 
-\minihead{Calibrate the robot-mounted stereo rig.}
-Select \emph{Stereo Camera Calibration (Robot)}.
-For each list entry (\uicall{1}), press \uicall{2} \emph{Click to set} to capture one synchronized sample (stereo image + flange pose), and use \uicall{3} to add more entries as needed (\autoref{fig:ch5_calib_inputs}).
-Capture at least 10 samples while:
-(i) the Charuco board is static, flat, and visible in both cameras, and
-(ii) the robot pose changes significantly between captures (vary position and orientation).
+If activation fails, verify the network connection to the robot controller and re-check the IP address. Robot model parameter is purely for visualization and does not affect the robot behavior.
 
-After collecting samples, press \uicall{4} \emph{Activate} to run calibration.
-If calibration fails, the captured dataset likely did not contain enough sharp, well-lit, diverse stereo views of the board (simultaneously visible in both cameras) or did not contain enough robot motion diversity; capture more samples with larger board coverage and stronger pose variation and retry.
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/05_activate_camera.pdf}
+  \caption[Activate the camera module]{Activate the camera module.}
+  \label{fig:ch5_activate_camera}
+\end{figure}
 
-% \begin{figure}[H]
-%   \centering
-%   \includegraphics[width=\linewidth]{img/ch5_user_workflow/fig_ch5_04_calibration_inputs.pdf}
-%   \caption[Providing calibration captures]{Providing calibration captures in the activation UI.}
-%   \label{fig:ch5_calib_inputs}
-% \end{figure}
+\minihead{Activate the camera module.}
+Activate the camera module by selecting \emph{Stereo Camera Input Module (Windows)} \uicall[fig:ch5_activate_camera]{1}, keeping the default parameters for the thesis hardware, and pressing \emph{Activate} \uicall[fig:ch5_activate_camera]{2}.
+
+If activation fails, verify that the OS can access the camera and re-check the selected resolution and frame rate.
+
+If you have a different camera which outputs a side-by-side stereo stream in MJPEG format, you can still use the \emph{Stereo Camera Input Module (Windows)} by adjusting the parameters to match your camera's output format. 
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/06_activate_calibration.pdf}
+  \caption[Perform camera calibration]{Perform camera calibration by activating the \emph{Stereo Camera Calibration (Robot)} module.}
+  \label{fig:ch5_activate_calibration}
+\end{figure}
+
+\minihead{Calibrate the robot-mounted stereo camera.}
+Select \emph{Stereo Camera Calibration (Robot)} \uicall[fig:ch5_activate_calibration]{1}. For each list entry in the \emph{Stereo images with flange pose} parameter, press \emph{Click to set} \uicall[fig:ch5_activate_calibration]{2} to capture one synchronized sample (stereo image + flange pose). Optionally, add more list entries by pressing ``+'' button \uicall[fig:ch5_activate_calibration]{3}. Capture at least 10 samples while:
+
+\begin{enumerate}[label=(\roman*)]
+  \item the Charuco board is static, flat, and visible in both cameras, and
+  \item the robot pose changes significantly between captures (vary position and orientation).
+\end{enumerate}
+
+After collecting samples, press \emph{Activate} \uicall[fig:ch5_activate_calibration]{4} to run calibration. If calibration fails, the captured dataset likely did not contain enough sharp, well-lit, diverse stereo views of the board (simultaneously visible in both cameras) or did not contain enough robot motion diversity; capture more samples with larger board coverage and stronger pose variation and retry.
+
+You can switch to the main (\emph{Aergo}) view by clicking \emph{Close} \uicall[fig:ch5_activate_calibration]{5} to see the live camera preview to help with capturing good calibration samples; the preview shows only one camera's view.
+A set value can be cleared using the ``$\times$'' button inside its value field \uicall[fig:ch5_activate_calibration]{6}.
+A list entry can be removed using the ``$\times$'' button next to the entry \uicall[fig:ch5_activate_calibration]{7}.
+The list enforces a minimum size of 10 entries; entries cannot be removed below this limit.
+
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/07_save_system.pdf}
+  \caption[Save the setup]{Save the setup.}
+  \label{fig:ch5_save_setup}
+\end{figure}
+
 
 \minihead{Save the setup (recommended).}
-To persist the current module graph and module state, press \emph{Save} in \emph{Setup Modules} and confirm the save name in the dialog.
-\xxx{Optionally add 1 small figure for the Save dialog if you keep this section. Otherwise keep as text.}
+To persist the current module graph and module states, press \emph{Save} in \emph{Setup Modules} view \uicall[fig:ch5_save_setup]{1}, confirm the save name in the dialog \uicall[fig:ch5_save_setup]{2}, and press \emph{Save} again \uicall[fig:ch5_save_setup]{3}. Please wait for the save procedure to finish. If you later want to restore this setup, use the \emph{Load} button \uicall[fig:ch5_save_setup]{4} in the \emph{Setup Modules} view and select the saved setup from the list.
+
+The save dialog suggests a unique name. You can change the name before saving. If you try to save with a name that already exists, the dialog will ask for confirmation to overwrite the existing save. 
+
+If you save the setup with robot and camera modules activated, the modules will attempt to activate when loading the setup later. If that activation fails (e.g., robot or camera not available), the loading procedure will fail and the module graph will not be restored. You may want to save the setup with the robot and camera modules in a deactivated state to avoid this potential loading failure. The calibration module can remain activated.
+
+
+
 
 % ----------------------------------------------------------
 \section{Main view essentials (what the operator needs)}
