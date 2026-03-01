@@ -637,6 +637,10 @@ SEE FUTURE WORK FOR MORE RESOURCES
 - mention maybe smoothrobotics etc. and how we are faster. Also maybe relate to the related work
 - we currently custom load which hides the visualziation (popup "loading custom value" partially covers the scene and disables all interaction except cancel). 
 - move trajectory did show us that using the captured pen poses works as an input for the trajectory move, but it can be a bit unstable at times (when the poses are jittery, the robot may not be able to handle the movement properly). 
+- lack of simulation mode support in the robot interface. It would be more complex because we would need to enable and disable the simulation visualization too. 
+- during the calibration stage, we cannot see the camera making the calibration hard. We can switch to the Aergo view to see the camera, but its slow and not ideal.
+- when we reload the website while loading a custom value, it get stuck on the loading pop up and never stops.
+
 
 ---
 
@@ -703,6 +707,8 @@ Future work
 - we currently custom load which hides the visualziation (popup "loading custom value" partially covers the scene and disables all interaction except cancel). 
 - move trajectory did show us that using the captured pen poses works as an input for the trajectory move, but it can be a bit unstable at times (when the poses are jittery, the robot may not be able to handle the movement properly). 
 - lack of simulation mode support in the robot interface. It would be more complex because we would need to enable and disable the simulation visualization too. 
+- during the calibration stage, we cannot see the camera making the calibration hard. We can switch to the Aergo view to see the camera, but its slow and not ideal.
+- when we reload the website while loading a custom value, it get stuck on the loading pop up and never stops.
 
 ## Additional notes for both discussion/limitation/future work
 
