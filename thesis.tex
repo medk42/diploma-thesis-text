@@ -109,6 +109,23 @@
 \newcommand{\reqref}[1]{\hyperref[#1]{Requirement~\ref*{#1}}}
 \newcommand{\goalref}[1]{\hyperref[#1]{Goal~\ref*{#1}}}
 
+% Chapter 5 UI callouts (pink like the bachelor docs)
+\usepackage{xparse}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\definecolor{uipink}{RGB}{255,0,255}
+
+\NewDocumentCommand{\uicall}{o m}{%
+  \textcolor{uipink}{\textbf{%
+    \IfValueTF{#1}{%
+      \hyperref[#1]{(#2)}%
+    }{%
+      (#2)%
+    }%
+  }}%
+}
+
 % \newcommand{\type}[1]{\texttt{\detokenize{#1}}}
 \newcommand{\type}[1]{\nolinkurl{\detokenize{#1}}}
 % Better line breaking for \type{...} (underscores, ::, punctuation, CamelCase)
