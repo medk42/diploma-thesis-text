@@ -214,6 +214,74 @@ The \emph{secondary} button (farther from the tip) can be used to request automa
   \item \textbf{Reload Visualization:} clears and rebuilds the UI-local visualization if stale artifacts remain visible.
 \end{itemize}
 
+
+
+% ----------------------------------------------------------
+\section{User story: weld}
+\label{sec:ch5_story_weld}
+
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics{img/ch5_user_workflow/14_weld_initial.pdf}
+%   \caption[Weld use case (before confirmation)]{Weld use case (before confirmation): parameters are not yet captured and the command is not confirmed.}
+%   \label{fig:ch5_weld_before}
+% \end{figure}
+
+\minihead{Goal.}
+Create and execute a weld command by (i) scanning the scene and (ii) drawing a pen trajectory along one intended seam between two detected boxes.
+
+\minihead{Precondition (scene and seams).}
+Place two fiducial-tagged boxes so that they \emph{touch}. The weld use case searches the scanned scene for \emph{seam candidates}, where a seam is a straight contact line between two boxes:
+\begin{itemize}
+  \item \textbf{Edge--edge seam:} two box edges touch along a line (e.g., two boxes placed flush side-by-side).
+  \item \textbf{Edge--face seam:} an edge of one box touches a face of the other box (e.g., a box resting on the edge of another).
+\end{itemize}
+The command always welds \emph{one} straight seam segment (or a subsegment of it). The selected seam is determined during confirmation; after confirmation, the scene should not be rearranged before execution.
+
+\minihead{Steps (before confirmation).}
+\begin{enumerate}
+  \item In \emph{Available}, press \uicall[fig:ch5_weld_before]{1} \emph{WELD}. The command appears in \emph{Program} \uicall[fig:ch5_weld_before]{2} and its parameters are shown \uicall[fig:ch5_weld_before]{3}.
+  \item Acquire the scene snapshot: for \emph{Scene Scan}, press \uicall[fig:ch5_weld_before]{4} \emph{Click to set}.
+        Verify that the two boxes are detected (visible in the 3D view after the scan).
+  \item Teach the welding trajectory: for \emph{Welding Trajectory}, press \uicall[fig:ch5_weld_before]{5} \emph{Click to set}. When the UI prompts for custom input:
+        \begin{enumerate}[label=(\roman*)]
+          \item Move the pen tip to the intended \emph{start} of the seam (keep the tip close to the contact line, within roughly 10\,mm).
+          \item Hold the pen like a torch: keep the pen \emph{pointing toward the seam} from the intended welding side (avoid drawing from the opposite side or with a strongly tilted pen).
+          \item Press and hold the \emph{primary} button, move the pen along the seam, then release at the intended \emph{end} point.
+        \end{enumerate}
+        The trajectory preview should appear in the 3D view and the trajectory parameter becomes set.
+  \item Press \uicall[fig:ch5_weld_before]{6} \emph{Confirm} to create the command.
+\end{enumerate}
+
+\minihead{If confirmation fails.}
+Confirmation can fail if the system cannot match the trajectory to any seam candidate. Typical causes and fixes:
+\begin{itemize}
+  \item \textbf{No seam in the scene:} ensure the two boxes \emph{touch} (edge--edge or edge--face) and re-run \emph{Scene Scan}.
+  \item \textbf{Trajectory too far from the seam:} redraw closer to the contact line (keep the pen tip within roughly 10\,mm).
+  \item \textbf{Wrong side / wrong pen orientation:} redraw from the same side from which the torch would approach the seam and keep the pen pointing toward the seam (avoid extreme tilt; large direction mismatch is rejected).
+  \item \textbf{Scene changed:} if boxes were moved after scanning, re-run \emph{Scene Scan} and redraw.
+\end{itemize}
+If needed, clear the parameter value (inner ``$\times$'') and reteach the trajectory.
+
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics{img/ch5_user_workflow/15_weld_defined.pdf}
+%   \caption[Weld use case (after confirmation)]{Weld use case (after confirmation): the command is confirmed and a motion preview is shown.}
+%   \label{fig:ch5_weld_after}
+% \end{figure}
+
+\minihead{On success (after confirmation).}
+After successful confirmation, the command becomes confirmed in \emph{Program} \uicall[fig:ch5_weld_after]{1}, \emph{Confirm} becomes disabled \uicall[fig:ch5_weld_after]{2}, and a preview of the approach--weld--depart motion is shown in the 3D view \uicall[fig:ch5_weld_after]{3}.
+Unlike pick-and-place, the weld command is \emph{resolved at confirmation time} into fixed world-frame poses; therefore, keep the workpiece configuration unchanged until execution.
+
+\minihead{Execute.}
+Press \uicall[fig:ch5_weld_after]{4} \emph{Start} to execute. Pause and stop are supported by this use case.
+
+
+
+
+
+
 % ----------------------------------------------------------
 \section{User story: pick-and-place}
 \label{sec:ch5_story_pick_place}
@@ -245,35 +313,8 @@ At least one fiducial-tagged box must be visible to the camera (registry in \aut
 \noindent \minihead{Note.}
 Pick-and-place re-reads the scene at execution start; the preview shown after confirmation is illustrative.
 
-% ----------------------------------------------------------
-\section{User story: weld}
-\label{sec:ch5_story_weld}
 
-\minihead{Goal.}
-Create and execute a weld command by (i) scanning the scene and (ii) drawing a trajectory along an intended seam.
 
-\minihead{Precondition (scene).}
-Place two tagged boxes so that they touch (edge--edge or edge--face contact).
-The weld use case detects seam candidates from the current box configuration and matches the user-drawn trajectory to one seam.
-
-\minihead{Steps.}
-\begin{enumerate}
-  \item In \emph{Available}, press \uicall{1} \emph{WELD}. The use case appears in the \emph{Program} list (\uicall{2}) and its parameters are shown (\uicall{3}).
-  \item For \emph{Scene Scan}, press \uicall{4} \emph{Click to set} to acquire a scene snapshot. Detected boxes appear in the 3D view (\uicall{5}).
-  \item For \emph{Welding Trajectory}, press \uicall{6} \emph{Click to set}. When prompted, draw a trajectory along the intended seam (press and hold primary, move, release).
-  \item Press \uicall{7} \emph{Confirm}. If command creation fails (trajectory cannot be matched to a seam), remove the trajectory value and reteach; if boxes were moved, refresh \emph{Scene Scan}.
-  \item Press \uicall{8} \emph{Start} to execute. Pause and stop are supported by this use case.
-\end{enumerate}
-
-% \begin{figure}[H]
-%   \centering
-%   \includegraphics[width=\linewidth]{img/ch5_user_workflow/fig_ch5_07_weld_before_after.pdf}
-%   \caption[Weld programming]{Weld programming (before/after confirmation).}
-%   \label{fig:ch5_weld_before_after}
-% \end{figure}
-
-\noindent \minihead{Note.}
-Unlike pick-and-place, the weld command is resolved at confirmation time and assumes the workpiece configuration remains unchanged until execution.
 
 % ----------------------------------------------------------
 \section{Persistence workflows (optional)}
