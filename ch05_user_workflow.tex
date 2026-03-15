@@ -234,8 +234,8 @@ Create and execute an approach--weld--depart weld command by (i) scanning the sc
 Place two fiducial-tagged boxes so that they \emph{touch}, as in the embedded illustration \uicall[fig:ch5_weld_before]{1}: raise one box using a spacer and bring it into contact with the other box.
 A \emph{seam} is a straight line where two boxes touch:
 \begin{itemize}
-  \item \textbf{Edge--edge seam:} two box edges touch (solid line in the embedded illustration).
-  \item \textbf{Edge--face seam:} an edge of one box touches a face of the other box (dotted line in the embedded illustration).
+  \item \textbf{Edge--edge seam:} two box edges touch along a line (solid line in the embedded illustration).
+  \item \textbf{Edge--face seam:} an edge of one box touches a face of the other box along a line (dotted line in the embedded illustration).
 \end{itemize}
 The command always welds \emph{one} straight seam segment (or a subsegment of it). The welding path is determined during confirmation; keep the box configuration unchanged until execution.
 
@@ -298,8 +298,7 @@ For implementation-level details and exact execution semantics, see \autoref{sub
 \minihead{Goal.}
 Create and execute a pick-and-place command by (i) capturing a scene snapshot and (ii) teaching pick and place poses.
 
-Unlike weld (which stores fixed world-frame poses at confirmation time), pick-and-place stores the command as:
-(i) the selected \emph{box ID}, (ii) the \emph{pick pose relative to that box}, and (iii) fixed world-frame place pose.
+Unlike weld (which stores fixed world-frame poses at confirmation time), pick-and-place stores the command as the selected box ID, the pick pose relative to that box, and the place pose in the world frame.
 At execution time, the system scans the scene again and recomputes the world pick pose from the box's current pose; the place pose remains the fixed world pose captured during confirmation.
 
 \minihead{Preconditions (scene).}
@@ -312,7 +311,7 @@ Place at least one fiducial-tagged box in the scene so that it is visible to the
   \item Trigger auto-loading by pressing the pen \emph{secondary} button.
         This captures \emph{Scene Request} and then prompts for \emph{Pick Position} and \emph{Place Position}.
   \item Teach \emph{Pick Position}:
-        move the pen tip close to the intended box and point the pen \emph{into the box} (during confirmation, the system selects a box using a short segment cast along the pick pose local $+z$ axis), as in the embedded example \uicall[fig:ch5_pick_before]{4}.
+        move the pen tip close to the intended box and point the pen \emph{into the box} (during confirmation, the system selects a box by checking a short segment along the pick pose $+z$ direction), as in the embedded example \uicall[fig:ch5_pick_before]{4}.
         Press the \emph{primary} button briefly to capture the pose.
   \item Teach \emph{Place Position}:
         move the pen to the desired placement location and press the primary button to capture the pose.
@@ -337,7 +336,7 @@ In practice, failures are usually due to:
 \minihead{On success (after confirmation).}
 After successful confirmation, the pick-and-place command is confirmed in \emph{Program} \uicall[fig:ch5_pick_after]{1} and \emph{Confirm} becomes disabled \uicall[fig:ch5_pick_after]{2}.
 A preview of the nominal lift-and-transfer motion is shown in the 3D view \uicall[fig:ch5_pick_after]{3}.
-The preview reflects the captured inputs and chosen lift distance; it is \emph{not} updated after confirmation.
+The preview reflects the captured inputs and configured parameters; it is \emph{not} updated after confirmation.
 
 \minihead{Execute.}
 Press \emph{Start} \uicall[fig:ch5_pick_after]{4} to execute. Stop is supported, but pause is not supported by this use case.
