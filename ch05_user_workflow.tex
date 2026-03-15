@@ -179,7 +179,7 @@ Therefore, it is recommended to save with the robot and camera modules deactivat
 
 
 % ----------------------------------------------------------
-\section{Main view essentials (what the operator needs)}
+\section{Main view essentials}
 \label{sec:ch5_main_view}
 
 \begin{figure}[H]
@@ -202,7 +202,7 @@ Keep the marker cube visible in the camera preview \uicall[fig:ch5_main_view]{1}
   \item \textbf{Trajectory:} press and hold the primary button, move the pen, then release to create a trajectory preview \uicall[fig:ch5_main_view]{4}.
 \end{itemize}
 
-The \emph{secondary} button (farther from the tip) can be used to request automatic loading of \emph{use case} parameters.
+The \emph{secondary} button (farther from the tip) can be used to request automatic loading of \emph{use case} parameters (shown in \autoref{sec:ch5_story_pick_place}).
 
 
 \minihead{Set Position / Move To Position \uicall[fig:ch5_main_view]{5}.}
@@ -288,44 +288,71 @@ For implementation-level details and exact execution semantics, see \autoref{sub
 \section{User story: pick-and-place}
 \label{sec:ch5_story_pick_place}
 
-\minihead{Goal.}
-Pick a detected box near an authored pick pose and place it at an authored place pose.
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/11_pick_initial.pdf}
+  \caption[Pick-and-place (before confirmation)]{Pick-and-place (before confirmation): parameters are not yet captured and the command is not confirmed.}
+  \label{fig:ch5_pick_before}
+\end{figure}
 
-\minihead{Precondition (scene).}
-At least one fiducial-tagged box must be visible to the camera (registry in \autoref{appendix:scene_registry}).
+\minihead{Goal.}
+Create and execute a pick-and-place command by (i) capturing a scene snapshot and (ii) teaching pick and place poses.
+
+\minihead{Preconditions (scene).}
+Place at least one fiducial-tagged box in the scene so that it is visible to the camera. 
+
+The command determines the pick pose at runtime, using box ID and pick pose offset recovered during command confirmation. Place pose remains constant between confirmation and executions. Therefore unlike the welding use case, the box can be moved between execution runs. 
 
 \minihead{Steps.}
 \begin{enumerate}
-  \item In \emph{Available}, press \uicall{1} \emph{PICK}. The use case appears in the \emph{Program} list (\uicall{2}) and its parameters are shown (\uicall{3}).
+  \item Press \emph{PICK} \uicall[fig:ch5_pick_before]{1} in \emph{Available}.
+        The command appears in \emph{Program} \uicall[fig:ch5_pick_before]{2} and its parameters are shown \uicall[fig:ch5_pick_before]{3}.
   \item Trigger auto-loading by pressing the pen \emph{secondary} button.
-        The UI first acquires a scene snapshot and then prompts for the pick and place poses.
-  \item Enter \emph{Pick Position} by moving the pen tip close to the intended box and pressing the primary button.
-  \item Enter \emph{Place Position} by moving the pen to the target location and pressing the primary button.
-  \item Press \uicall{4} \emph{Confirm}. If confirmation fails (no object near the pick pose), reteach \emph{Pick Position}.
-  \item Press \uicall{5} \emph{Start} to execute. Stop is supported; pause is not supported by this use case.
+        This captures \emph{Scene Request} and then prompts for \emph{Pick Position} and \emph{Place Position}.
+  \item Teach \emph{Pick Position}:
+        move the pen tip close to the intended box and point the pen \emph{into the box} (the system selects a box using a short segment cast along the pick pose local $+z$ axis) --- see \uicall[fig:ch5_pick_before]{4} for an example pick pose.
+        Press the \emph{primary} button briefly to capture the pose.
+  \item Teach \emph{Place Position}:
+        move the pen to the desired placement location and press the primary button to capture the pose.
+  \item Press \emph{Confirm} \uicall[fig:ch5_pick_before]{5} to create the command.
 \end{enumerate}
 
-% \begin{figure}[H]
-%   \centering
-%   \includegraphics[width=\linewidth]{img/ch5_user_workflow/fig_ch5_06_pick_before_after.pdf}
-%   \caption[Pick-and-place programming]{Pick-and-place programming (before/after confirmation).}
-%   \label{fig:ch5_pick_before_after}
-% \end{figure}
+\minihead{If confirmation fails.}
+If confirmation fails, clear the affected parameter value using the inner ``$\times$'' next to the stored \emph{Value} and capture it again (re-capture \emph{Scene Request} and/or re-teach \emph{Pick/Place Position} as needed) using the \emph{secondary} button or \emph{Click to set}.
+In practice, failures are usually caused by one of:
+\begin{itemize}
+  \item \textbf{No box selected:} the pick pose did not intersect any registered box. Move the pen tip closer and point the pick pose $+z$ into the intended box.
+  \item \textbf{Scene changed after the snapshot:} if the box was moved after capturing \emph{Scene request} and before capturing the \emph{Pick Position}, re-capture \emph{Scene Request} before confirming again.
+\end{itemize}
 
-\noindent \minihead{Note.}
-Pick-and-place re-reads the scene at execution start; the preview shown after confirmation is illustrative.
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/12_pick_defined.pdf}
+  \caption[Pick-and-place (after confirmation)]{Pick-and-place (after confirmation): the command is confirmed and a motion preview is shown.}
+  \label{fig:ch5_pick_after}
+\end{figure}
+
+\minihead{On success (after confirmation).}
+After successful confirmation, the pick-and-place command is confirmed in \emph{Program} \uicall[fig:ch5_pick_after]{1} and \emph{Confirm} becomes disabled \uicall[fig:ch5_pick_after]{2}.
+A preview of the nominal lift-and-transfer motion is shown in the 3D view \uicall[fig:ch5_pick_after]{3}.
+The preview is illustrative: pick-and-place re-reads the scene at execution start, but the preview is \emph{not} updated.
+
+\minihead{Execute.}
+Press \emph{Start} \uicall[fig:ch5_pick_after]{4} to execute. Stop is supported; pause is not supported by this use case. Unlike the weld use case, the pick-and-place use case dynamically updates the pick pose based on the current scene. During execution, the scene is scanned and the pick pose is calculated according to the current scene state. The place pose remains fixed as defined during confirmation. Therefore, this use case illustrates a dynamic use case workflow instead of the one-off run-and-execute weld use case approach.
+
+For implementation-level details and exact execution semantics, see \autoref{subsec:ch4_usecase_pick_place}.
+
+\section{Save the program}
+\label{sec:ch5_save_program}
+
+Any use case program can be saved and later loaded including all parameters, confirmation state and visualization data. For run-and-execute use cases like the weld, this is not very practical (it would require the scene to remain unchanged between saving and loading), but for more dynamic use cases that adapt to the existing scene (like the pick-and-place), this becomes quite practical.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/13_pick_save.pdf}
+  \caption{Save the program.}
+  \label{fig:ch5_pick_save}
+\end{figure}
 
 
-
-
-% ----------------------------------------------------------
-\section{Persistence workflows (optional)}
-\label{sec:ch5_persistence}
-
-\minihead{Save/load setup.}
-Use \emph{Setup Modules → Save/Load} to persist the module graph and per-module state (\autoref{sec:ch3_persistence_semantics}).
-
-\minihead{Save/load program.}
-Use \emph{Main view → Save/Load} to persist the authored command list and parameter values (\autoref{sec:ch3_persistence_semantics}).
-
-\xxx{Optional 1 figure: one combined Save/Load dialog screenshot; otherwise keep text-only.}
+To persist the current program, press \emph{Save} in the \emph{Aergo} view \uicall[fig:ch5_pick_save]{1}, confirm the save name in the dialog \uicall[fig:ch5_pick_save]{2}, and press \emph{Save} again \uicall[fig:ch5_pick_save]{3}. If you later want to restore the program, use the \emph{Load} button \uicall[fig:ch5_pick_save]{4} and select the saved program from the list. The program save dialog behaves like the setup save dialog in terms of save file naming. 
