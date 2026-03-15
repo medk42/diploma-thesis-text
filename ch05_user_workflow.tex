@@ -298,6 +298,10 @@ For implementation-level details and exact execution semantics, see \autoref{sub
 \minihead{Goal.}
 Create and execute a pick-and-place command by (i) capturing a scene snapshot and (ii) teaching pick and place poses.
 
+Unlike weld (which stores fixed world-frame poses at confirmation time), pick-and-place stores the command as:
+(i) the selected \emph{box ID}, (ii) the \emph{pick pose relative to that box}, and (iii) fixed world-frame place pose.
+At execution time, the system scans the scene again and recomputes the world pick pose from the box's current pose; the place pose remains the fixed world pose captured during confirmation.
+
 \minihead{Preconditions (scene).}
 Place at least one fiducial-tagged box in the scene so that it is visible to the camera.
 
@@ -333,11 +337,11 @@ In practice, failures are usually due to:
 \minihead{On success (after confirmation).}
 After successful confirmation, the pick-and-place command is confirmed in \emph{Program} \uicall[fig:ch5_pick_after]{1} and \emph{Confirm} becomes disabled \uicall[fig:ch5_pick_after]{2}.
 A preview of the nominal lift-and-transfer motion is shown in the 3D view \uicall[fig:ch5_pick_after]{3}.
-The preview is illustrative: pick-and-place re-reads the scene at execution start, but the preview is \emph{not} updated.
+The preview reflects the captured inputs and chosen lift distance; it is \emph{not} updated after confirmation.
 
 \minihead{Execute.}
 Press \emph{Start} \uicall[fig:ch5_pick_after]{4} to execute. Stop is supported, but pause is not supported by this use case.
-At execution start, the scene is re-scanned and the pick pose is reconstructed from the stored box ID and relative pick offset; the place pose remains fixed as defined during confirmation.
+At execution start, the system re-scans the scene, finds the box with the stored ID, and computes the pick pose from its current pose and the stored relative pick offset; the place pose stays unchanged.
 For implementation-level details and exact execution semantics, see \autoref{subsec:ch4_usecase_pick_place}.
 
 % ----------------------------------------------------------
