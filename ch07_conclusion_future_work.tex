@@ -10,11 +10,11 @@ At the same time, the thesis remains a proof of concept rather than a validated 
 
 \section{Near-Term Future Work}
 
-The clearest engineering boundary is the current scene and sensing pipeline. The first practical step is therefore to move beyond the present box-based fiducial scene model, improve calibration robustness, and make better use of the sensing already available on the pen side. It would also be useful to characterize the stability and practical accuracy of both spatial input and scene estimation more explicitly than was possible within the scope of this thesis.
+The clearest engineering boundary is the current scene and sensing pipeline. The first practical step is therefore to move beyond the present box-based fiducial scene model, improve calibration robustness, and make better use of the sensing already available on the pen side. It would also be useful to characterize the stability and practical accuracy of both spatial input and scene estimation more explicitly than was done in this thesis.
 
-A second engineering boundary is the execution layer. A stronger robot interface should provide clearer separation between motion execution and tool control, support at least basic tool abstraction, and add execution-aware capabilities such as motion validation, collision checking, and safer planning. In the same area, it would be valuable to explore a path toward export or compilation of suitable task representations into robot-side programs, especially for use cases that do not require runtime scene adaptation.
+A second engineering boundary is the execution layer. A stronger execution layer should refine the current motion interface, design a generalized tool-control abstraction, and add execution-aware capabilities such as motion validation, collision checking, and safer planning. In the same area, it would be valuable to explore a path toward export or compilation of suitable task representations into robot-side programs, especially for use cases that do not require runtime scene adaptation.
 
-After these issues, the remaining engineering work concerns execution robustness, cross-platform completion, and orchestration polish. This includes better cross-platform support, a more robust orchestration workflow, and refinement of the control-plane UI. These improvements are important if the system is to be used repeatedly in practice, but they are secondary to the scene, sensing, and execution issues that currently define the main technical boundary of the prototype.
+Beyond scene, sensing, and execution, the remaining near-term engineering work is mainly completion work, such as better cross-platform support. These changes would further complete the prototype, but they do not change the main technical boundary of the system.
 
 \section{Longer-Term Directions}
 
