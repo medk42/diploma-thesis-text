@@ -77,31 +77,18 @@ Based on the high-level approach described above, we define three goals:
 \section*{Thesis structure}
 \addcontentsline{toc}{section}{Thesis structure}
 
-This thesis is divided into the following chapters.
+This thesis is organized as follows.
 
-\autoref{chapter:ch1_related_work} reviews the background and related work on robot programming methods, spatial authoring approaches, and relevant technologies for sensing and execution. 
+\autoref{chapter:ch1_related_work} surveys related work on reducing friction in robot programming and positions the thesis within in-workspace spatial authoring approaches.
 
-\autoref{chapter:ch2_analysis} derives system requirements and decomposes the problem into core components and design trade-offs. 
+\autoref{chapter:ch2_analysis} derives the system requirements from the target tasks, compares alternative design directions, and motivates the selected architecture.
 
-\autoref{chapter:ch3_system_design} describes the overall system architecture, detailing the modular communication contracts, the core runtime, and the shared interfaces that connect the components. 
+\autoref{chapter:ch3_system_design} presents the modular system design, including the runtime core, the module contract, and the main interface contracts.
 
-\autoref{chapter:ch4_implementation} presents the physical hardware setup and the concrete internal implementation details of the sensing and execution modules. 
+\autoref{chapter:ch4_implementation} describes the prototype hardware setup and the concrete implementation of the modules used in the thesis.
 
-\autoref{chapter:ch5_user_workflow} focuses on the practical operation of the system, walking through the initial environment setup and demonstrating the end-to-end authoring process through two concrete user stories: a pick-and-place task and a welding task. 
+\autoref{chapter:ch5_user_workflow} documents the operator workflow in the web frontend, from startup and calibration to authoring and executing the welding and pick-and-place use cases.
 
-\autoref{chapter:ch6_discussion} serves as the qualitative evaluation of the system, discussing what was successfully built, assessing the practical workflow, and identifying current limitations. 
+\autoref{chapter:ch6_discussion} interprets the prototype result, clarifies the scope of the demonstrated use cases, and discusses the main limitations of the current system.
 
-Finally, \autoref{chapter:ch7_conclusion} concludes the thesis with a summary of contributions and outlines future work to address the identified limitations.
-
-\xxx{add a 5–8 line “System at a glance”. This should cover what our thesis actually does in a nutshell, before jumping into the analysis. Or at the very least clearly link it in the structure.}
-
-\xxx{Do not forget to refernce the chapters with autoref, and to update the chapter numbers if you add/remove chapters.}
-
-% \autoref{chapter:ch1_related_work} reviews the background and related work on robot programming methods, spatial authoring approaches, and relevant technologies for sensing and execution.
-% \autoref{chapter:ch2_analysis} derives requirements and decomposes the problem into core components and design trade-offs.
-% \autoref{chapter:ch3_architecture} describes the system architecture and design decisions.
-% \autoref{chapter:ch4_implementation} presents the hardware setup and implementation details of each component.
-% \autoref{chapter:ch5_usage} focuses on system usage, including setup and two user stories for the two use cases.
-% \autoref{chapter:ch6_evaluation} evaluates the system through tracking stability experiments, end-to-end workflow trials, and real robot validation.
-% \autoref{chapter:ch7_discussion} discusses the results, limitations, and future work.
-% Finally, \autoref{chapter:ch8_conclusion} concludes the thesis with a summary of contributions and final remarks.
+Finally, \autoref{chapter:ch7_conclusion} summarizes the thesis and outlines near-term and longer-term future work.
