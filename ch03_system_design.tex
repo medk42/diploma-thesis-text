@@ -338,7 +338,7 @@ Finally, \type{BaseModule} implements \type{IModule::getModuleInfo()} by returni
 
 \section{Core implementation used in this thesis} \label{sec:ch3_core}
 
-\xxx{Core routing and request/response “exactly one response” is explained in several places (communication primitives, message delivery flow, routing section, wrapper section). It’s fine for now, but later you can replace one of the later repeats with “as described in §X”.}
+\xxx{Core routing and request/response “exactly one response” is explained in several places (communication primitives, message delivery flow, routing section, wrapper section). It's fine for now, but later you can replace one of the later repeats with “as described in §X”.}
 
 The previous section defined the module contract in an implementation-independent way: what a module is, how it declares channels, how messages are represented, and what services the runtime must provide through \type{ICore}. In this section, we describe the concrete runtime core used in this thesis, which implements that contract in a single process using threads and in-memory routing.
 
@@ -1447,7 +1447,7 @@ Use case authoring and execution is \emph{orchestrator-driven}: the UI initiates
 \end{enumerate}
 
 \minihead{Execution control semantics.}
-\type{UsecaseTree} delegates all execution to the use case wrapper’s task lifecycle. Concretely, a program run is realized by sending \type{PROGRAM\_START\_REAL} (or \type{PROGRAM\_START\_SIMULATED}) for each confirmed command JSON, polling \type{PROGRAM\_STATUS} until a terminal status is reported, and issuing \type{PROGRAM\_REMOVE} for explicit cleanup (\path{program_instance.h}, \path{program_instance.cpp}). 
+\type{UsecaseTree} delegates all execution to the use case wrapper's task lifecycle. Concretely, a program run is realized by sending \type{PROGRAM\_START\_REAL} (or \type{PROGRAM\_START\_SIMULATED}) for each confirmed command JSON, polling \type{PROGRAM\_STATUS} until a terminal status is reported, and issuing \type{PROGRAM\_REMOVE} for explicit cleanup (\path{program_instance.h}, \path{program_instance.cpp}). 
 
 The optional control operations \type{PROGRAM\_PAUSE}, \type{PROGRAM\_RESUME}, and \type{PROGRAM\_STOP} are treated as \emph{best-effort}:
 \begin{itemize}
@@ -1482,7 +1482,7 @@ Internal identifiers used for bookkeeping are implementation details and are reg
 \subsection{UI orchestration module} \label{sec:ch3_ui_orchestration}
 
 \minihead{Purpose.}
-While the contracts in this chapter define \emph{compatibility} (which channels can talk to which), the system still requires a control-plane component that \emph{drives} these interactions into an end-user workflow. In this thesis, this role is implemented by the web-based \type{web\_frontend\_module}: it is a normal module from the module contract’s perspective, but it orchestrates the module graph, activation, use case programming/execution (via \type{UsecaseTree}), visualization aggregation, and persistence.
+While the contracts in this chapter define \emph{compatibility} (which channels can talk to which), the system still requires a control-plane component that \emph{drives} these interactions into an end-user workflow. In this thesis, this role is implemented by the web-based \type{web\_frontend\_module}: it is a normal module from the module contract's perspective, but it orchestrates the module graph, activation, use case programming/execution (via \type{UsecaseTree}), visualization aggregation, and persistence.
 
 \minihead{UI decomposition (three screens).}
 The frontend exposes three user-facing views that mirror its orchestration responsibilities:
@@ -1493,34 +1493,54 @@ The frontend exposes three user-facing views that mirror its orchestration respo
 \end{itemize}
 This separation is conceptual: it reflects three phases of using the system rather than internal UI implementation details.
 
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch3_system_design/05_ui_orchestration_add_module.pdf}
+  \caption[\type{AddModuleUi}: graph construction]{\type{AddModuleUi}: graph construction by selecting a module type, choosing input wiring, and creating a runtime module instance.}
+  \label{fig:ch3_ui_orchestration_add_module}
+\end{figure}
+
 \minihead{Module graph wiring via core reflection/orchestration.}
 Graph editing is implemented on top of \type{ICoreControl} (\autoref{subsec:ch3_reflection_orchestration}):
 \begin{itemize}
-    \item The frontend presents the \emph{loaded module catalog} as a palette of module types that can be instantiated, together with their declared subscribe/request consumers.
-    \item For each consumer, it presents a \emph{current registry} of compatible producer endpoints (publish producers for subscribe wiring; response producers for request wiring), and the user \emph{explicitly selects} which endpoints to bind.
-    \item On creation, the selected endpoints are collected into an \type{InputChannelMapInfo} and passed to \type{ICoreControl::addModule}; the core validates and materializes the wiring as part of the runtime graph.
+    \item The frontend presents the \emph{loaded module catalog} as a palette of module types that can be instantiated, together with their declared subscribe/request consumers \uicall[fig:ch3_ui_orchestration_add_module]{1}.
+    \item For each consumer, it presents a \emph{current registry} of compatible producer endpoints (publish producers for subscribe wiring; response producers for request wiring), and the user \emph{explicitly selects} which endpoints to bind \uicall[fig:ch3_ui_orchestration_add_module]{2}.
+    \item On creation \uicall[fig:ch3_ui_orchestration_add_module]{3}, the selected endpoints are collected into an \type{InputChannelMapInfo} and passed to \type{ICoreControl::addModule}; the core validates and materializes the wiring as part of the runtime graph.
     \item Removal is likewise delegated to the core (\type{removeModuleById}), with dependency-aware removal supported by \type{collectDependencies} when the UI needs to present the user with the impact of a removal.
 \end{itemize}
 
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch3_system_design/06_ui_orchestration_activation.pdf}
+  \caption[\type{ActivationUi}: configuration and lifecycle]{\type{ActivationUi}: generic configuration and lifecycle control for running module instances.}
+  \label{fig:ch3_ui_orchestration_activation}
+\end{figure}
 
 \minihead{Activation driving (generic configuration panel).}
-For each running module instance, the frontend determines whether it is activable by checking whether the module exposes the activation-wrapper protocol (activation response producer). Activable modules are configured and driven through the activation interface (\autoref{subsec:ch3_activation_interface}):
+For each running module instance \uicall[fig:ch3_ui_orchestration_activation]{1}, the frontend determines whether it is activable by checking whether the module exposes the activation-wrapper protocol (activation response producer). Activable modules are configured and driven through the activation interface (\autoref{subsec:ch3_activation_interface}):
 \begin{itemize}
-    \item The UI requests the activation parameter schema (\type{READ\_ACTIVATION\_PARAMETERS}) and current values (\type{READ\_VALUES}) and renders a generic editor that follows the parameter-description definitions (types, ranges, enum domains, list bounds; see \path{backend/module_helpers/parameter_description/}).
-    \item Users edit values and list cardinalities; changes are propagated to the activation wrapper using \type{SET\_VALUE} and \type{LIST\_ADD}/\type{LIST\_REMOVE}.
-    \item Activation and deactivation are started explicitly by \type{ACTIVATE}/\type{DEACTIVATE} and monitored via \type{GET\_STATUS}; long-running tasks are presented as cancelable progress dialogs via \type{CANCEL\_TASK}.
+    \item The UI requests the activation parameter schema (\type{READ\_ACTIVATION\_PARAMETERS}) and current values (\type{READ\_VALUES}) and renders a generic editor \uicall[fig:ch3_ui_orchestration_activation]{2} that follows the parameter-description definitions (types, ranges, enum domains, list bounds; see \path{backend/module_helpers/parameter_description/}).
+    \item Users edit values and list cardinalities \uicall[fig:ch3_ui_orchestration_activation]{3}; changes are propagated to the activation wrapper using \type{SET\_VALUE} and \type{LIST\_ADD}/\type{LIST\_REMOVE}.
+    \item Activation and deactivation \uicall[fig:ch3_ui_orchestration_activation]{4} are started explicitly by \type{ACTIVATE}/\type{DEACTIVATE} and monitored via \type{GET\_STATUS}; long-running tasks are presented as cancelable progress dialogs via \type{CANCEL\_TASK}.
     \item Modules that do not expose activation are treated as \emph{always ready} (no activate/deactivate controls), keeping the setup UI uniform even for modules that need no configuration.
 \end{itemize}
 Activation parameter values are owned by the activation wrapper/module side; the UI only edits them through the protocol.
 
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch3_system_design/07_ui_orchestration_main_visualization.pdf}
+  \caption[\type{MainVisualizationUi}]{\type{MainVisualizationUi}: operational view combining camera preview, 3D scene visualization, and use-case program authoring/execution.}
+  \label{fig:ch3_ui_orchestration_main_visualization}
+\end{figure}
+
 \minihead{Use case programming and execution.}
 The main visualization view embeds the programming UI (implemented in \path{program_tree.h}/\path{program_tree.cpp}) backed by \type{UsecaseTree} (\path{backend/module_helpers/usecase_tree/}; see also \autoref{sec:ch3_usecase_tree}):
 \begin{itemize}
-    \item The UI discovers available use cases by querying all connected use case modules for metadata and parameter schema (\type{READ\_COMMAND\_PARAMETERS}).
-    \item The user composes a linear program by appending or reordering commands (each command binds a use case identifier to concrete parameter values).
-    \item Missing \type{CUSTOM} inputs are acquired on demand through the use case wrapper’s capture protocol (\type{READ\_CUSTOM\_PARAMETER\_START} and repeated \type{READ\_CUSTOM\_PARAMETER\_CHECK}), either manually (``Click to set'') or via a pen-triggered auto-fill shortcut.
-    \item Each command is explicitly \emph{confirmed} by requesting \type{CREATE\_COMMAND}, which materializes the command JSON (and optionally a preview visualization) and caches it as the executable representation.
-    \item A program run is then started in real or simulated mode and controlled via start/pause/resume/stop; execution is sequential and its progress is surfaced to the user through the program state and completion dialogs.
+    \item The UI discovers available use cases \uicall[fig:ch3_ui_orchestration_main_visualization]{1} by querying all connected use case modules for metadata and parameter schema (\type{READ\_COMMAND\_PARAMETERS}).
+    \item The user composes a linear program \uicall[fig:ch3_ui_orchestration_main_visualization]{2} by appending or reordering commands (each command binds a use case identifier to concrete parameter values).
+    \item Missing \type{CUSTOM} inputs are acquired on demand through the use case wrapper's capture protocol (\type{READ\_CUSTOM\_PARAMETER\_START} and repeated \type{READ\_CUSTOM\_PARAMETER\_CHECK}), either manually (``Click to set'') or via a pen-triggered auto-fill shortcut \uicall[fig:ch3_ui_orchestration_main_visualization]{3}.
+    \item Each command is explicitly \emph{confirmed} \uicall[fig:ch3_ui_orchestration_main_visualization]{4} by requesting \type{CREATE\_COMMAND}, which materializes the command JSON (and optionally a preview visualization) and caches it as the executable representation.
+    \item A program run is then started in real or simulated mode \uicall[fig:ch3_ui_orchestration_main_visualization]{5} and controlled via start/pause/resume/stop; execution is sequential and its progress is surfaced to the user through the program state and completion dialogs.
 \end{itemize}
 This makes the control flow explicit and reproducible: execution is never pushed by modules; it is always initiated and advanced by the orchestrator via directed request/response.
 
@@ -1529,13 +1549,13 @@ Unlike activation, the linear program (the command list and each command's param
 \minihead{Visualization: camera preview and 3D scene.}
 The main view aggregates two visualization modalities:
 \begin{itemize}
-    \item \textbf{Camera preview (subscribe):} camera frames arrive as publish/subscribe messages and are displayed in the UI so the user can inspect what the camera sees (see \autoref{sec:ch3_supporting_messages}). The UI presents a single camera stream as the preview source.
-    \item \textbf{3D scene visualization (subscribe + request):} incremental scene updates arrive as publish/subscribe messages (ANNOUNCE/UPDATE). When the UI first becomes aware of a visualization producer, it requests a full scene snapshot via the 3D visualization interface's request/response path (e.g., \type{READ\_FULL}; see \autoref{sec:ch3_visualization_interface}); afterwards it processes the delta updates as they arrive. The UI additionally exposes ``Reload Visualization'', which re-requests full snapshots to rebuild the local scene mirror.
+    \item \textbf{Camera preview (subscribe)} \uicall[fig:ch3_ui_orchestration_main_visualization]{6}: camera frames arrive as publish/subscribe messages and are displayed in the UI so the user can inspect what the camera sees (see \autoref{sec:ch3_supporting_messages}). The UI presents a single camera stream as the preview source.
+    \item \textbf{3D scene visualization (subscribe + request)} \uicall[fig:ch3_ui_orchestration_main_visualization]{7}: incremental scene updates arrive as publish/subscribe messages (ANNOUNCE/UPDATE). When the UI first becomes aware of a visualization producer, it requests a full scene snapshot via the 3D visualization interface's request/response path (e.g., \type{READ\_FULL}; see \autoref{sec:ch3_visualization_interface}); afterwards it processes the delta updates as they arrive. The UI additionally exposes ``Reload Visualization'' \uicall[fig:ch3_ui_orchestration_main_visualization]{8}, which re-requests full snapshots to rebuild the local scene mirror.
 \end{itemize}
 The scene view additionally integrates per-command preview overlays returned by use case modules as part of \type{CREATE\_COMMAND}.
 
 \minihead{On-demand utility actions (directed requests).}
-Besides the generic contracts, the main view exposes a small set of practical operator actions implemented as explicit requests:
+Besides the generic contracts, the main view exposes a small set of practical operator actions implemented as explicit requests \uicall[fig:ch3_ui_orchestration_main_visualization]{8}:
 \begin{itemize}
     \item \textbf{Scan Scene:} triggers a fresh scene-detection request (\type{READ\_SCENE}) to an available scene-detection module; the resulting objects appear through the standard visualization channel (the UI does not interpret detection blobs directly).
     \item \textbf{Set Position / Move To Position:} persists a user-defined default robot joint configuration (stored in \path{main_visualization_data.json}) and commands a robot move to that configuration via the robot execution interface.
@@ -1544,18 +1564,24 @@ Besides the generic contracts, the main view exposes a small set of practical op
 \minihead{Note.}
 The UI module is described only through its externally observable behavior: how it exposes and drives the system interfaces to the user. Internal UI structure is intentionally omitted, unlike the core and selected modules, because it is not required to understand the system design. The UI implementation is a prototype intended to support the evaluation workflow rather than to serve as a reference implementation of a frontend architecture. Consequently, the UI module is not decomposed further in \autoref{chapter:ch4_implementation}.
 
-
-\xxx{EASY, CRUCIAL Fig (PLANNED): Screenshot collage of the three UI screens (AddModuleUi, ActivationUi, MainVisualizationUi) with brief callouts: (A) module palette + wiring selection, (B) activation parameters + activate/deactivate + remove, (C) camera preview + 3D scene + program panel. Keep callouts minimal; this figure is about \emph{orchestration responsibilities}, not UI aesthetics.}
-
 % =========================================================================================
 
 \subsection{User workflow state machine} \label{sec:ch3_workflow_state_machine}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch3_system_design/04_workflow_state_machine.pdf}
+\caption[User workflow state machine]{%
+    User workflow state machine. A typical session progresses from graph setup through module activation, program authoring, command confirmation, and execution. At multiple points in this workflow, the user may save or load either the current system setup or the authored program.%
+}
+  \label{fig:ch3_workflow_state_machine}
+\end{figure}
 
 \minihead{Purpose.}
 The contracts and helper components above define individual interactions (mapping, activation, use case requests, visualization), but a user experiences the system as an end-to-end workflow. This section summarizes that workflow as a small state machine whose transitions are triggered by explicit user actions in the UI.
 
 \minihead{Workflow states (user perspective).}
-A typical session proceeds through the following states:
+A typical session proceeds through the following states (see \autoref{fig:ch3_workflow_state_machine}):
 \begin{enumerate}
     \item \textbf{Graph setup:} instantiate modules and choose wiring for subscribe/request consumers (AddModuleUi; \type{ICoreControl::addModule}).
     \item \textbf{Module configuration:} edit activation parameters and activate required modules (ActivationUi; activation wrapper protocol).
@@ -1565,7 +1591,6 @@ A typical session proceeds through the following states:
 \end{enumerate}
 At any point, the user may persist either the current system setup (module graph + optional per-module state) or the current program (command list and each command's authored state); the concrete semantics are described in \autoref{sec:ch3_persistence_semantics}.
 
-\xxx{EASY, CRUCIAL Fig (PLANNED): User workflow state machine. States: \emph{Setup graph} $\rightarrow$ \emph{Activate modules} $\rightarrow$ \emph{Author program} $\rightarrow$ \emph{Confirm commands} $\rightarrow$ \emph{Run} (with \emph{Paused} as a substate). Add side transitions for \emph{Save/Load core state} (graph + per-module state) and \emph{Save/Load program} (program list + parameters + cached artifacts), and note that these transitions can be invoked at multiple points, not only at the end of a stage. The goal is to show the end-to-end control-plane story on one small diagram. I would do large boxes to separate the logically distinct stages (graph setup, activation, programming, execution) and then use arrows save --> disk. disk --> load to show that persistence can save at any stage of setup. }
 
 % =========================================================================================
 
@@ -1682,7 +1707,7 @@ The UI module acts as the system orchestrator that makes this workflow operable 
 % \xxx{Concrete "this is what we ran". Smooth bridge to Chapter~4. Rationale: This prevents the "UI does everything" paragraph from feeling like a grab bag. The reader already understands what "program" means (UsecaseTree), then the UI is simply the driver.}
 
 % \xxx{1 diagram + 1 paragraph}
-% \xxx{Demo module graph: this is the only module wiring diagram in this section. If you already plan a full all-connected graph in Ch4, then here do a simplified demo graph (only key modules + key edges), and in Ch4 show the full one. Don’t show two full graphs back-to-back.}
+% \xxx{Demo module graph: this is the only module wiring diagram in this section. If you already plan a full all-connected graph in Ch4, then here do a simplified demo graph (only key modules + key edges), and in Ch4 show the full one. Don't show two full graphs back-to-back.}
 
 
 
