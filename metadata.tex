@@ -50,19 +50,21 @@ I would also like to thank my family for their continued support and encourageme
 
 % Abstract (recommended length around 80-200 words; this is not a copy of your thesis assignment!)
 \def\Abstract{%
-This thesis explores spatial authoring of cooperative robot programs in the real workspace as an alternative to teach pendant and lead-through methods. Instead of programming motions directly, the user provides spatial intent (e.g., a pose, or a coarse trajectory) via AR-inspired inputs, and task-specific use cases transform this input into executable robot motion and tool commands using scene context.\newline
-A modular runtime is developed to support task-oriented programming use cases as plugins that reuse the same world-space acquisition and robot execution pipelines, while allowing components such as sensing, tracking, and scene estimation to be replaced.\newline
-The approach is implemented on a Kassow Robots collaborative robot with camera-based workspace referencing, a tracked 3D pen, and a tablet-oriented web UI. Representative use cases --- pick-and-place and seam welding --- are developed and tested on the real robot, together with basic motion primitives.\newline
-Experiments evaluate tracking stability, end-to-end authoring time, and failure modes. Results demonstrate that spatial intent input can significantly reduce setup effort for frequently redefined, trajectory-centric tasks such as welding, and they identify practical limitations driven by sensing accuracy and tool integration.
+This thesis investigates whether collaborative-robot tasks that change frequently can be authored more directly by specifying spatial intent in the real workspace instead of editing low-level robot programs through a teach pendant or offline workflow.
+It presents a modular prototype for task-oriented in-workspace spatial authoring: a shared runtime provides common services for sensing, authoring, confirmation, execution, and persistence, while task-specific use cases interpret captured poses and trajectories as robot motions and tool actions.
+The system was implemented on a Kassow Robots collaborative robot using stereo-vision workspace sensing, a tracked 6DoF pen, and a web-based interface.
+Two representative use cases were demonstrated on the real robot: pick-and-place and seam welding.
+The result is a qualitative proof of concept that this approach can support selected task-oriented workflows, with seam welding showing the clearest practical fit because authored trajectory input is used to identify and parameterize the weld seam, while pick-and-place mainly shows that authored intent can be combined with refreshed scene information at execution time.
+The contribution remains bounded by prototype scope, limited physical validation, and current limitations in scene detection, sensing robustness, and the absence of tool integration.
 }
 
 % 3 to 5 keywords (recommended) separated by \sep
 % Keywords are useful for indexing and searching for the theses by topic.
 \def\ThesisKeywords{%
 spatial authoring\sep
-collaborative robots\sep
+collaborative robot\sep
+task-oriented robot programming\sep
 augmented reality\sep
-robot programming\sep
 modular software architecture%
 }
 
@@ -89,16 +91,19 @@ modular software architecture%
 \def\StudyProgrammeCS{Informatika - Umělá inteligence}
 
 \def\ThesisKeywordsCS{%
-prostorové programování\sep
-kolaborativní roboti\sep
+prostorové zadávání\sep
+kolaborativní robot\sep
+úlohově orientované programování robotů\sep
 rozšířená realita\sep
-programování robotů\sep
 modulární softwarová architektura%
 }
 
 \def\AbstractCS{%
-Tato práce zkoumá prostorové zadávání programů pro~kolaborativní roboty přímo v~reálném pracovním prostoru jako alternativu k~programování pomocí teach pendantu a k~metodám lead-through. Uživatel nezadává pohyby robota přímo; místo toho poskytuje prostorový záměr (např. požadovanou polohu nebo hrubý průběh trajektorie) pomocí vstupů inspirovaných rozšířenou realitou. Úlohově orientované moduly následně tento záměr s~využitím kontextu scény převádějí na~vykonatelné pohyby robota a příkazy pro~nástroje připevněné k~robotu (např. otevřít/uzavřít gripper).\newline
-V~rámci práce byl vytvořen modulární běhový systém, který umožňuje implementovat a rozšiřovat programovací use-casy formou pluginů. Ty sdílejí rozhraní pro~získávání dat ve~světových souřadnicích a pro~vykonání programu na~robotu, přičemž jednotlivé části (snímání a sledování polohy, detekce scény) lze vyměnit za přesnější nebo méně experimentální řešení.\newline
-Navržený přístup je realizován na~kolaborativním robotu Kassow Robots s~detekcí scény a sledováním 3D~pera pomocí stereo kamerového systému a webovým rozhraním optimalizovaným pro~použití na~tabletu. Byly implementovány a na~reálném robotu otestovány reprezentativní úlohy pick-and-place a seam welding, doplněné o~základní pohybové primitivy.\newline
-Experimenty hodnotí stabilitu sledování, čas potřebný k~vytvoření programu od~začátku do~spuštění a typické režimy selhání. Výsledky ukazují, že zadávání prostorového záměru může výrazně snížit čas i~náročnost přípravy u~často upravovaných, na~trajektorii založených úloh, jako~je svařování, a zároveň odhalují praktická omezení daná přesností snímání a integrací nástrojů.
+Tato práce zkoumá, zda lze úlohy pro~kolaborativní roboty, které se často mění, zadávat přímo v~reálném pracovním prostoru namísto úprav nízkoúrovňového programu v~teach pendantu nebo v~offline programování.
+Představuje modulární prototyp úlohově orientovaného prostorového zadávání: společný runtime zajišťuje snímání scény, zadávání polohy a trajektorie, potvrzení výsledku, spuštění programu i~ukládání, zatímco jednotlivé aplikační moduly převádějí zachycené polohy a trajektorie na~pohyby robota a akce nástroje.
+Systém byl implementován na~kolaborativním robotu Kassow Robots s~využitím stereo vidění pracovního prostoru, sledovaného 6DoF pera a webového rozhraní.
+Na~reálném robotu byly demonstrovány dvě reprezentativní úlohy: pick-and-place a svařování.
+Výsledek je kvalitativním ověřením toho, že tento přístup může podpořit vybrané úlohově orientované pracovní postupy.
+Nejlépe se osvědčil u~svařování, kde zadaná trajektorie slouží k~určení a parametrizaci svarového švu; u~pick-and-place se naopak ukazuje hlavně to, že zadaný záměr lze při spuštění kombinovat s~aktuálními informacemi o~scéně.
+Výsledek práce je však omezen rozsahem prototypu a dosavadním ověřením na reálném robotu; pro širší praktické nasazení by bylo nutné zlepšit detekci scény a sledování pera a doplnit integraci nástrojů.
 }
