@@ -99,11 +99,11 @@ modulární softwarová architektura%
 }
 
 \def\AbstractCS{%
-Tato práce zkoumá, zda lze úlohy pro~kolaborativní roboty, které se často mění, zadávat přímo v~reálném pracovním prostoru namísto úprav nízkoúrovňového programu v~teach pendantu nebo v~offline programování.
-Představuje modulární prototyp úlohově orientovaného prostorového zadávání: společný runtime zajišťuje snímání scény, zadávání polohy a trajektorie, potvrzení výsledku, spuštění programu i~ukládání, zatímco jednotlivé aplikační moduly převádějí zachycené polohy a trajektorie na~pohyby robota a akce nástroje.
-Systém byl implementován na~kolaborativním robotu Kassow Robots s~využitím stereo vidění pracovního prostoru, sledovaného 6DoF pera a webového rozhraní.
-Na~reálném robotu byly demonstrovány dvě reprezentativní úlohy: pick-and-place a svařování.
-Výsledek je kvalitativním ověřením toho, že tento přístup může podpořit vybrané úlohově orientované pracovní postupy.
-Nejlépe se osvědčil u~svařování, kde zadaná trajektorie slouží k~určení a parametrizaci svarového švu; u~pick-and-place se naopak ukazuje hlavně to, že zadaný záměr lze při spuštění kombinovat s~aktuálními informacemi o~scéně.
-Výsledek práce je však omezen rozsahem prototypu a dosavadním ověřením na reálném robotu; pro širší praktické nasazení by bylo nutné zlepšit detekci scény a sledování pera a doplnit integraci nástrojů.
+Tato práce zkoumá, zda lze úlohy pro~kolaborativní roboty, které se často obměňují, zadávat přímo v~reálném pracovním prostoru namísto úprav nízkoúrovňových programů robota pomocí teach pendantu nebo postupů offline programování.
+Představuje modulární prototyp systému pro~úlohově orientované prostorové zadávání: sdílená běhová vrstva zajišťuje snímání scény, zadávání poloh a~trajektorií, potvrzení výsledku, spuštění i~ukládání, zatímco jednotlivé aplikační moduly převádějí zadané polohy a~trajektorie na~pohyby robota a~akce nástroje.
+Systém byl implementován na~kolaborativním robotu Kassow Robots s~využitím stereo snímání pracovního prostoru, sledovaného pera se 6~stupni volnosti a~webového rozhraní.
+Na~reálném robotu byly demonstrovány dvě reprezentativní úlohy: pick-and-place a~svařování.
+Výsledkem je kvalitativní ověření, že tento přístup může podpořit vybrané úlohově orientované pracovní postupy.
+Nejpřesvědčivěji se osvědčil u~svařování, kde zadaná trajektorie slouží k~určení průběhu a~parametrů svarového švu; u~úlohy pick-and-place se naopak ukazuje především to, že zadaný záměr lze při vykonání kombinovat s~aktuálními informacemi o~scéně.
+Přínos práce však stále vymezují hranice prototypu, jen omezené ověření na~reálném robotu a~také dosavadní limity detekce scény, robustnosti snímání a~chybějící integrace nástrojů.
 }
