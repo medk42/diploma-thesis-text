@@ -4,9 +4,9 @@ The introduction asked whether frequently changing collaborative-robot tasks can
 
 This chapter interprets that result rather than recapping the implementation. The thesis does not propose a general robot programming environment. It shows that a selected use case can combine workspace sensing, spatial input, task-specific interpretation, and robot execution into one authoring workflow, and it also makes clear where that result currently stops.
 
-\section{Prototype Result and Shared Workflow}
+\section{Prototype Result}
 
-The main result is an end-to-end prototype for in-workspace spatial authoring on a collaborative robot. The implemented system combines a tracked 6DoF input device, stereo-vision-based sensing, task-specific interpretation, and robot execution behind a shared runtime with explicit interfaces. In practical terms, the prototype covers the full path from setup and calibration through authoring, confirmation, visualization, execution, and persistence.
+The main result is an end-to-end prototype for in-workspace spatial authoring on a collaborative robot. The implemented system combines a tracked 6DoF input device, stereo-vision-based scene sensing, task-specific interpretation, and robot execution behind a shared modular runtime with explicit interfaces. In practical terms, the prototype covers the full path from setup and calibration through authoring, confirmation, visualization, execution, and persistence.
 
 At prototype scope, this closes the three goals stated in the introduction. For \goalref{goal:1}, the thesis demonstrates that poses and trajectories can be authored directly in the workspace and turned into executable robot behavior through task-specific interpretation. For \goalref{goal:2}, it provides a modular system in which different use cases reuse the same sensing, orchestration, and execution infrastructure. For \goalref{goal:3}, it demonstrates that approach on a real robot with two representative task families, pick-and-place and seam welding, while keeping the evaluation qualitative.
 
@@ -40,7 +40,7 @@ Execution remains equally bounded. The thesis demonstrates a shared robot motion
 
 The current use cases also depend on task-specific operating assumptions. The weld command assumes that the workpiece configuration stays unchanged after confirmation. The pick-and-place command assumes that the scene can be refreshed at execution time and that the expected object can still be matched by its stored identity.
 
-UI maturity and portability are secondary limits. The frontend prototype supports setup, authoring, execution, and persistence in one workflow, but it still shows clear prototype-level behavior in practice. Visualization can require manual reload, saved setups may restore only partially if hardware modules cannot reactivate, camera acquisition is currently Windows-only, and BLE discovery is not currently functional on Linux.
+UI maturity and portability are secondary limits. The frontend prototype supports setup, authoring, execution, and persistence in one workflow, but it still shows clear prototype-level behavior in practice. Visualization can require manual reload, saved setups may restore only partially if hardware modules cannot reactivate, and hardware support remains platform-limited: camera acquisition is currently implemented only on Windows, while BLE discovery is currently functional on Windows but not on Linux.
 
 At the same time, the developed system's modular structure provides a practical path for further development, because individual parts of the system can be improved without requiring the whole prototype to be rebuilt from the ground up. This does not remove the current limitations, and some improvements would still require changes at the interface boundary, but it does mean that the existing system remains a useful foundation for further work.
 
