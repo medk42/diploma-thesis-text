@@ -38,7 +38,7 @@
     - + Usual approaches of programming robots (integrators vs here for me users)
 
 - Problem statement + scope:
-    - We target task-oriented programs (no complex branching/loops; cooperative robot; external sensing allowed)
+    - We target task-oriented programs (no complex branching/loops; collaborative robot; external sensing allowed)
     - We focus on motions + actions (tool start/stop, open/close, etc.), not just trajectories
 
 ### 1.3 Goals & contributions
@@ -46,7 +46,7 @@
 - **B:** Extensible plugin system reusing acquisition and execution infrastructure  
 - **C:** Demonstration on selected representative tasks (pick & place, seam welding)  
 
-- Goal A (interaction concept): Explore and validate programming of cooperative robots directly in the real workspace by defining robot motions and tool actions using spatial, AR-inspired inputs, as an alternative to traditional teach pendant and lead-through methods.
+- Goal A (interaction concept): Explore and validate programming of collaborative robots directly in the real workspace by defining robot motions and tool actions using spatial, AR-inspired inputs, as an alternative to traditional teach pendant and lead-through methods.
 - Goal B (system): Provide an extensible system where task-oriented use cases can be implemented as plugins that reuse the same acquisition/execution infrastructure.
 - Goal C (evaluation / demonstration): Demonstrate the approach on representative tasks:
     - a canonical material-handling task (pick & place)
@@ -555,7 +555,7 @@ See chapter 2 (like https://pmc.ncbi.nlm.nih.gov/articles/PMC9583918/ for exampl
 - Safety envelope  
     - No collision checking / no certified safety envelope planning in the software.
     - Conservative default speeds.
-    - Cooperative robot reduces risk but does not eliminate it.
+    - collaborative robot reduces risk but does not eliminate it.
     - Camera-on-flange collision risk exists.
     - Operator must be ready to hit E-STOP; experiments were run with safety constraints.
 

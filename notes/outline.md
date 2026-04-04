@@ -17,9 +17,9 @@ develop an experimental system
     - Background
         - Typical programming approaches (teach pendants, offline programming tools)
         - Usual approaches of programming robots (integrators vs here for me users)
-    - Goal: explore and validate the posibility of programming cooperative robots in real world space using AR-style inputs like 3d pen, hand tracking, VR controllers instead of teach pendant approach / teaching the robot by moving it. 
+    - Goal: explore and validate the posibility of programming collaborative robots in real world space using AR-style inputs like 3d pen, hand tracking, VR controllers instead of teach pendant approach / teaching the robot by moving it. 
         - Goals: These should be after we introduce typical programming approaches and how cobots are programmed. We need to argue these goals from the motivation, typical approaches etc. So we will need to write why the teach-pendent/offline-programing/lead-through lacks -> goal 1) and why we chose fixed usecases (ease of use for new users / semi-automatic situations) -> goal 2)/3). And give example applications (pick and place, welding, painting). 
-            1) Devise an approach to program a cooperative robot using real world movements / positions (hand tracking or other pose tracking) instead of the well-known teach-pendant or lead-through approaches.
+            1) Devise an approach to program a collaborative robot using real world movements / positions (hand tracking or other pose tracking) instead of the well-known teach-pendant or lead-through approaches.
             2) Develop a system that applies the programming tool from 1) to specific fixed common use-cases. The system should be easily extensible by new usecases in the form of plugins. 
             3) Implement demo usecases using this system - a pick and place demo and seam welding demo. 
         - Goals (ChatGPT, but i think it's too early for these -> these would slowly show up in Problem Decomposition):

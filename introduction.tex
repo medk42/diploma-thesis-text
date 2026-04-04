@@ -32,7 +32,7 @@ These limitations motivate the research question of this thesis: can robot progr
 \section*{High-level approach}
 \addcontentsline{toc}{section}{High-level approach}
 
-We propose \emph{spatial authoring} of cooperative robot motions and tool actions directly in the real workspace using AR-inspired inputs, supported by external sensing. While general-purpose robot programming is expressive, it also exposes many low-level details (motion primitives, tool coordination, error handling) that dominate effort in small programs for frequently changing tasks. Therefore, this thesis focuses on task-oriented \emph{use cases} for common task families. In this context, a use case denotes a self-contained task-specific application that defines how spatial user input and sensed workspace context are interpreted and expanded into robot motion and tool commands.
+We propose \emph{spatial authoring} of collaborative robot motions and tool actions directly in the real workspace using AR-inspired inputs, supported by external sensing. While general-purpose robot programming is expressive, it also exposes many low-level details (motion primitives, tool coordination, error handling) that dominate effort in small programs for frequently changing tasks. Therefore, this thesis focuses on task-oriented \emph{use cases} for common task families. In this context, a use case denotes a self-contained task-specific application that defines how spatial user input and sensed workspace context are interpreted and expanded into robot motion and tool commands.
 
 This approach has four conceptual stages, illustrated in \autoref{fig:intro__img_2__usecase_stages}:
 \begin{enumerate*}[label=(\roman*)]
@@ -68,7 +68,7 @@ We evaluate the approach on two representative task families that stress differe
 
 Based on the high-level approach described above, we define three goals:
 \begin{goals}
-  \item \label{goal:1} Explore and validate programming of cooperative robots directly in the real workspace by defining robot motions and tool actions using spatial, AR-inspired inputs, as an alternative to traditional teach pendant, offline programming, and hand-guiding workflows.
+  \item \label{goal:1} Explore and validate programming of collaborative robots directly in the real workspace by defining robot motions and tool actions using spatial, AR-inspired inputs, as an alternative to traditional teach pendant, offline programming, and hand-guiding workflows.
   \item \label{goal:2} Provide an extensible system where task-oriented use cases can be implemented as plugins that reuse the same acquisition/execution infrastructure.
   \item \label{goal:3} Demonstrate the approach on a real robot with representative use cases for a material-handling task (pick-and-place) and a trajectory-centric task (seam welding), and evaluate the benefits and limitations of spatial authoring for these tasks.
 \end{goals}
