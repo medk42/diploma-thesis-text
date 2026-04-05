@@ -1430,7 +1430,7 @@ All files mentioned in this section are located in \path{backend/module_helpers/
     \item \textbf{Use case catalog} \uicall[fig:ch3_usecase_tree]{1}: a cache of discovered use cases (identifier, human-readable metadata, parameter schema groups, and the communication channel used for directed requests).
     \item \textbf{Editable program representation} \uicall[fig:ch3_usecase_tree]{2}: an ordered list of commands; each command binds a selected use case identifier to concrete parameter values (including list parameters) and may carry an optional preview visualization payload.
     \item \textbf{Command materialization}: support for acquiring missing \type{CUSTOM} inputs \uicall[fig:ch3_usecase_tree]{3} and for materializing a command into its executable representation \uicall[fig:ch3_usecase_tree]{4} (cached command JSON), including tracking whether the cache is in sync with the current parameters.
-    \item \textbf{Execution management} \uicall[fig:ch3_usecase_tree]{5}: a sequential runner (\type{ProgramInstance}) that executes a snapshot of the command list, exposes program state/control (pause/resume/stop) and reports a final result.
+    \item \textbf{Execution management}: a sequential runner (\type{ProgramInstance}) that executes a snapshot of the command list, exposes program state/control \uicall[fig:ch3_usecase_tree]{5} (pause/resume/stop) and reports a final result.
     \item \textbf{Program persistence} \uicall[fig:ch3_usecase_tree]{6}: serialization/deserialization of the program (use case identifiers, parameter values, cached command JSON, and optional preview data) as a JSON document.
 \end{itemize}
 
@@ -1446,11 +1446,11 @@ This separation is deliberate: the \emph{catalog} answers \emph{what can be done
 \minihead{Typical workflow (user-facing).}
 Use case authoring and execution is \emph{orchestrator-driven}: the UI initiates each step via directed request/response on a selected use case channel, rather than reacting to a stream. A typical session built on \type{UsecaseTree} proceeds as:
 \begin{enumerate}
-    \item \textbf{Discover:} update the available use case catalog \uicall[fig:ch3_usecase_tree]{1} from connected modules.
-    \item \textbf{Compose:} append/insert/remove commands to form a linear program \uicall[fig:ch3_usecase_tree]{2}; for each command, edit parameter values (including list cardinalities) \uicall[fig:ch3_usecase_tree]{3}.
-    \item \textbf{Acquire CUSTOM (optional):} for missing \type{CUSTOM} parameters, start a capture and poll until the value is produced (or cancel).
-    \item \textbf{Confirm:} request \type{CREATE\_COMMAND} \uicall[fig:ch3_usecase_tree]{4} to obtain the command JSON (and optional preview visualization) and cache it as the executable representation of the command.
-    \item \textbf{Execute:} start a program run (real or simulated) \uicall[fig:ch3_usecase_tree]{5}. The runtime executes commands sequentially and exposes the program state and final result to the caller.
+    \item \textbf{Discover}: update the available use case catalog \uicall[fig:ch3_usecase_tree]{1} from connected modules.
+    \item \textbf{Compose}: append/insert/remove commands to form a linear program \uicall[fig:ch3_usecase_tree]{2}; for each command, edit parameter values (including list cardinalities) \uicall[fig:ch3_usecase_tree]{3}.
+    \item \textbf{Acquire CUSTOM (optional)} \uicall[fig:ch3_usecase_tree]{3}: for missing \type{CUSTOM} parameters, start a capture and poll until the value is produced (or cancel).
+    \item \textbf{Confirm}: request \type{CREATE\_COMMAND} \uicall[fig:ch3_usecase_tree]{4} to obtain the command JSON (and optional preview visualization) and cache it as the executable representation of the command.
+    \item \textbf{Execute}: start a program run (real or simulated) \uicall[fig:ch3_usecase_tree]{5}. The runtime executes commands sequentially and exposes the program state and final result to the caller.
 \end{enumerate}
 
 \minihead{Execution control semantics.}
