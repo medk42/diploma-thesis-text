@@ -1417,14 +1417,21 @@ The use case interface contract (\autoref{sec:ch3_usecase_wrapper}) intentionall
 
 All files mentioned in this section are located in \path{backend/module_helpers/usecase_tree/}. The helper interacts with use case modules exclusively via the use case wrapper protocol in \path{backend/module_helpers/usecase_wrapper/} (notably \path{message_types.h} and \path{usecase_module_interface.h}).
 
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch3_system_design/08_usecase_tree.pdf}
+  \caption[\type{UsecaseTree} in the main UI]{\type{UsecaseTree} in the main UI, showing the use case catalog, editable command list, command authoring and confirmation, execution controls, and program persistence in one workflow.}
+  \label{fig:ch3_usecase_tree}
+\end{figure}
+
 \minihead{What the helper provides.}
 \type{UsecaseTree} is a reusable implementation component (not a system contract). Given a host module that can send requests and receive responses, it maintains a \emph{program-level} view of use case programming:
 \begin{itemize}
-    \item \textbf{Use case catalog:} a cache of discovered use cases (identifier, human-readable metadata, parameter schema groups, and the communication channel used for directed requests).
-    \item \textbf{Editable program representation:} an ordered list of commands; each command binds a selected use case identifier to concrete parameter values (including list parameters) and may carry an optional preview visualization payload.
-    \item \textbf{Command materialization:} support for acquiring missing \type{CUSTOM} inputs and for materializing a command into its executable representation (cached command JSON), including tracking whether the cache is in sync with the current parameters.
-    \item \textbf{Execution management:} a sequential runner (\type{ProgramInstance}) that executes a snapshot of the command list, exposes program state/control (pause/resume/stop) and reports a final result.
-    \item \textbf{Program persistence:} serialization/deserialization of the program (use case identifiers, parameter values, cached command JSON, and optional preview data) as a JSON document.
+    \item \textbf{Use case catalog} \uicall[fig:ch3_usecase_tree]{1}: a cache of discovered use cases (identifier, human-readable metadata, parameter schema groups, and the communication channel used for directed requests).
+    \item \textbf{Editable program representation} \uicall[fig:ch3_usecase_tree]{2}: an ordered list of commands; each command binds a selected use case identifier to concrete parameter values (including list parameters) and may carry an optional preview visualization payload.
+    \item \textbf{Command materialization}: support for acquiring missing \type{CUSTOM} inputs \uicall[fig:ch3_usecase_tree]{3} and for materializing a command into its executable representation \uicall[fig:ch3_usecase_tree]{4} (cached command JSON), including tracking whether the cache is in sync with the current parameters.
+    \item \textbf{Execution management} \uicall[fig:ch3_usecase_tree]{5}: a sequential runner (\type{ProgramInstance}) that executes a snapshot of the command list, exposes program state/control (pause/resume/stop) and reports a final result.
+    \item \textbf{Program persistence} \uicall[fig:ch3_usecase_tree]{6}: serialization/deserialization of the program (use case identifiers, parameter values, cached command JSON, and optional preview data) as a JSON document.
 \end{itemize}
 
 \minihead{Program model.}
@@ -1439,11 +1446,11 @@ This separation is deliberate: the \emph{catalog} answers \emph{what can be done
 \minihead{Typical workflow (user-facing).}
 Use case authoring and execution is \emph{orchestrator-driven}: the UI initiates each step via directed request/response on a selected use case channel, rather than reacting to a stream. A typical session built on \type{UsecaseTree} proceeds as:
 \begin{enumerate}
-    \item \textbf{Discover:} update the available use case catalog from connected modules.
-    \item \textbf{Compose:} append/insert/remove commands to form a linear program; for each command, edit parameter values (including list cardinalities).
+    \item \textbf{Discover:} update the available use case catalog \uicall[fig:ch3_usecase_tree]{1} from connected modules.
+    \item \textbf{Compose:} append/insert/remove commands to form a linear program \uicall[fig:ch3_usecase_tree]{2}; for each command, edit parameter values (including list cardinalities) \uicall[fig:ch3_usecase_tree]{3}.
     \item \textbf{Acquire CUSTOM (optional):} for missing \type{CUSTOM} parameters, start a capture and poll until the value is produced (or cancel).
-    \item \textbf{Confirm:} request \type{CREATE\_COMMAND} to obtain the command JSON (and optional preview visualization) and cache it as the executable representation of the command.
-    \item \textbf{Execute:} start a program run (real or simulated). The runtime executes commands sequentially and exposes the program state and final result to the caller.
+    \item \textbf{Confirm:} request \type{CREATE\_COMMAND} \uicall[fig:ch3_usecase_tree]{4} to obtain the command JSON (and optional preview visualization) and cache it as the executable representation of the command.
+    \item \textbf{Execute:} start a program run (real or simulated) \uicall[fig:ch3_usecase_tree]{5}. The runtime executes commands sequentially and exposes the program state and final result to the caller.
 \end{enumerate}
 
 \minihead{Execution control semantics.}
@@ -1464,16 +1471,6 @@ Internal identifiers used for bookkeeping are implementation details and are reg
 
 \minihead{Scope and limitations.}
 \type{UsecaseTree} does not interpret the semantics of command JSON, nor does it define how use case modules implement their internals; it only standardizes the \emph{user-facing} composition and execution structure on top of the existing use case protocol. In this thesis, the chosen model is intentionally linear (sequential commands); parallel composition or branching program logic are out of scope.
-
-\xxx{Fig (PLANNED): UsecaseTree/program model: a linear list of commands with per-command parameters $\rightarrow$ \type{CREATE\_COMMAND} (command JSON + optional preview) $\rightarrow$ \type{PROGRAM\_START\_*}/\type{PROGRAM\_STATUS} loop $\rightarrow$ \type{PROGRAM\_REMOVE}.}
-
-\xxx{EASY, HIGH VALUE Fig (PLANNED): UsecaseTree in the actual UI. Use a screenshot of the running \type{web\_frontend\_module} program panel and annotate it with simple callouts (prefer A--F labels over many arrows to keep it clean). Map the callouts to: (A) use case catalog, (B) program/command list (program representation), (C) parameter editing + \type{CUSTOM} parameter acquisition, (D) per-command ``confirm'' / command creation (\type{CREATE\_COMMAND} $\rightarrow$ cached command JSON + optional preview), (E) program execution controls + status (start/pause/resume/stop), (F) program persistence (save/load). Prefer vector annotation (Inkscape/draw.io) and export as PDF for crisp labels/arrows.}
-
-
-
-
-
-
 
 
 
@@ -1578,7 +1575,7 @@ The UI module is described only through its externally observable behavior: how 
 \end{figure}
 
 \minihead{Purpose.}
-The contracts and helper components above define individual interactions (mapping, activation, use case requests, visualization), but a user experiences the system as an end-to-end workflow. This section summarizes that workflow as a small state machine whose transitions are triggered by explicit user actions in the UI.
+The contracts and helper components above define individual interactions (mapping, activation, use case requests, visualization), but a user experiences the system as an end-to-end workflow. This section summarizes that workflow as a small state machine whose transitions are triggered by explicit user actions in the UI. This workflow is described in detail in \autoref{chapter:ch5_user_workflow}.
 
 \minihead{Workflow states (user perspective).}
 A typical session proceeds through the following states (see \autoref{fig:ch3_workflow_state_machine}):
