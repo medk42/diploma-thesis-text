@@ -1624,10 +1624,32 @@ Program persistence stores only the programming artifact managed by \type{Usecas
 To reconstruct the program during loading, the loader must resolve each stored use case identifier against 
 currently connected use case modules. If an identifier is missing, the UI cancels the load and reports an error indicating which use case identifier is unavailable.
 
-\minihead{Summary.}
-Graph persistence is core-owned infrastructure that reconstructs the environment-specific runtime wiring and optional per-module configuration/state. Program persistence is a UI-level authoring artifact built on top of the use case interface; it stores the user-authored linear program (use case commands and their parameters) together with derived execution/preview artifacts (cached command JSON, optional preview visualization, and the confirmed/out-of-sync state). Loading a program requires the referenced use case identifiers to be available in the current setup; otherwise loading fails with a clear error.
+\begin{table}[H]
+  \centering
+  \caption[Persistence split]{Persistence split between the core-owned system setup (\type{.aergo}) and the UI-owned authored program (\type{.paergo}).}
+  \label{tab:ch3_persistence_split}
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \renewcommand{\arraystretch}{1.1}
+  \begin{tabular*}{0.90\textwidth}{@{\extracolsep{\fill}} p{0.13\textwidth} p{0.38\textwidth} p{0.38\textwidth}}
+    \toprule
+    & \textbf{System setup (\type{.aergo})} & \textbf{Program (\type{.paergo})} \\
+    \midrule
+    \textbf{Owner} & core-owned & UI-owned \\
+    \textbf{Object} & system setup & authored program \\
+    \textbf{Contents} & module graph, activation, state & command list, params, cache \\
+    \textbf{Save} & \type{ICore::save()} & \type{UsecaseTree::toJson()} \\
+    \textbf{Load} & \type{ICore::load()} & \type{UsecaseTree::fromJson()} \\
+    \bottomrule
+  \end{tabular*}
 
-\xxx{EASY Fig (OPTIONAL): Persistence split diagram. Left: \type{.aergo} = core save/load (graph + optional per-module state; IDs reconstructed). Right: \type{.paergo} = UI save/load (program list + parameters incl.\ \type{CUSTOM} + cached command JSON/preview + confirmed/out-of-sync flags).}
+  \vspace{2pt}
+
+  \parbox{0.85\textwidth}{\footnotesize \textit{Note:} Loading a \type{.paergo} program requires the referenced use case modules to be available in the current setup.}
+\end{table}
+
+\minihead{Summary.}
+The persistence split is summarized in \autoref{tab:ch3_persistence_split}: \type{.aergo} reconstructs the environment-specific runtime setup, while \type{.paergo} restores the authored program state on top of a compatible setup.
 
 
 
