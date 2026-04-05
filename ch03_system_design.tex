@@ -179,10 +179,10 @@ This section describes the runtime semantics of the two communication primitives
 
 Message delivery follows the same contract-level steps for publish/subscribe as well as request/response:
 
-\xxx{req: Add two small sequence diagrams (stacked) for the message delivery flow.
-(1) Publish/subscribe: Sender module calls \type{sendMessage} $\rightarrow$ Core resolves mapped subscribers $\rightarrow$ Target wrapper calls \type{onIngress} $\rightarrow$ enqueue (copy small payload + blob handles) $\rightarrow$ worker calls \type{processMessage}.
-(2) Request/response: Requester calls \type{sendRequest(source, target)} $\rightarrow$ Core forwards to target wrapper $\rightarrow$ \type{onIngress} + enqueue $\rightarrow$ worker runs \type{processRequest} and returns \type{ResponseData} $\rightarrow$ wrapper   /core emits exactly one \type{sendResponse} preserving \type{id\_} $\rightarrow$ requester receives via \type{processResponse}.
-Include dashed failure path: if request cannot be delivered or is dropped, synthesize response with \type{success\_=false}. (replace the list later if you have time)}
+% xxx{Fig req: Add two small sequence diagrams (stacked) for the message delivery flow.
+% (1) Publish/subscribe: Sender module calls \type{sendMessage} $\rightarrow$ Core resolves mapped subscribers $\rightarrow$ Target wrapper calls \type{onIngress} $\rightarrow$ enqueue (copy small payload + blob handles) $\rightarrow$ worker calls \type{processMessage}.
+% (2) Request/response: Requester calls \type{sendRequest(source, target)} $\rightarrow$ Core forwards to target wrapper $\rightarrow$ \type{onIngress} + enqueue $\rightarrow$ worker runs \type{processRequest} and returns \type{ResponseData} $\rightarrow$ wrapper   /core emits exactly one \type{sendResponse} preserving \type{id\_} $\rightarrow$ requester receives via \type{processResponse}.
+% Include dashed failure path: if request cannot be delivered or is dropped, synthesize response with \type{success\_=false}. (replace the list later if you have time)}
 
 \begin{enumerate}
     \item The sender calls \type{ICore::sendMessage} / \type{ICore::sendRequest} / \type{ICore::sendResponse} and provides the source channel identifier (and a target identifier for request/response).
@@ -338,7 +338,7 @@ Finally, \type{BaseModule} implements \type{IModule::getModuleInfo()} by returni
 
 \section{Core implementation used in this thesis} \label{sec:ch3_core}
 
-\xxx{Core routing and request/response “exactly one response” is explained in several places (communication primitives, message delivery flow, routing section, wrapper section). It's fine for now, but later you can replace one of the later repeats with “as described in §X”.}
+% xxx{Core routing and request/response “exactly one response” is explained in several places (communication primitives, message delivery flow, routing section, wrapper section). It's fine for now, but later you can replace one of the later repeats with “as described in §X”.}
 
 The previous section defined the module contract in an implementation-independent way: what a module is, how it declares channels, how messages are represented, and what services the runtime must provide through \type{ICore}. In this section, we describe the concrete runtime core used in this thesis, which implements that contract in a single process using threads and in-memory routing.
 
@@ -356,12 +356,12 @@ The implementation is split into two cooperating parts:
 (i) the \emph{central core}, which maintains global runtime state (loaded module catalog, running module instances, channel mappings/routing tables, reflection/orchestration API, and persistence), and
 (ii) a \emph{per-module hosting wrapper}, which owns a single instantiated \type{IModule} and implements the concrete delivery machinery required by the contract (ingress decisions, payload/blob-handle copying into queues, worker threads, and invoking \type{processMessage}/\type{processRequest}/\type{processResponse}).
 
-\xxx{req: Add a schematic ``runtime anatomy'' figure here.
-Show: (1) Central core (loaded module catalog, running instances, mapping/routing tables, discovery maps, persistence, locks);
-(2) Per-module hosting wrapper (ingress, per-channel queues, worker pools, calls into \type{IModule}, request completion via response dispatch);
-(3) Concrete module inside wrapper.
-Add arrows: module \type{sendMessage/sendRequest/sendResponse} $\rightarrow$ core routing $\rightarrow$ wrapper ingress $\rightarrow$ queue $\rightarrow$ worker $\rightarrow$ \type{process*}.
-Caption should emphasize: core decides \emph{where} to deliver; wrapper decides \emph{how} (queueing + threading).}
+% xxx{Fig req: Add a schematic ``runtime anatomy'' figure here.
+% Show: (1) Central core (loaded module catalog, running instances, mapping/routing tables, discovery maps, persistence, locks);
+% (2) Per-module hosting wrapper (ingress, per-channel queues, worker pools, calls into \type{IModule}, request completion via response dispatch);
+% (3) Concrete module inside wrapper.
+% Add arrows: module \type{sendMessage/sendRequest/sendResponse} $\rightarrow$ core routing $\rightarrow$ wrapper ingress $\rightarrow$ queue $\rightarrow$ worker $\rightarrow$ \type{process*}.
+% Caption should emphasize: core decides \emph{where} to deliver; wrapper decides \emph{how} (queueing + threading).}
 
 \minihead{What is covered here (and what is not).}
 This section describes how modules are discovered and loaded, how module instances are created/removed and wired, how routing and delivery are implemented, how shared payload allocation is managed, how reflection/orchestration queries are served, and how the module graph is persisted and reconstructed.
@@ -503,15 +503,15 @@ For every running instance, the core keeps four per-module tables inside \type{s
 \end{itemize}
 Note that \type{ChannelIdentifier} is reused for both directions as a compact \type{(module\_id, channel\_id)} pair (producer in one context, consumer endpoint in the other).
 
-\xxx{req: Add a data-structure diagram for mapping storage.
-For a single instance, show the four per-module tables:
-\type{mapping\_publish\_} and \type{mapping\_response\_}: producer channel id $\rightarrow$ list of consumer endpoints (module id + consumer id);
-\type{mapping\_subscribe\_} and \type{mapping\_request\_}: consumer channel id $\rightarrow$ list of producer \type{ChannelIdentifier}s.
-Next to it, show the global indexes keyed by channel type identifier:
-existing publish producers, existing response producers, AUTO\_ALL subscribe consumers, AUTO\_ALL request consumers.
-Add a small callout: AUTO\_ALL ``catch-up'' wiring uses the global indexes.
-immediately after minihead Per-instance mapping tables. (or right after the four-table list).
-}
+% xxx{Fig req: Add a data-structure diagram for mapping storage.
+% For a single instance, show the four per-module tables:
+% \type{mapping\_publish\_} and \type{mapping\_response\_}: producer channel id $\rightarrow$ list of consumer endpoints (module id + consumer id);
+% \type{mapping\_subscribe\_} and \type{mapping\_request\_}: consumer channel id $\rightarrow$ list of producer \type{ChannelIdentifier}s.
+% Next to it, show the global indexes keyed by channel type identifier:
+% existing publish producers, existing response producers, AUTO\_ALL subscribe consumers, AUTO\_ALL request consumers.
+% Add a small callout: AUTO\_ALL ``catch-up'' wiring uses the global indexes.
+% immediately after minihead Per-instance mapping tables. (or right after the four-table list).
+% }
 
 \minihead{Global channel indexes.}
 In addition to per-module tables, the core maintains global maps keyed by \type{channel\_type\_identifier\_}:
@@ -559,10 +559,10 @@ The core therefore treats explicit edges as \emph{hard dependencies} and uses \t
 \type{AUTO\_ALL} edges are treated as \emph{non-binding} and ignored there: they are runtime-expanded wiring that can shrink/grow as modules appear and disappear, so they do not create a ``must-remove'' dependency.
 (In valid configurations we expect the explicit dependency graph to be acyclic; \type{AUTO\_ALL} can add extra runtime edges without making removals unpredictable.)
 
-\xxx{req OPTIONAL: Add a small 2-panel figure clarifying AUTO\_ALL semantics.
-Panel 1: publish mapping fan-out (producer $\rightarrow$ many subscribers via mapping).
-Panel 2: request is directed (requester chooses one concrete target response channel; AUTO\_ALL only affects how candidate targets are discovered/wired, not that a request is broadcast).
-Goal: prevent interpreting AUTO\_ALL as request broadcast.}
+% xxx{Fig req OPTIONAL: Add a small 2-panel figure clarifying AUTO\_ALL semantics.
+% Panel 1: publish mapping fan-out (producer $\rightarrow$ many subscribers via mapping).
+% Panel 2: request is directed (requester chooses one concrete target response channel; AUTO\_ALL only affects how candidate targets are discovered/wired, not that a request is broadcast).
+% Goal: prevent interpreting AUTO\_ALL as request broadcast.}
 
 \minihead{Reflection and persistence.}
 The global producer indexes (\type{existing\_publish\_channels\_}/\type{existing\_response\_channels\_}) are what backs the ``what channels exist?'' queries used by modules and the UI.
@@ -731,10 +731,10 @@ After \type{threadStop} returns, the core clears the instance pointer (\type{mod
 
 This temporary unlock is the reason for using the second \type{add\_remove\_mutex\_}: it prevents concurrent graph edits while the core is temporarily unlocked during thread stopping.
 
-\xxx{req: Add a lock/timeline diagram explaining removal.
-Two lanes: (A) Core removal thread, (B) Module worker thread.
-Core lane: lock \type{add\_remove\_mutex\_} $\rightarrow$ lock \type{core\_mutex\_} (unique) $\rightarrow$ set \type{destruction\_in\_progress\_} $\rightarrow$ unlock \type{core\_mutex\_} $\rightarrow$ call \type{threadStop} (wait) $\rightarrow$ relock \type{core\_mutex\_} $\rightarrow$ detach edges + update discovery maps $\rightarrow$ bump mapping state id.
-Worker lane: potential concurrent \type{send*}/reflection calls that need \type{core\_mutex\_} (shared), illustrating the deadlock avoided by the temporary unlock.}
+% xxx{Fig: req: Add a lock/timeline diagram explaining removal.
+% Two lanes: (A) Core removal thread, (B) Module worker thread.
+% Core lane: lock \type{add\_remove\_mutex\_} $\rightarrow$ lock \type{core\_mutex\_} (unique) $\rightarrow$ set \type{destruction\_in\_progress\_} $\rightarrow$ unlock \type{core\_mutex\_} $\rightarrow$ call \type{threadStop} (wait) $\rightarrow$ relock \type{core\_mutex\_} $\rightarrow$ detach edges + update discovery maps $\rightarrow$ bump mapping state id.
+% Worker lane: potential concurrent \type{send*}/reflection calls that need \type{core\_mutex\_} (shared), illustrating the deadlock avoided by the temporary unlock.}
 
 \minihead{Detaching routing edges.}
 Once the instance is stopped, the core removes all edges involving it, in both directions:
@@ -866,7 +866,7 @@ Some interface protocols involve a larger state machine than a single message ex
 \minihead{Capability queries for wrapper stacking.}
 To support stacking multiple wrappers, modules expose optional capabilities via \type{IModule::query\_capability}. Each wrapper forwards the query to the wrapped object, and the bottom-most module returns a pointer to the requested interface if supported (or \type{nullptr} otherwise). This allows extending the system's functionality (e.g., module activation) using messaging and wrappers without changing the base module contract.
 
-\xxx{Fig (OPTIONAL): Transport vs. interface contract. Core transports \type{MessageHeader} (+ blobs) between channels; an interface contract defines how the payload is interpreted as a domain message, request/response pair, or status/update stream.}
+% xxx{Fig (OPTIONAL): Transport vs. interface contract. Core transports \type{MessageHeader} (+ blobs) between channels; an interface contract defines how the payload is interpreted as a domain message, request/response pair, or status/update stream.}
 
 
 \subsection{Activation interface} \label{subsec:ch3_activation_interface}
@@ -940,7 +940,7 @@ A typical UI-driven interaction is:
     \item On successful completion, the wrapper flips the gating state and normal ingress is allowed. \type{DEACTIVATE} mirrors the same pattern.
 \end{enumerate}
 
-\xxx{Fig (OPTIONAL): ActivationWrapper state machine. Deactivated $\rightarrow$ (editing) $\rightarrow$ WaitingForCustomValue / Activating $\rightarrow$ Activated, with symmetric deactivation and \type{CANCEL\_TASK} transitions.}
+% xxx{Fig (OPTIONAL): ActivationWrapper state machine. Deactivated $\rightarrow$ (editing) $\rightarrow$ WaitingForCustomValue / Activating $\rightarrow$ Activated, with symmetric deactivation and \type{CANCEL\_TASK} transitions.}
 
 \minihead{Activation state semantics.}
 Activation is primarily a \emph{module-level on/off switch} with explicit configuration: \type{activate()} receives the filled parameter set and is expected to bring the module into an operational state (e.g., connect to a device/robot, allocate resources, and begin producing outputs). Conversely, \type{deactivate()} is expected to shut the module down and stop producing outputs. The wrapper mirrors this operational state in an internal \type{activated} flag, reports it to the UI, and uses it to gate non-activation traffic.
@@ -955,7 +955,7 @@ A newly created module starts \emph{deactivated} (\type{activated=false}), so on
 \end{itemize}
 
 
-\xxx{Fig: the activation steps outlined.}
+% xxx{Fig: the activation steps outlined.}
 
 \minihead{Guarantees and limitations.}
 \begin{itemize}
@@ -1052,7 +1052,7 @@ The UI--use case protocol can be viewed as four request groups; most requests op
     \end{itemize}
 \end{itemize}
 
-\xxx{Fig: the communication, showing possible req/resp}
+% xxx{Fig: the communication, showing possible req/resp}
 
 \minihead{Flow.}
 A typical UI-driven interaction is:
@@ -1065,7 +1065,7 @@ A typical UI-driven interaction is:
     \item After a terminal status: call \type{PROGRAM\_REMOVE} (once per \type{task\_id}) to deterministically release per-task resources.
 \end{enumerate}
 
-\xxx{Fig (OPTIONAL): Use case request sequence: READ\_COMMAND\_PARAMETERS $\rightarrow$ (CUSTOM reads) $\rightarrow$ CREATE\_COMMAND $\rightarrow$ PROGRAM\_START\_* $\rightarrow$ STATUS/CONTROL $\rightarrow$ PROGRAM\_REMOVE.}
+% xxx{Fig (OPTIONAL): Use case request sequence: READ\_COMMAND\_PARAMETERS $\rightarrow$ (CUSTOM reads) $\rightarrow$ CREATE\_COMMAND $\rightarrow$ PROGRAM\_START\_* $\rightarrow$ STATUS/CONTROL $\rightarrow$ PROGRAM\_REMOVE.}
 
 \minihead{Use case responsibilities.}
 The contract intentionally splits use case logic into two distinct responsibilities:
@@ -1162,8 +1162,8 @@ The exact binary layouts are implemented in \path{serialization_helper.h} and ar
 \end{itemize}
 
 
-\xxx{Fig (OPTIONAL): Bootstrap flow: ANNOUNCE $\rightarrow$ READ\_FULL (resources + scene) $\rightarrow$ UPDATE stream.}
-\xxx{Fig (OPTIONAL): Update flow: multiple local edits $\rightarrow$ coalesced UPDATE (one blob).}
+% xxx{Fig (OPTIONAL): Bootstrap flow: ANNOUNCE $\rightarrow$ READ\_FULL (resources + scene) $\rightarrow$ UPDATE stream.}
+% xxx{Fig (OPTIONAL): Update flow: multiple local edits $\rightarrow$ coalesced UPDATE (one blob).}
 
 \minihead{Helper implementation.}
 To reduce boilerplate and keep updates compact, modules typically use \type{VisualizationHelper} (\path{visualization_helper.h}):
@@ -1242,7 +1242,7 @@ Within \type{RobotFeature::ROBOT\_CONTROL}, the implemented messages cover:
 \end{itemize}
 The exact payload layouts are implemented in \path{features/robot_control/messages.h} and are treated as the source of truth; this section stays at the protocol level.
 
-\xxx{Fig (OPTIONAL): Robot action lifecycle: START\_ACTION $\rightarrow$ (SUCCESS\_IN\_PROGRESS, action\_id) $\rightarrow$ STATUS stream + optional UPDATE\_ACTION $\rightarrow$ FINISHED(action\_id, success).}
+% xxx{Fig (OPTIONAL): Robot action lifecycle: START\_ACTION $\rightarrow$ (SUCCESS\_IN\_PROGRESS, action\_id) $\rightarrow$ STATUS stream + optional UPDATE\_ACTION $\rightarrow$ FINISHED(action\_id, success).}
 
 \minihead{Typical flow (client perspective).}
 A typical use case that commands motion proceeds as follows:
@@ -1671,8 +1671,6 @@ Module labels in this section use display names; the corresponding module type i
 It captures (i) the sensing pipeline (stereo camera, calibration, pen tracking, scene detection),
 (ii) the robot execution backend, (iii) the task-oriented use case modules, and (iv) the UI/frontend module that orchestrates setup, program authoring, and execution (\autoref{sec:ch3_ui_orchestration}).
 
-\xxx{Maybe rename the kassow robot module in the graph to something more generic like "Robot Module" to emphasize that the robot interface is a contract and the module is one implementation?}
-
 \begin{landscape}
 \thispagestyle{plain}
 \begin{figure}[H]
@@ -1723,10 +1721,10 @@ The UI module acts as the system orchestrator that makes this workflow operable 
 
 % \subsection{Demo module graphs} \label{sec:ch3_demo_graph}
 
-% \xxx{Concrete "this is what we ran". Smooth bridge to Chapter~4. Rationale: This prevents the "UI does everything" paragraph from feeling like a grab bag. The reader already understands what "program" means (UsecaseTree), then the UI is simply the driver.}
+% xxx{Concrete "this is what we ran". Smooth bridge to Chapter~4. Rationale: This prevents the "UI does everything" paragraph from feeling like a grab bag. The reader already understands what "program" means (UsecaseTree), then the UI is simply the driver.}
 
-% \xxx{1 diagram + 1 paragraph}
-% \xxx{Demo module graph: this is the only module wiring diagram in this section. If you already plan a full all-connected graph in Ch4, then here do a simplified demo graph (only key modules + key edges), and in Ch4 show the full one. Don't show two full graphs back-to-back.}
+% xxx{1 diagram + 1 paragraph}
+% xxx{Demo module graph: this is the only module wiring diagram in this section. If you already plan a full all-connected graph in Ch4, then here do a simplified demo graph (only key modules + key edges), and in Ch4 show the full one. Don't show two full graphs back-to-back.}
 
 
 
