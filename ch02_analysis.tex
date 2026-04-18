@@ -1,6 +1,6 @@
 \chapter{Problem Decomposition and Analysis} \label{chapter:ch2_analysis}
 
-In this chapter we will analyze the goals of this thesis and derive requirements for our system. We will then analyze different approaches of meeting these requirements, compare them to each other, and select an approach best suited to our goals and requirements. 
+This chapter continues the research framing established in \autoref{chapter:ch1_related_work}. Using the related-work landscape and the goals of this thesis, we derive system requirements, compare feasible ways of meeting them, and justify the selected architecture used in the implemented system.
 
 \section{Target tasks and their requirements} \label{sec:ch2_analysis_tasks_and_requirements}
 
@@ -202,7 +202,7 @@ In principle, marker pose can be estimated from a single calibrated RGB camera. 
 
 \subsection{Scene detection} \label{subsec:ch2_analysis_scene_detection}
 
-Based on \reqref{req:scene_detection_logic}, our system needs to provide \emph{scene detection} logic that can detect objects in the scene and provide their poses. The accuracy requirements for scene detection are higher than for the 6DoF input interface, since the detected object poses are used to refine and constrain user-defined trajectories. For example, in the seam welding use case, we rely on the detected objects to find the seam between them and align the user-defined trajectory to it. If the estimated object poses are inaccurate, the derived seam geometry and aligned trajectory will also be affected, directly degrading execution quality.
+Based on \reqref{req:scene_detection_logic}, our system needs to provide \emph{scene detection} logic that can detect objects in the scene and provide their poses. The accuracy requirements for scene detection are higher than for the 6DoF input interface, since the detected object poses are used to refine and constrain user-defined trajectories. For example, in the seam welding use case, we rely on the detected objects to find the seam between them and align the user-defined trajectory to it. If the estimated object poses are inaccurate, the derived seam geometry and aligned trajectory will also be affected, directly degrading execution quality. At the same time, for this thesis scene detection is only one bounded component of the overall workflow: we need enough scene understanding to localize relevant objects and geometric relations for the supported tasks, not a complete solution to general robotic scene understanding.
 
 When selecting an approach for scene detection, we consider:
 \begin{enumerate*}[label=(\roman*)]
@@ -314,7 +314,7 @@ Given the scope of this thesis and the available hardware, fiducial-based detect
 
 While marker-based detection does not provide perfect accuracy and may exhibit pose noise due to suboptimal lighting conditions and limited camera resolution, the obtained precision is sufficient for the seam welding and pick-and-place demonstrations presented in this thesis. Accuracy could be further improved by aggregating multiple observations over time or increasing image resolution.
 
-Therefore, we select a camera-based fiducial marker detection approach for scene detection in this thesis. At the same time, we will keep the system architecture modular, allowing replacement of the detection component with model-based or reconstruction-based approaches in future work if higher robustness or model-free operation is required.
+Therefore, we select a camera-based fiducial marker detection approach for scene detection in this thesis. At the same time, we will keep the system architecture modular, allowing replacement of the detection component with model-based or reconstruction-based approaches in future work if higher robustness, broader object coverage, or more model-free operation is required.
 
 
 \subsection{Camera configuration} \label{subsec:ch2_analysis_camera_tradeoffs}
@@ -490,7 +490,7 @@ Across the previous sections, we repeatedly relied on the same engineering princ
     \item the set of use cases supported by the system.
 \end{enumerate}
 
-Taken together with \reqref{req:use_case_plugin_support}, these points naturally motivate a \emph{modular architecture}: the system should be composed of independent components with clear interfaces, so that one component can be replaced without rewriting the others. This shifts the emphasis from selecting the “best” algorithm upfront to defining \emph{stable interfaces} between components. With well-chosen interfaces, we can start with a simple proof-of-concept implementation and later upgrade only the relevant part (e.g., replace fiducial scene detection with a model-based pipeline) while keeping the rest unchanged.
+Taken together with \reqref{req:use_case_plugin_support}, these points naturally motivate a \emph{modular architecture}: the system should be composed of independent components with clear interfaces, so that one component can be replaced without rewriting the others. This shifts the emphasis from selecting the “best” algorithm upfront to defining \emph{stable interfaces} between components. With well-chosen interfaces, we can start with a simple prototype implementation and later upgrade only the relevant part (e.g., replace fiducial scene detection with a model-based pipeline, broaden the object representation, or accept richer authored trajectories) while keeping the rest unchanged.
 
 A modular decomposition also matches the structure derived from the requirements in \autoref{fig:ch2_analysis__base_components}. For example, different camera setups can be implemented as alternative sensing components that provide the same outputs (time-stamped images and calibrated poses in a shared reference frame). Similarly, the pen tracking and scene detection components can be exchanged independently as long as they produce the same abstract outputs used by the use cases (pen poses/trajectories and object poses/IDs). Finally, use cases consume these abstract inputs and translate them into robot actions executed through the common robot interface (e.g., sequences of motion primitives with associated parameters).
 
@@ -502,4 +502,4 @@ In this chapter, we derived system requirements from two representative tasks (p
 
 For execution, we require a robot interface that exposes a small set of motion primitives and the robot state needed for both control and sensing, while remaining robot-agnostic at the use case level. For interaction, we require a UI that supports parameter entry, use case selection, visualization, and confirmation prior to execution; we select a tablet-oriented UI as a practical default for workshop operation.
 
-Importantly, these choices are made in the context of a prototype. To keep the system open for future improvements (alternative sensing pipelines, alternative UIs, additional robots, and additional tasks), the requirements and decisions above motivate a modular architecture with explicit interfaces between components. The next chapter (\autoref{chapter:ch3_system_design}) therefore focuses on the overall system design and integration of the selected components into a single modular system.
+Importantly, these choices are made in the context of a prototype. To keep the system open for future improvements (alternative sensing pipelines, alternative UIs, additional robots, richer trajectory authoring, broader object handling, and additional tasks), the requirements and decisions above motivate a modular architecture with explicit interfaces between components. Together with \autoref{chapter:ch1_related_work}, this chapter closes the survey-to-design loop by translating the surveyed design space into concrete requirements and a selected system direction. The next chapter (\autoref{chapter:ch3_system_design}) therefore focuses on the overall system design and integration of the selected components into a single modular system.

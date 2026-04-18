@@ -4,13 +4,13 @@ This thesis asked whether collaborative-robot tasks that change frequently, repr
 
 The main result is not that setup, calibration, or integration effort disappears. It is that, once the prepared pipeline is in place, new task instances can be authored through direct spatial input and confirmation inside a use case across both demonstrated task families instead of being rebuilt as low-level robot procedures.
 
-This remains a proof-of-concept with limited physical validation and qualitative evaluation. The rest of the chapter therefore focuses on the blockers that currently limit transfer beyond the demonstrated setup.
+This is a bounded but positive result for prepared task-oriented workflows, based on limited physical validation and qualitative evaluation. The rest of the chapter therefore focuses on the next steps needed to broaden validation and harden the system.
 
 \section{Near-Term Future Work}
 
 Improving sensing, tracking, and calibration is therefore the most direct near-term step for transferring the present result beyond the demonstrated setup. More robust pen tracking, use of pen-side IMU data, and an object-detection pipeline beyond the current fiducial-box representation would directly improve the present workflow. In particular, the system needs a more accurate and more broadly applicable way to detect task-relevant objects in the scene, ideally without relying only on predefined tagged objects. That work should also be accompanied by clearer evaluation of tracking stability and scene-detection accuracy in the real workspace.
 
-Execution semantics and safety come next. Future work should replace the current fixed-delay approximations of gripper and welding actions with an explicit tool-action abstraction, and it should add motion planning, collision checking, and simulated execution before real-robot use.
+Execution semantics and safety come next. Future work should replace the current fixed-delay approximations of gripper and welding actions with an explicit tool-action abstraction. On top of that, broader deployment-oriented extensions such as motion planning, collision checking, and simulated execution can be added to the current workflow before wider real-robot use.
 
 Applicability still needs validation. Broader physical testing and bounded quantitative characterization of tracking stability, scene-estimation repeatability, and execution consistency would make the current evidence easier to interpret. A formal comparison against teach pendant or offline workflows, ideally through a user study focused on frequently changing prepared tasks, is then needed to determine where this style of spatial authoring is actually advantageous and where conventional workflows remain more practical.
 
