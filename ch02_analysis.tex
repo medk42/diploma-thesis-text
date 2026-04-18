@@ -1,6 +1,8 @@
 \chapter{Problem Decomposition and Analysis} \label{chapter:ch2_analysis}
 
-This chapter continues the research framing established in \autoref{chapter:ch1_related_work}. Using the related-work landscape and the goals of this thesis, we derive system requirements, compare feasible ways of meeting them, and justify the selected architecture used in the implemented system.
+This chapter turns the \autoref{chapter:ch1_related_work} survey into concrete design criteria. In particular, it carries forward the position established in \autoref{chapter:ch1_related_work}: the thesis targets online authoring in the real workspace, task-oriented use cases rather than general robot programming or rule-only authoring, and user-provided spatial intent refined by sensed scene context rather than full manual specification of low-level robot motion.
+
+Using that framing together with the goals of this thesis, we derive system requirements, compare feasible ways of meeting them, and justify the selected architecture for this thesis.
 
 \section{Target tasks and their requirements} \label{sec:ch2_analysis_tasks_and_requirements}
 
@@ -87,6 +89,8 @@ The requirements outlined in \autoref{subsec:ch2_analysis_system_requirements} a
 For example, the \emph{painting task} can be implemented using the \emph{6DoF input interface} to select the face to be painted as a 6DoF pose or a trajectory circling the face. The requested face can then be chosen by the use case logic as the face closest to the user input. The \emph{UI} can be used to define painting parameters (e.g. paint flow rate, spray pattern) and the use case can then generate the appropriate robot trajectory.
 
 Similarly, traditional robot motion primitives can also be implemented using the same \emph{6DoF input interface} for defining target poses or paths. This use would require higher precision and lower noise of the input, particularly for defining paths, which further emphasizes the importance of a high-quality \emph{6DoF input interface}. At the same time, a use case may apply smoothing or refinement to the user-provided path, which can partially relax the precision requirements on the input.
+
+These requirements already reflect the distinctions drawn in \autoref{chapter:ch1_related_work}. We are not designing a generic offline programming workflow, nor a pure waypoint recorder, nor a rule-centered end-user system. Instead, the remaining analysis asks what infrastructure is needed for online, task-oriented spatial authoring: stable spatial input, scene understanding that can refine user intent, reusable use case logic, and supporting UI and robot interfaces.
 
 \section{Requirement-driven design decisions}
 
