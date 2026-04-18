@@ -4,7 +4,7 @@ This thesis asked whether collaborative-robot tasks that change frequently, repr
 
 The main result is not that setup, calibration, or integration effort disappears. It is that, once the prepared pipeline is in place, new task instances can be authored through direct spatial input and confirmation inside a use case across both demonstrated task families instead of being rebuilt as low-level robot procedures.
 
-This is a positive result for prepared task-oriented workflows, based on limited physical validation and qualitative evaluation. The rest of the chapter therefore focuses on the next steps needed to broaden validation and harden the system.
+This is a positive result for prepared task-oriented workflows. The rest of the chapter therefore focuses on the next steps that would broaden validation and extend the system toward a wider range of practical conditions.
 
 \section{Near-Term Future Work}
 
@@ -12,7 +12,7 @@ Improving sensing, tracking, and calibration is therefore the most direct near-t
 
 Execution semantics and safety come next. Future work should replace the current fixed-delay approximations of gripper and welding actions with an explicit tool-action abstraction. On top of that, broader deployment-oriented extensions such as motion planning, collision checking, and simulated execution can be added to the current workflow before wider real-robot use.
 
-Applicability still needs validation. Broader physical testing and bounded quantitative characterization of tracking stability, scene-estimation repeatability, and execution consistency would make the current evidence easier to interpret. A formal comparison against teach pendant or offline workflows, ideally through a user study focused on frequently changing prepared tasks, is then needed to determine where this style of spatial authoring is actually advantageous and where conventional workflows remain more practical.
+Applicability can be evaluated more systematically through further study. Broader physical testing and bounded quantitative characterization of tracking stability, scene-estimation repeatability, and execution consistency would make the current evidence easier to interpret. A formal comparison against teach pendant or offline workflows, ideally through a user study focused on frequently changing prepared tasks, would then help determine where this style of spatial authoring is actually advantageous and where conventional workflows remain more practical.
 
 \section{Longer-Term Research Directions}
 
@@ -20,4 +20,4 @@ Because the architecture is not tied to the current pen-based interface, richer 
 
 A longer-term research direction is to study where this style of task-oriented spatial authoring fits best in practice. The thesis establishes the system and points to promising conditions, especially tasks that are re-authored often enough that simpler spatial authoring may matter, but it does not study that practical fit systematically. Future work could examine how spatial authoring should relate to teach pendant or controller workflows and evaluate that question through a formal user study. That would help determine for which task families this approach actually reduces reprogramming effort, where prepared use cases are a good fit, and where more general robot programming remains the better tool.
 
-That research could then guide the next stage of system development and evaluation across a broader range of task families and operating conditions. Richer welding scenarios, additional fabrication or surface-processing tasks, and other human-in-the-loop workflows in which the human provides task intent and the robot performs repeated physical execution would provide a stronger basis for judging that applicability boundary. The present result provides a concrete foundation for that work, while broader claims still depend on technical completion and evaluation on concrete task families.
+That research could then guide the next stage of system development and evaluation across a broader range of task families and operating conditions. Richer welding scenarios, additional fabrication or surface-processing tasks, and other human-in-the-loop workflows in which the human provides task intent and the robot performs repeated physical execution would provide a stronger basis for judging that applicability boundary. The present result provides a concrete foundation for that work, while broader claims about applicability across task families would require corresponding extensions and evaluation on those concrete task families.
