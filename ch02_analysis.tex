@@ -66,7 +66,7 @@ To fulfill these requirements, we could use the same \emph{6DoF input interface}
 
 However this approach would depend heavily on the precision of the \emph{6DoF input interface}. Therefore we could instead first use the \emph{scene detection} logic to detect objects within the scene and then use use-case-specific logic to detect possible seams between the detected objects --- the user would still use the \emph{6DoF input interface} to enter a trajectory representing the intended weld, however the system would align that input to the closest detected seam (requirement \ref{req:seam_definition}). The approach pose (requirement \ref{req:approach_pose}) could be automatically defined by the use case as a point at a certain distance from the start of the seam along the seam normal. Finally, the welding parameters (requirement \ref{req:welding_parameters}) could be defined by a simple UI element (with reasonable defaults).
 
-A broader extension direction considered during the early design of this thesis was free-trajectory welding on existing workpieces with arbitrary seam shape. The implemented welding use case does not cover that broader case. It already relies on pen-authored trajectory input, but interprets it only in a bounded setting suitable for the present thesis scope. Supporting arbitrary seam shapes would require not only richer use-case-specific welding logic, but also a richer scene representation. Because these questions are shared with scene handling more generally and are not specific only to welding, we discuss them centrally in \autoref{subsec:ch2_analysis_free_trajectory_welding}.
+A broader extension direction considered during the early design of this thesis was welding on existing workpieces with arbitrary seam shape and not just linear welds. The welding use case considered in this thesis does not target that broader case. It already relies on pen-authored trajectory input, but interprets it only in a bounded setting suitable for the present thesis scope. Supporting arbitrary seam shapes would require both richer scene representation and more complex use-case-specific scene processing logic. Because these questions are shared with scene handling more generally and are not specific only to welding, we discuss them centrally in \autoref{subsec:ch2_analysis_scene_representation}.
 
 \subsection{System requirements} \label{subsec:ch2_analysis_system_requirements}
 
@@ -323,21 +323,88 @@ While marker-based detection does not provide perfect accuracy and may exhibit p
 Therefore, we select a camera-based fiducial marker detection approach for scene detection in this thesis. At the same time, we will keep the system architecture modular, allowing replacement of the detection component with model-based or reconstruction-based approaches in future work if higher robustness, broader object coverage, or more model-free operation is required.
 
 
-\subsection{Free-trajectory welding: scene representation and downstream implications} \label{subsec:ch2_analysis_free_trajectory_welding}
+\subsection{Scene representation} \label{subsec:ch2_analysis_scene_representation}
 
-During the early design of the work, one broader direction that was considered was free-trajectory welding on existing workpieces with arbitrary seam shape. It is useful to make this direction explicit here, because it clarifies what additional requirements arise once the intended weld is no longer limited to a simple bounded case. The previous subsection discussed how scene data could be obtained. For this broader welding direction, however, detection alone is not enough. Once object-level or scene-level geometry has been obtained, the system must still decide how that geometry is represented internally, and the downstream use case must be able to interpret a user-authored trajectory against that representation.
+The previous subsection addressed how the system can obtain scene data. For the supported use cases, however, detection alone is not enough. Once scene or object geometry has been obtained, the system must still choose how that geometry is represented internally, because that representation directly affects what the downstream use cases can do with it.
 
-A first option is to represent workpieces using simple geometric primitives, potentially extended with composition operations. This remains relatively structured and could still keep seam-related reasoning manageable, because the downstream logic would operate on explicit geometric elements rather than on purely sampled data. At the same time, such a representation is less general than fully arbitrary geometry, and its practical usefulness depends on how large a shape family it can cover before the representation becomes too restrictive.
+This question became particularly relevant during the early design of the thesis when considering a broader welding direction: free-trajectory welding on existing workpieces with arbitrary seam shape. In such a case, the main difficulty is not only detecting the scene or capturing a pen-authored trajectory, but also representing the detected geometry in a form that remains usable for downstream task logic. The same representation question also affects other use cases, including pick-and-place, although their downstream needs are different.
 
-A second option is a mesh-based representation. Meshes are attractive because they are widely used, easy to exchange, easy to visualize, and can be obtained either from CAD export or from 3D scanning. They are also generic enough to represent a broad range of shapes. The drawback is that the downstream use case then operates only on sampled triangle geometry. For welding, this means that seams, edges, and local surface directions must be inferred from that sampled representation, which becomes harder especially on curved surfaces or where the result depends strongly on mesh resolution. Meshes therefore simplify interchange and visualization, but they shift more complexity into downstream processing.
+When selecting a scene representation, we consider:
+\begin{enumerate*}[label=(\roman*)]
+    \item expressive power (what range of object geometries can be represented),
+    \item compatibility with scene acquisition approaches,
+    \item complexity of downstream task processing,
+    \item preservation of object-level structure and identity, and
+    \item implementation effort within the scope of this thesis.
+\end{enumerate*}
 
-A third option is a CAD-like representation. In principle, this is the most expressive and most exact of the considered options, because it preserves the intended object geometry more directly than a sampled mesh. For downstream welding logic, this could be advantageous, since seam-relevant geometric relations may be represented more precisely. The trade-off is that CAD-like data is also the hardest to parse, interpret, and process generically. In other words, it offers the best geometric description, but at the price of the highest implementation complexity.
+We consider four candidate representation directions:
+\begin{enumerate}[label=(\roman*), itemsep=0.2em]
+    \item \emph{simple geometric primitives}, potentially extended with composition operations,
+    \item \emph{mesh-based representation},
+    \item \emph{CAD-like representation}, and
+    \item \emph{point-cloud representation}.
+\end{enumerate}
 
-A different direction is to work with a point cloud reconstructed from a scene scan. This is attractive because it does not require a prepared library of known object models and can capture previously unseen workpieces directly from the scene. For welding, this can be appealing, since local seam-like structures may be derived directly from scanned geometry if the scan is sufficiently dense and accurate. However, the same representation is less convenient for use cases such as pick-and-place, where the downstream logic benefits from having distinct objects identified explicitly rather than only a single undifferentiated scene geometry. A point cloud naturally describes the scene as one geometric whole, so additional processing would be needed to separate objects and identify them reliably.
+\paragraph{Simple geometric primitives.}
+A first option is to represent workpieces using simple geometric primitives. The simplest case is a scene composed of basic parameterized objects such as boxes, cylinders, or similar shapes. A moderate extension is to allow composition operations between such primitives, which increases expressive power while still keeping the representation relatively structured.
 
-These alternatives illustrate that broader free-trajectory welding is limited less by the ability to capture a user-authored trajectory than by the scene representation chosen after detection and by the complexity of the downstream processing built on top of that representation. This is particularly visible when comparing welding and pick-and-place: a representation that may still be workable for welding-oriented geometric reasoning can become much less suitable for pick-and-place if object-level separation and identification are not preserved explicitly.
+The main advantage of this direction is that downstream reasoning remains comparatively manageable. Since the represented geometry is explicit and semantically simple, use cases can operate on known geometric entities rather than inferring them from sampled data. For welding, this can make seam-related reasoning substantially easier. For pick-and-place, object-level identity is also naturally preserved, because the representation remains organized per object.
 
-For the purposes of this thesis, we therefore focus on simpler object geometries and corresponding use-case logic. In the implemented system, this direction is simplified further to a single-box object representation, which keeps the downstream reasoning for both demonstrated use cases tractable. Under that representation, the relevant weld geometry is correspondingly limited, so the bounded welding use case considered here focuses on linear seams. The broader free-trajectory case would require a richer scene representation together with correspondingly richer downstream processing.
+The main limitation is reduced generality. The usefulness of this representation depends on how large a shape family it can cover before it becomes too restrictive for practical objects. Nevertheless, it offers a favorable trade-off when the goal is not full geometric generality, but a scene model that remains tractable for downstream task logic.
+
+\paragraph{Mesh-based representation.}
+A second option is to represent objects as triangular meshes. Meshes are attractive because they are widely used, easy to exchange, straightforward to visualize, and can be obtained either from CAD export or from reconstruction pipelines. They are also general enough to describe a broad range of shapes.
+
+The main drawback is that downstream processing must operate on sampled triangle geometry rather than on an explicitly structured geometric model. For welding, this means that seams, edges, and local surface directions must be inferred from the mesh, which becomes more difficult especially on curved surfaces or in cases where the result depends strongly on mesh resolution. For pick-and-place, object-level identity can still be preserved if the mesh is attached to a detected object instance, but the geometric reasoning remains more complex than with simple primitives.
+
+Overall, meshes provide a useful middle ground: much broader shape coverage than simple primitives, but at the cost of more difficult downstream reasoning.
+
+\paragraph{CAD-like representation.}
+A third option is a CAD-like representation. In principle, this is the most expressive and most exact of the considered options, because it preserves intended object geometry more directly than a sampled mesh. For downstream task logic, this could be advantageous, since seam-relevant geometric relations may be represented more precisely and with more explicit structure.
+
+The disadvantage is implementation complexity. CAD-like data is the hardest to parse, interpret, and process generically, especially in a system that is meant to support multiple task-oriented use cases rather than one narrowly specialized geometry pipeline. While this direction may be attractive from the perspective of geometric fidelity, it is also the heaviest one from the perspective of implementation effort and downstream processing design.
+
+\paragraph{Point-cloud representation.}
+A different direction is to represent the scene directly as a point cloud, typically obtained from scene scanning or reconstruction. This is attractive because it does not require a prepared library of known object models and can describe previously unseen workpieces directly from sensed data.
+
+For welding, this can be appealing, since local seam-like structures may in principle be derived from sufficiently dense and accurate scanned geometry. At the same time, point clouds describe the scene primarily as geometry rather than as a set of explicit object instances. This makes downstream processing more difficult, especially for use cases that benefit from stable object-level structure. In particular, use cases such as pick-and-place are less naturally supported if additional processing is required to separate objects and identify them reliably.
+
+Point clouds therefore provide the most generic scene input, but they affect downstream processing unevenly: they may still be workable for some geometry-driven tasks such as welding, while being much less convenient for use cases such as pick-and-place that rely on stable object-level identity.
+
+\begin{table}[t]
+\centering
+\caption{Comparison of candidate scene representation directions.}
+\label{tab:scene_representation_comparison}
+
+\small
+
+\begin{tabular}{l c c c c c}
+\toprule
+Representation & Expressiv. & Obj. Struct. & Welding Proc. & PP Suitab. & Impl. Effort \\
+\midrule
+Simple primitives & Medium & High & Low & High & Low--Med \\
+Mesh & High & Medium & Medium--High & Medium & Medium \\
+CAD-like & Very High & High & Medium & High & Very High \\
+Point cloud & Very High & Low & Medium--High & Low & High \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+\footnotesize
+\emph{Abbreviations:}
+Expressiv. -- expressive power;
+Obj. Struct. -- preservation of explicit object-level structure;
+Welding Proc. -- expected complexity of downstream welding processing;
+PP Suitab. -- suitability for pick-and-place style downstream logic.
+\end{table}
+
+\paragraph{Summary}
+\autoref{tab:scene_representation_comparison} summarizes the main trade-offs. Richer scene representations such as meshes, CAD-like models, or point clouds would increase geometric coverage, but they would also increase the complexity of downstream processing. This is especially relevant for broader welding scenarios such as free-trajectory welding on arbitrary seam shapes, but it also matters more generally for the practical extensibility of the system, because the required geometric reasoning would not necessarily transfer well across use cases. For example, detecting seam candidates for welding is a substantially different problem from identifying a matching object instance for pick-and-place. If each new use case required disproportionately complex and largely task-specific geometric processing, the benefit of a reusable task-oriented architecture would be reduced.
+
+Given the scope of this thesis, we therefore select a \emph{simple geometric scene representation} as the most appropriate direction. It provides sufficient structure for downstream task reasoning while keeping implementation effort within a manageable range. In the selected thesis design, this direction is realized using box-shaped objects, which is sufficient for the demonstrated pick-and-place and seam-welding use cases.
+
+This selection deliberately limits the geometric breadth of the present thesis solution. At the same time, it keeps the focus of the thesis on the central question of spatial authoring in the real workspace, rather than shifting the work toward a much larger geometric modeling and processing problem.
 
 
 \subsection{Camera configuration} \label{subsec:ch2_analysis_camera_tradeoffs}
@@ -521,7 +588,7 @@ The practical consequence is that the system design must focus on (i) defining s
 
 \subsection{Summary} \label{subsec:ch2_analysis_summary}
 
-In this chapter, we derived system requirements from two representative tasks (pick-and-place and seam welding) and decomposed the system into five base components (\autoref{fig:ch2_analysis__base_components}). For the 6DoF input and scene detection, we selected camera-based fiducial tracking as the most practical approach under the thesis constraints. To address the depth-stability trade-off of monocular sensing, we selected a robot-mounted stereo configuration as the sensing setup used in this thesis.
+In this chapter, we derived system requirements from two representative tasks (pick-and-place and seam welding) and decomposed the system into five base components (\autoref{fig:ch2_analysis__base_components}). For the 6DoF input and scene detection, we selected camera-based fiducial tracking as the most practical approach under the thesis constraints. For scene representation, we selected a simple geometric model, realized in the thesis design as box-shaped objects, in order to keep downstream task processing tractable. To address the depth-stability trade-off of monocular sensing, we selected a robot-mounted stereo configuration as the sensing setup used in this thesis.
 
 For execution, we require a robot interface that exposes a small set of motion primitives and the robot state needed for both control and sensing, while remaining robot-agnostic at the use case level. For interaction, we require a UI that supports parameter entry, use case selection, visualization, and confirmation prior to execution; we select a tablet-oriented UI as a practical default for workshop operation.
 
