@@ -1003,7 +1003,7 @@ The contract is implemented in three layers:
 \begin{itemize}
     \item \textbf{Messaging contract (\type{message\_types.h}, \path{usecase_wrapper}).} Defines the request/response protocol used by the UI.
     \item \textbf{\type{UsecaseWrapper} + \type{IUsecaseModule} (\path{usecase_wrapper}).} Similar in spirit to \type{ActivationWrapper}: the wrapper handles the messaging contract, while the wrapped module implements a small capability interface \type{IUsecaseModule}.
-    \item \textbf{\type{BaseUsecase} (\path{base_usecase}).} Convenience base class for use case authors, implementing the program lifecycle (\type{programStart}/\type{programStatus}/\type{programPause}/\dots) and providing default \type{IModule} behavior. The remaining use case-specific logic stays in the derived module.
+    \item \textbf{\type{BaseUsecase} (\path{base_usecase}).} Convenience base class for use case authors, implementing the program lifecycle (\type{programStart}/\type{programStatus}/\type{programPause}/\dots) and providing default \type{IModule} behavior. The remaining use-case-specific logic stays in the derived module.
 \end{itemize}
 
 \minihead{How modules implement the contract.}
@@ -1080,7 +1080,7 @@ During execution, that JSON is treated as the program to run: the wrapper only p
 (i) the \type{program*} lifecycle methods of \type{IUsecaseModule} (task IDs, per-task status tracking, thread ownership, pause/stop bookkeeping, and \type{PROGRAM\_REMOVE} cleanup), and
 (ii) default implementations of \type{IModule} methods that many use cases do not need.
 
-A use case author still implements the use case-specific parts, at minimum:
+A use case author still implements the use-case-specific parts, at minimum:
 \begin{itemize}
     \item \type{createCommandFromParameters(...)}: builds the opaque command JSON (and optional preview/visualization data) from the filled parameter values.
     \item \type{validateParameters(command\_json)}: semantic validation of the created command before execution.
@@ -1100,7 +1100,7 @@ If you need non-blocking control (e.g., to perform cleanup before exiting), \typ
 
 \minihead{Guarantees and limitations.}
 \begin{itemize}
-    \item \textbf{Uniform plugin protocol:} the UI never calls use case-specific channels; it only uses the wrapper protocol.
+    \item \textbf{Uniform plugin protocol:} the UI never calls use-case-specific channels; it only uses the wrapper protocol.
     \item \textbf{No activation state for use cases:} use case modules are not gated by the activation interface. They are expected to always respond to the wrapper protocol (at least \type{READ\_COMMAND\_PARAMETERS} and \type{CREATE\_COMMAND}); if prerequisites are missing (e.g., tracking or robot backend inactive), they fail fast with an appropriate error instead of being ``inactive''.
     \item \textbf{Validation boundary:} the wrapper enforces type/limits/list bounds according to \type{ParameterDescription}; the module focuses on semantic validation and execution.
     \item \textbf{Task identity and control:} all running programs are addressed by \type{task\_id}; invalid IDs return \type{ID\_INVALID}. Pause/resume/stop are optional capabilities (fail fast if unsupported).
