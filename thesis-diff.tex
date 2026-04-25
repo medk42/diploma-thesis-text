@@ -1,0 +1,305 @@
+%%% The main file. It contains definitions of basic parameters and includes all other parts.
+
+% Meta-data of your thesis (please edit)
+\input metadata.tex
+
+% Generate metadata in XMP format for use by the pdfx package
+\input xmp.tex
+
+%% Settings for single-side (simplex) printing
+% Margins: left 40mm, right 25mm, top and bottom 25mm
+% (but beware, LaTeX adds 1in implicitly)
+% \documentclass[12pt,a4paper]{report}
+% \setlength\textwidth{145mm}
+% \setlength\textheight{247mm}
+% \setlength\oddsidemargin{15mm}
+% \setlength\evensidemargin{15mm}
+% \setlength\topmargin{0mm}
+% \setlength\headsep{0mm}
+% \setlength\headheight{0mm}
+% % \openright makes the following text appear on a right-hand page
+% \let\openright=\clearpage
+
+%% Settings for two-sided (duplex) printing
+% \documentclass[12pt,a4paper,twoside,openright]{report}
+% \setlength\textwidth{145mm}
+% \setlength\textheight{247mm}
+% \setlength\oddsidemargin{14.2mm}
+% \setlength\evensidemargin{0mm}
+% \setlength\topmargin{0mm}
+% \setlength\headsep{0mm}
+% \setlength\headheight{0mm}
+% \let\openright=\cleardoublepage
+
+%% If the thesis has no printed version, symmetric margins look better
+\documentclass[12pt,a4paper]{report}
+\setlength\textwidth{145mm}
+\setlength\textheight{247mm}
+\setlength\oddsidemargin{10mm}
+\setlength\evensidemargin{10mm}
+\setlength\topmargin{0mm}
+\setlength\headsep{0mm}
+\setlength\headheight{0mm}
+\let\openright=\clearpage
+
+%% Generate PDF/A-2u
+\usepackage[a-2u]{pdfx}
+
+%% Prefer Latin Modern fonts
+\usepackage{lmodern}
+% If we are not using LuaTeX, we need to set up character encoding:
+\usepackage{iftex}
+\ifpdftex
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\fi
+
+%% Further useful packages (included in most LaTeX distributions)
+\usepackage{amsmath}        % extensions for typesetting of math
+\usepackage{amsfonts}       % math fonts
+\usepackage{amsthm}         % theorems, definitions, etc.
+\usepackage{bm}             % boldface symbols (\bm)
+\usepackage{booktabs}       % improved horizontal lines in tables
+\usepackage{caption}        % custom captions of floating objects
+\usepackage{dcolumn}        % improved alignment of table columns
+\usepackage{floatrow}       % custom float environments
+\usepackage{graphicx}       % embedding of pictures
+\usepackage{indentfirst}    % indent the first paragraph of a chapter
+\usepackage[nopatch=item]{microtype}   % micro-typographic refinement
+\usepackage{paralist}       % improved enumerate and itemize
+\usepackage[nottoc]{tocbibind} % makes sure that bibliography and the lists
+			    % of figures/tables are included in the table
+			    % of contents
+\usepackage{xcolor}         % typesetting in color
+
+% The hyperref package for clickable links in PDF and also for storing
+% metadata to PDF (including the table of contents).
+% Most settings are pre-set by the pdfx package.
+\hypersetup{unicode}
+\hypersetup{breaklinks=true}
+
+% Packages for computer science theses
+\usepackage{algpseudocode}  % part of algorithmicx package
+\usepackage{algorithm}
+\usepackage{fancyvrb}       % improved verbatim environment
+\usepackage{listings}       % pretty-printer of source code
+
+% Extra packages for this thesis
+\usepackage[inline]{enumitem}
+\usepackage{xurl}
+\urlstyle{tt}
+
+\usepackage{pdflscape}  % for \begin{landscape}
+\usepackage{float}      % for [H]
+
+% Extra macro definitions for this thesis
+\newlist{goals}{enumerate}{1}
+\setlist[goals]{label=\textbf{G\arabic*:}, ref=G\arabic*, leftmargin=*}
+
+\newlist{requirements}{enumerate}{1}
+\setlist[requirements]{label=\textbf{R\arabic*:}, ref=R\arabic*, leftmargin=*}
+
+\renewcommand{\chapterautorefname}{Chapter}
+\renewcommand{\sectionautorefname}{Section}
+\renewcommand{\subsectionautorefname}{Section} % Optional: map subsections to "Section"
+\renewcommand{\figureautorefname}{Figure}
+\renewcommand{\tableautorefname}{Table}
+
+\newcommand{\reqref}[1]{\hyperref[#1]{Requirement~\ref*{#1}}}
+\newcommand{\goalref}[1]{\hyperref[#1]{Goal~\ref*{#1}}}
+
+% Chapter 5 UI callouts (pink like the bachelor docs)
+\usepackage{xparse}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\definecolor{uipink}{RGB}{255,0,255}
+
+\NewDocumentCommand{\uicall}{o m}{%
+  \textcolor{uipink}{\textbf{%
+    \IfValueTF{#1}{%
+      \hyperref[#1]{(#2)}%
+    }{%
+      (#2)%
+    }%
+  }}%
+}
+
+% \newcommand{\type}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\type}[1]{\nolinkurl{\detokenize{#1}}}
+% Better line breaking for \type{...} (underscores, ::, punctuation, CamelCase)
+% \usepackage{xparse}
+
+% \ExplSyntaxOn
+% \cs_new_protected:Npn \jakub_type:n #1
+%   {
+%     \tl_set:Nx \l_tmpa_tl { #1 }
+
+%     % Break AFTER common separators
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_colon_str\c_colon_str } { \c_colon_str\c_colon_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_underscore_str }        { \c_underscore_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_dot_str }               { \c_dot_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_slash_str }             { \c_slash_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_minus_str }             { \c_minus_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_lparen_str }            { \c_lparen_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_rparen_str }            { \c_rparen_str \c{allowbreak} }
+%     \tl_replace_all:Nnn \l_tmpa_tl { \c_comma_str }             { \c_comma_str \c{allowbreak} }
+
+%     % Break BETWEEN lower/digit and Upper (CamelCase)
+%     \regex_replace_all:nnN
+%       { ([a-z0-9])([A-Z]) }
+%       { \1 \c{allowbreak} \2 }
+%       \l_tmpa_tl
+
+%     \texttt{\tl_use:N \l_tmpa_tl}
+%   }
+
+% % If \type already exists via \newcommand, this is correct:
+% \RenewDocumentCommand{\type}{m}{\jakub_type:n{#1}}
+% \ExplSyntaxOff
+
+
+\usepackage{xparse}
+
+\ExplSyntaxOn
+\cs_new_protected:Npn \jakub_type:n #1
+  {
+    % KEEP Nx, but do NOT expand #1 (preserve tokens like \rightarrow)
+    \tl_set:Nx \l_tmpa_tl { \exp_not:n { #1 } }
+
+    % Break AFTER common separators
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_colon_str\c_colon_str } { \c_colon_str\c_colon_str \c{allowbreak} }
+
+    % If user writes "_" literally
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_underscore_str } { \c_underscore_str \c{allowbreak} }
+    % If user writes "\_" (common in LaTeX code-ish text)
+    \tl_replace_all:Nnn \l_tmpa_tl { \_ } { \_ \allowbreak }
+
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_dot_str }    { \c_dot_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_slash_str }  { \c_slash_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_minus_str }  { \c_minus_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_lparen_str } { \c_lparen_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_rparen_str } { \c_rparen_str \c{allowbreak} }
+    \tl_replace_all:Nnn \l_tmpa_tl { \c_comma_str }  { \c_comma_str \c{allowbreak} }
+
+    % Break BETWEEN lower/digit and Upper (CamelCase)
+    \regex_replace_all:nnN
+      { ([a-z0-9])([A-Z]) }
+      { \1 \c{allowbreak} \2 }
+      \l_tmpa_tl
+
+    % IMPORTANT: never end with \allowbreak (fixes dataType_. / dataType_.")
+    \regex_replace_once:nnN { \c{allowbreak}\Z } { } \l_tmpa_tl
+
+    \texttt{\tl_use:N \l_tmpa_tl}
+  }
+
+\RenewDocumentCommand{\type}{m}{\jakub_type:n{#1}}
+\ExplSyntaxOff
+
+
+% Run-in bold mini-heading with consistent spacing before it.
+% Usage: \minihead{Lifecycle.} Text continues...
+\newcommand{\minihead}[1]{\par\medskip\noindent\textbf{#1}\enspace\ignorespaces}
+
+
+\emergencystretch=2em      % try 1em–4em
+\tolerance=2000            % allow worse spacing before overfull
+\hbadness=2000             % reduce spam in log (optional)
+
+% You might want to use cleveref for references
+% \usepackage{cleveref}
+
+% Set up formatting of bibliography (references to literature)
+% Details can be adjusted in macros.tex.
+%
+% BEWARE: Different fields of research and different university departments
+% have their own customs regarding bibliography. Consult the bibliography
+% format with your supervisor.
+%
+% The basic format according to the ISO 690 standard with numbered references
+\usepackage[natbib,style=iso-numeric,sorting=none]{biblatex}
+% ISO 690 with alphanumeric references (abbreviations of authors' names)
+%\usepackage[natbib,style=iso-alphabetic]{biblatex}
+% ISO 690 with references Author (year)
+%\usepackage[natbib,style=iso-authoryear]{biblatex}
+%
+% Some fields of research prefer a simple format with numbered references
+% (sorting=none tells that bibliography should be listed in citation order)
+%\usepackage[natbib,style=numeric,sorting=none]{biblatex}
+% Numbered references, but [1,2,3,4,5] is compressed to [1-5]
+%\usepackage[natbib,style=numeric-comp,sorting=none]{biblatex}
+% A simple format with alphanumeric references:
+%\usepackage[natbib,style=alphabetic]{biblatex}
+
+% Load the file with bibliography entries
+\addbibresource{bibliography.bib}
+
+% Our definitions of macros (see description inside)
+\input macros.tex
+
+%%% Title page and various mandatory informational pages
+
+% DIF PREAMBLE EXTENSION ADDED BY LATEXDIFF
+% DIF UNDERLINE PREAMBLE %DIF PREAMBLE
+\RequirePackage[normalem]{ulem} %DIF PREAMBLE
+\RequirePackage{color}\definecolor{RED}{rgb}{1,0,0}\definecolor{BLUE}{rgb}{0,0,1} %DIF PREAMBLE
+\providecommand{\DIFadd}[1]{{\protect\color{blue}\uwave{#1}}} %DIF PREAMBLE
+\providecommand{\DIFdel}[1]{{\protect\color{red}\sout{#1}}} %DIF PREAMBLE
+% DIF SAFE PREAMBLE %DIF PREAMBLE
+\providecommand{\DIFaddbegin}{} %DIF PREAMBLE
+\providecommand{\DIFaddend}{} %DIF PREAMBLE
+\providecommand{\DIFdelbegin}{} %DIF PREAMBLE
+\providecommand{\DIFdelend}{} %DIF PREAMBLE
+\providecommand{\DIFmodbegin}{} %DIF PREAMBLE
+\providecommand{\DIFmodend}{} %DIF PREAMBLE
+% DIF FLOATSAFE PREAMBLE %DIF PREAMBLE
+\providecommand{\DIFaddFL}[1]{\DIFadd{#1}} %DIF PREAMBLE
+\providecommand{\DIFdelFL}[1]{\DIFdel{#1}} %DIF PREAMBLE
+\providecommand{\DIFaddbeginFL}{} %DIF PREAMBLE
+\providecommand{\DIFaddendFL}{} %DIF PREAMBLE
+\providecommand{\DIFdelbeginFL}{} %DIF PREAMBLE
+\providecommand{\DIFdelendFL}{} %DIF PREAMBLE
+% DIF COLORLISTINGS PREAMBLE %DIF PREAMBLE
+\lstdefinelanguage{DIFcode}{ %DIF PREAMBLE
+  moredelim=[il][\color{red}\sout]{\%DIF\ <\ }, %DIF PREAMBLE
+  moredelim=[il][\color{blue}\uwave]{\%DIF\ >\ } %DIF PREAMBLE
+} %DIF PREAMBLE
+\lstdefinestyle{DIFverbatimstyle}{ %DIF PREAMBLE
+  language=DIFcode, %DIF PREAMBLE
+  basicstyle=\ttfamily, %DIF PREAMBLE
+  columns=fullflexible, %DIF PREAMBLE
+  keepspaces=true %DIF PREAMBLE
+} %DIF PREAMBLE
+\lstnewenvironment{DIFverbatim}[1][]{\lstset{style=DIFverbatimstyle}}{} %DIF PREAMBLE
+\lstnewenvironment{DIFverbatim*}[1][]{\lstset{style=DIFverbatimstyle,showspaces=true}}{} %DIF PREAMBLE
+\lstset{extendedchars=\true,inputencoding=utf8}
+% DIF END PREAMBLE EXTENSION ADDED BY LATEXDIFF
+
+\begin{document}
+\tableofcontents
+
+\chapter*{Advisor Review Diff}
+\addcontentsline{toc}{chapter}{Advisor Review Diff}
+This document shows advisor-review changes between \type{e37203aaee1e} and \type{HEAD}.
+It intentionally does not diff the full flattened thesis preamble, \type{xmp.tex}, or the main thesis file.
+The metadata changes are presented below as readable abstract text diffs, while changed chapters are included as per-file \type{latexdiff} outputs.
+Chapter 3 only has minor textual consistency edits (`use case-specific'' to `use-case-specific'').
+Current Chapter 4 is included without diff markup so that later chapter numbering and the main cross-references remain stable.
+
+\input{advisor-diff/generated/metadata-diff.tex}
+\input{advisor-diff/generated/ai_declaration.diff.tex}
+\input{advisor-diff/generated/introduction.diff.tex}
+\input{advisor-diff/generated/ch01_background.diff.tex}
+\input{advisor-diff/generated/ch02_analysis.diff.tex}
+\input{advisor-diff/generated/ch03_system_design.diff.tex}
+\input{ch04_implementation.tex}
+\input{advisor-diff/generated/ch05_user_workflow.diff.tex}
+\input{advisor-diff/generated/ch06_discussion.diff.tex}
+\input{advisor-diff/generated/ch07_conclusion_future_work.diff.tex}
+\clearpage
+\input{bibliography.tex}
+\appendix
+\input{appendix_attachments.tex}
+\end{document}

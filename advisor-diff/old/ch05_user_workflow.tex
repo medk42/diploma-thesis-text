@@ -1,0 +1,362 @@
+\chapter{User Workflow}
+\label{chapter:ch5_user_workflow}
+
+This chapter documents the operator workflow of the prototype via the web frontend: how to start the system, instantiate and wire the module graph, activate modules, calibrate the robot-mounted stereo camera, and author and execute commands for the two evaluated use cases (welding and pick-and-place).
+The frontend actions correspond to the orchestration behavior described in \autoref{sec:ch3_ui_orchestration}, and the instantiated module configuration follows \autoref{fig:runtime_full}.
+
+Build and installation steps for the submitted code snapshot are described in \autoref{appendix:source_code}.
+The delivered artifact files (Charuco PDF, camera mount CAD, pen CAD/firmware, scene CAD/registry, and CBun sources) are summarized in \autoref{appendix:artifacts};
+the prototype hardware setup (including the stereo camera) is described in \autoref{sec:ch4_physical_setup}.
+
+
+
+
+% ----------------------------------------------------------
+\section{Preconditions and environment}
+\label{sec:ch5_preconditions}
+
+\minihead{Physical setup.}
+The workflow assumes:
+\begin{itemize}
+  \item Kassow robot with a stereo camera rigidly mounted to the tool flange (mount CAD in \autoref{appendix:camera_mount_cad}; camera hardware in \autoref{subsec:ch4_hw_camera}).
+        The cable from the camera is routed along the robot arm so that it does not occlude the camera, interfere with motion, or get pinched.
+  \item A computer connected to the camera (USB) and to the robot controller (Ethernet). A direct wired connection and static IP addressing in a common subnet are recommended (avoid wireless connection).
+  \item The tracked pen assembled, flashed, charged, and available over BLE as ``\type{3D Pen}'' (\autoref{appendix:pen_artifacts}).
+  \item For calibration: a Charuco board printed at 100\,\% scale and mounted flat on a rigid backing (\autoref{appendix:charuco}).
+  \item For the use cases: fiducial-tagged box objects visible to the camera (CAD \autoref{appendix:scene_cad}, registry \autoref{appendix:scene_registry}).
+\end{itemize}
+
+\minihead{Software setup.}
+This chapter assumes the installed runtime layout under \path{binaries/} as described in \autoref{appendix:source_code}.
+
+\minihead{Robot-side boundary.}
+The Aergo CBun is assumed installed and enabled on the robot controller (sources/build notes in \autoref{appendix:cbun}).
+Configuring the robot controller (network settings, CBun installation) is outside the scope of this chapter.
+
+
+
+
+% ----------------------------------------------------------
+\section{System startup}
+\label{sec:ch5_startup}
+
+\minihead{Start the runtime.}
+From the installed layout (\autoref{appendix:source_code}), start the runtime by running the core executable with the \type{modules} and \type{data} directories as arguments:
+\begin{verbatim}
+cd binaries
+.\core.exe modules data
+\end{verbatim}
+Then open \url{http://localhost:8080} in a browser.
+
+
+
+
+% ----------------------------------------------------------
+\section{Instantiate the module graph}
+\label{sec:ch5_graph_setup}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/01_initial_screen.pdf}
+  \caption[Setup Modules view]{\emph{Setup Modules} view: the initial screen after starting the runtime.}
+  \label{fig:ch5_initial_screen}
+\end{figure}
+
+\minihead{Goal.}
+Create the module instances corresponding to \autoref{fig:runtime_full}.
+
+\minihead{Add modules.}
+After launching the core and opening the frontend, the initial view is \emph{Setup Modules} (\autoref{fig:ch5_initial_screen}), which shows the current instantiated module list (empty at launch). 
+From the \emph{Setup Modules} view, press \emph{Add New} \uicall[fig:ch5_initial_screen]{1} to open the \emph{Add Module} view.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/02_add_robot.pdf}
+  \caption[Add Module view]{\emph{Add Module} view: adding the robot module.}
+  \label{fig:ch5_add_module}
+\end{figure}
+
+In the \emph{Add Module} view (\autoref{fig:ch5_add_module}), the left list shows available module types, and the right panel shows input mapping options for the selected module type. In the left list, select \emph{Kassow Robot Module} \uicall[fig:ch5_add_module]{1} and press \emph{Create} \uicall[fig:ch5_add_module]{2} to add the robot module instance.
+
+Repeat the same steps for the following module types in the order shown:
+\begin{enumerate}
+  \item \emph{Stereo Camera Input Module (Windows)}
+  \item \emph{Camera Pose Injector}
+  \item \emph{Stereo Camera Calibration (Robot)}
+  \item \emph{Pen Tracking (Multi-Cam)}
+  \item \emph{Scene Detection (Stereo Camera)}
+  \item \emph{Usecase Weld}
+  \item \emph{Usecase Pick and Place}
+\end{enumerate}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/03_add_injector.pdf}
+  \caption[Module input mapping]{Module input mapping example: \emph{Camera Pose Injector} consumes the camera stream and robot status; in the demonstrated setup the mapping is auto-filled.}
+  \label{fig:ch5_input_mapping}
+\end{figure}
+
+\minihead{Input mapping (when shown).}
+Most modules consume outputs of other modules and therefore show an input mapping panel \uicall[fig:ch5_input_mapping]{1}.
+In the demonstrated configuration, each input has a single compatible producer at the time the module is added, so the mapping is filled automatically and can be left unchanged.
+If the mapping is not filled automatically, the current module set does not match this tutorial; return to \emph{Setup Modules}, remove unexpected instances, and continue by following the module list in the stated order.
+
+
+
+
+% ----------------------------------------------------------
+\section{Activation and calibration}
+\label{sec:ch5_activation_calibration}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/04_activate_robot.pdf}
+  \caption[Activate the robot module]{Activate the robot module.}
+  \label{fig:ch5_activate_robot}
+\end{figure}
+
+\minihead{Goal.}
+Bring the runtime into an operational state: start the camera and robot backends, then calibrate the robot-mounted stereo camera to produce a \emph{calibrated camera set} in the workspace frame.
+
+\minihead{Activate the robot module.}
+After instantiating the module graph, your \emph{Setup Modules} view should show all eight added modules in the left list in the same order as \autoref{fig:ch5_activate_robot}. The robot, camera, and calibration modules require activation and thus appear with a red \type{unready} indicator \uicall[fig:ch5_activate_robot]{1}. 
+
+Activate the robot module by selecting \emph{Kassow Robot Module} \uicall[fig:ch5_activate_robot]{2}, setting the \emph{Host} parameter \uicall[fig:ch5_activate_robot]{3} to the robot controller IP address, selecting the correct \emph{Robot Model} \uicall[fig:ch5_activate_robot]{4} for your hardware, and pressing \emph{Activate} \uicall[fig:ch5_activate_robot]{5}. Wait for the activation procedure to finish: the \emph{Activating Module} pop-up message will disappear, \emph{Activate} button will become disabled, and the module status indicator should turn green to indicate the module is ready.
+
+If activation fails, verify the network connection to the robot controller and re-check the IP address. The robot model parameter is purely for visualization and does not affect the robot behavior.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/05_activate_camera.pdf}
+  \caption[Activate the camera module]{Activate the camera module.}
+  \label{fig:ch5_activate_camera}
+\end{figure}
+
+\minihead{Activate the camera module.}
+Activate the camera module by selecting \emph{Stereo Camera Input Module (Windows)} \uicall[fig:ch5_activate_camera]{1}, keeping the default parameters for the thesis hardware, and pressing \emph{Activate} \uicall[fig:ch5_activate_camera]{2}.
+
+If activation fails, verify that the OS can access the camera and re-check the selected resolution and frame rate.
+
+If you have a different camera which outputs a side-by-side stereo stream in MJPEG format, you can still use the \emph{Stereo Camera Input Module (Windows)} by adjusting the parameters to match your camera's output format. 
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/06_activate_calibration.pdf}
+  \caption[Perform camera calibration]{Perform camera calibration by activating the \emph{Stereo Camera Calibration (Robot)} module.}
+  \label{fig:ch5_activate_calibration}
+\end{figure}
+
+\minihead{Calibrate the robot-mounted stereo camera.}
+Select \emph{Stereo Camera Calibration (Robot)} \uicall[fig:ch5_activate_calibration]{1}. For each list entry in the \emph{Stereo images with flange pose} parameter, press \emph{Click to set} \uicall[fig:ch5_activate_calibration]{2} to capture one synchronized sample (stereo image + flange pose). Optionally, add more list entries by pressing ``+'' button \uicall[fig:ch5_activate_calibration]{3}. Capture at least 10 samples while:
+
+\begin{enumerate}[label=(\roman*)]
+  \item the Charuco board is static, flat, and visible in both cameras, and
+  \item the robot pose changes significantly between captures (vary position and orientation).
+\end{enumerate}
+
+After collecting samples, press \emph{Activate} \uicall[fig:ch5_activate_calibration]{4} to run calibration. 
+If calibration fails, the captured dataset likely did not contain enough sharp, well-lit, diverse stereo views of the board (simultaneously visible in both cameras) or did not contain enough robot motion diversity; capture more samples with larger board coverage and stronger pose variation and retry.
+Calibration is valid only while the stereo rig remains rigid with respect to the robot flange; if the camera mount is moved, loosened, or reassembled, repeat the calibration procedure.
+
+For live preview, switch to the main (\emph{Aergo}) view via \emph{Close} \uicall[fig:ch5_activate_calibration]{5}.
+Clear a captured value with the inner ``$\times$'' \uicall[fig:ch5_activate_calibration]{6}, remove a list entry with the outer ``$\times$'' \uicall[fig:ch5_activate_calibration]{7}; the list cannot shrink below 10 entries.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/07_save_system.pdf}
+  \caption[Save the setup]{Save the setup.}
+  \label{fig:ch5_save_setup}
+\end{figure}
+
+
+\minihead{Save the setup (recommended).}
+To persist the current module graph and module states, press \emph{Save} in \emph{Setup Modules} view \uicall[fig:ch5_save_setup]{1}, confirm the save name in the dialog \uicall[fig:ch5_save_setup]{2}, and press \emph{Save} again \uicall[fig:ch5_save_setup]{3}. Please wait for the save procedure to finish. If you later want to restore this setup, use the \emph{Load} button \uicall[fig:ch5_save_setup]{4} in the \emph{Setup Modules} view and select the saved setup from the list.
+
+The save dialog suggests a unique name. You can change the name before saving. Saving under an existing name prompts for overwrite confirmation.
+On load, modules try to restore their activation state; if a hardware module cannot activate (robot/camera unavailable), loading may fail and restore only part of the graph.
+Therefore, it is recommended to save with the robot and camera modules deactivated, and activate them after loading; the calibration module can remain activated.
+
+
+
+% ----------------------------------------------------------
+\section{Main view essentials}
+\label{sec:ch5_main_view}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/08_main_view.pdf}
+  \caption[Main view]{Main view.}
+  \label{fig:ch5_main_view}
+\end{figure}
+
+After setting up the module graph and activating the necessary modules, you can switch to the main view (\emph{Aergo}) by pressing \emph{Close} in the \emph{Setup Modules} view. The main view shows the camera preview, 3D visualization of the workspace, and the use case program panel. 
+
+\minihead{3D navigation.}
+Drag with the left mouse button to rotate, right mouse button to pan, and use the mouse wheel to zoom.
+
+\minihead{Wake the pen and test pose/trajectory capture.}
+Wake the pen by shaking it; it should advertise over BLE as ``\type{3D Pen}''.
+Keep the marker cube visible in the camera preview \uicall[fig:ch5_main_view]{1}; the tracked pen pose will appear in the 3D view \uicall[fig:ch5_main_view]{2}.
+\begin{itemize}
+  \item \textbf{Pose:} press the \emph{primary} button (closer to the tip) briefly to create a pose marker \uicall[fig:ch5_main_view]{3}.
+  \item \textbf{Trajectory:} press and hold the primary button, move the pen, then release to create a trajectory preview \uicall[fig:ch5_main_view]{4}.
+\end{itemize}
+
+The \emph{secondary} button (farther from the tip) can be used to request automatic loading of \emph{use case} parameters (shown in \autoref{sec:ch5_story_pick_place}).
+
+
+\minihead{Set Position / Move To Position \uicall[fig:ch5_main_view]{5}.}
+\emph{Set Position} stores the current robot joint configuration as a convenient home pose; \emph{Move To Position} commands a move to the stored pose. \textbf{Warning:} this command will move the robot; use with caution and be ready to hit emergency stop if the robot moves unexpectedly. 
+
+\minihead{Two utility actions \uicall[fig:ch5_main_view]{6}.}
+\begin{itemize}
+  \item \textbf{Scan Scene:} refreshes the displayed scene detection by triggering one scene snapshot.
+  \item \textbf{Reload Visualization:} clears and rebuilds the UI-local visualization if stale artifacts remain visible.
+\end{itemize}
+
+
+
+% ----------------------------------------------------------
+\section{User story: weld}
+\label{sec:ch5_story_weld}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/09_weld_initial.pdf}
+  \caption[Weld use case (before confirmation)]{Weld use case (before confirmation): parameters are not yet captured and the command is not confirmed.}
+  \label{fig:ch5_weld_before}
+\end{figure}
+
+\minihead{Goal.}
+Create and execute an approach--weld--depart weld command by (i) scanning the scene and (ii) drawing a pen trajectory along the intended seam.
+
+\minihead{Preconditions (scene and seams).}
+Place two fiducial-tagged boxes so that they \emph{touch}, as in the embedded illustration \uicall[fig:ch5_weld_before]{1}: raise one box using a spacer and bring it into contact with the other box.
+A \emph{seam} is a straight line where two boxes touch:
+\begin{itemize}
+  \item \textbf{Edge--edge seam:} two box edges touch along a line (solid line in the embedded illustration).
+  \item \textbf{Edge--face seam:} an edge of one box touches a face of the other box along a line (dotted line in the embedded illustration).
+\end{itemize}
+The command always welds \emph{one} straight seam segment (or a subsegment of it). The welding path is determined during confirmation; keep the box configuration unchanged until execution.
+
+\minihead{Steps.}
+\begin{enumerate}
+  \item Press \emph{WELD} \uicall[fig:ch5_weld_before]{2} in \emph{Available}.
+        The command appears in \emph{Program} \uicall[fig:ch5_weld_before]{3} and its parameters are shown \uicall[fig:ch5_weld_before]{4}.
+  \item Capture the scene: press \emph{Click to set} \uicall[fig:ch5_weld_before]{5} for \emph{Scene Scan}.
+  \item Teach the welding trajectory: press \emph{Click to set} \uicall[fig:ch5_weld_before]{6} for \emph{Welding Trajectory}.
+        When prompted for custom input:
+        \begin{enumerate}[label=(\roman*)]
+          \item Move the pen tip to the intended seam start \uicall[fig:ch5_weld_before]{7} (keep the tip close to the contact line, within roughly 10\,mm).
+          \item Hold the pen in an intended welding orientation: keep the pen pointing toward the seam from the side where the torch would approach (avoid strong tilt).
+          \item Press and hold the \emph{primary} button, move the pen along the seam (toward \uicall[fig:ch5_weld_before]{8}), then release at the intended end point.
+        \end{enumerate}
+  \item Press \emph{Confirm} \uicall[fig:ch5_weld_before]{9} to create the command.
+\end{enumerate}
+
+\minihead{If confirmation fails.}
+If confirmation fails, clear the affected parameter value using the inner ``$\times$'' next to the stored \emph{Value} and capture it again (re-capture \emph{Scene Scan} and/or \emph{Welding Trajectory} as needed).
+In practice, failures are usually caused by one of:
+\begin{itemize}
+  \item \textbf{No seam in the scan:} ensure the boxes \emph{touch} (edge--edge or edge--face), then re-capture \emph{Scene Scan}.
+  \item \textbf{Trajectory too far from the seam:} redraw closer to the contact line (tip within roughly 10\,mm).
+  \item \textbf{Pen orientation rejected:} redraw with the pen pointing toward the seam in an intended welding orientation (avoid extreme tilt).
+  \item \textbf{Scene changed after the scan:} if boxes were moved, re-capture \emph{Scene Scan} \emph{and} redraw the trajectory.
+\end{itemize}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/10_weld_defined.pdf}
+  \caption[Weld use case (after confirmation)]{Weld use case (after confirmation): the command is confirmed and a motion preview is shown.}
+  \label{fig:ch5_weld_after}
+\end{figure}
+
+\minihead{On success (after confirmation).}
+After successful confirmation, the weld command is confirmed in \emph{Program} \uicall[fig:ch5_weld_after]{1}, \emph{Confirm} becomes disabled \uicall[fig:ch5_weld_after]{2}, and a preview of the approach--weld--depart motion is shown in the 3D view \uicall[fig:ch5_weld_after]{3}.
+Unlike pick-and-place, the weld command is resolved at confirmation time into fixed world-frame poses; keep the workpiece configuration unchanged until execution.
+
+\minihead{Execute.}
+Press \emph{Start} \uicall[fig:ch5_weld_after]{4} to execute the approach--weld--depart motion. Pause and stop are supported by this use case.
+For implementation-level details and exact execution semantics, see \autoref{subsec:ch4_usecase_weld}.
+
+
+
+
+
+
+% ----------------------------------------------------------
+\section{User story: pick-and-place}
+\label{sec:ch5_story_pick_place}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/11_pick_initial.pdf}
+  \caption[Pick-and-place (before confirmation)]{Pick-and-place (before confirmation): parameters are not yet captured and the command is not confirmed.}
+  \label{fig:ch5_pick_before}
+\end{figure}
+
+\minihead{Goal.}
+Create and execute a pick-and-place command by (i) capturing a scene snapshot and (ii) teaching pick and place poses.
+
+Unlike weld (which stores fixed world-frame poses at confirmation time), pick-and-place stores the command as the selected box ID, the pick pose relative to that box, and the place pose in the world frame.
+At execution time, the system scans the scene again and recomputes the world pick pose from the box's current pose; the place pose remains the fixed world pose captured during confirmation.
+
+\minihead{Preconditions (scene).}
+Place at least one fiducial-tagged box in the scene so that it is visible to the camera.
+
+\minihead{Steps.}
+\begin{enumerate}
+  \item Press \emph{PICK} \uicall[fig:ch5_pick_before]{1} in \emph{Available}.
+        The command appears in \emph{Program} \uicall[fig:ch5_pick_before]{2} and its parameters are shown \uicall[fig:ch5_pick_before]{3}.
+  \item Trigger auto-loading by pressing the pen \emph{secondary} button.
+        This captures \emph{Scene Request} and then prompts for \emph{Pick Position} and \emph{Place Position}.
+  \item Teach \emph{Pick Position}:
+        move the pen tip close to the intended box and point the pen \emph{into the box} (during confirmation, the system selects a box by checking a short segment along the pick pose $+z$ direction), as in the embedded example \uicall[fig:ch5_pick_before]{4}.
+        Press the \emph{primary} button briefly to capture the pose.
+  \item Teach \emph{Place Position}:
+        move the pen to the desired placement location and press the primary button to capture the pose.
+  \item Press \emph{Confirm} \uicall[fig:ch5_pick_before]{5} to create the command.
+\end{enumerate}
+
+\minihead{If confirmation fails.}
+If confirmation fails, clear the affected parameter value using the inner ``$\times$'' next to the stored \emph{Value} and capture it again (re-capture \emph{Scene Request} and/or re-teach \emph{Pick/Place Position} as needed).
+In practice, failures are usually due to:
+\begin{itemize}
+  \item \textbf{No box selected:} the pick pose segment did not intersect any detected box. Move the pen tip closer and point the pick pose $+z$ into the intended box, or increase the detection distance via the \emph{Pick Detection Distance [mm]} advanced parameter.
+  \item \textbf{Scene changed between capture steps:} if the box was moved after capturing \emph{Scene Request} and before capturing \emph{Pick Position}, re-capture \emph{Scene Request} before confirming again.
+\end{itemize}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/12_pick_defined.pdf}
+  \caption[Pick-and-place (after confirmation)]{Pick-and-place (after confirmation): the command is confirmed and a motion preview is shown.}
+  \label{fig:ch5_pick_after}
+\end{figure}
+
+\minihead{On success (after confirmation).}
+After successful confirmation, the pick-and-place command is confirmed in \emph{Program} \uicall[fig:ch5_pick_after]{1} and \emph{Confirm} becomes disabled \uicall[fig:ch5_pick_after]{2}.
+A preview of the nominal lift-and-transfer motion is shown in the 3D view \uicall[fig:ch5_pick_after]{3}.
+The preview reflects the captured inputs and configured parameters; it is \emph{not} updated after confirmation.
+
+\minihead{Execute.}
+Press \emph{Start} \uicall[fig:ch5_pick_after]{4} to execute. Stop is supported, but pause is not supported by this use case.
+At execution start, the system re-scans the scene, finds the box with the stored ID, and computes the pick pose from its current pose and the stored relative pick offset; the place pose stays unchanged.
+For implementation-level details and exact execution semantics, see \autoref{subsec:ch4_usecase_pick_place}.
+
+% ----------------------------------------------------------
+\section{Save and load the program}
+\label{sec:ch5_save_program}
+
+Any authored program can be saved and later loaded, including all parameters, confirmation state, and visualization data.
+For run-and-execute commands such as weld, saved programs are only reusable if the scene stays unchanged; for scene-adaptive commands such as pick-and-place, saving and loading is practical across runs.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics{img/ch5_user_workflow/13_pick_save.pdf}
+  \caption{Save the program.}
+  \label{fig:ch5_pick_save}
+\end{figure}
+
+To persist the current program, press \emph{Save} in the \emph{Aergo} view \uicall[fig:ch5_pick_save]{1}, confirm the save name in the dialog \uicall[fig:ch5_pick_save]{2}, and press \emph{Save} again \uicall[fig:ch5_pick_save]{3}.
+To restore a program later, use the \emph{Load} button \uicall[fig:ch5_pick_save]{4} and select the saved program from the list.
+The program save dialog behaves like the setup save dialog in terms of save file naming and overwrite confirmation.

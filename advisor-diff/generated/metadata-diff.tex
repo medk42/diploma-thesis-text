@@ -1,0 +1,22 @@
+\chapter*{Abstract Changes}
+\addcontentsline{toc}{chapter}{Abstract Changes}
+
+\section*{English Abstract}
+%
+This thesis investigates whether collaborative-robot tasks that change frequently can be authored more directly by specifying spatial intent in the real workspace instead of editing low-level robot programs through a teach pendant or offline workflow.
+It presents a modular \DIFdelbegin \DIFdel{prototype }\DIFdelend \DIFaddbegin \DIFadd{system }\DIFaddend for task-oriented in-workspace spatial authoring: a shared runtime provides common services for sensing, authoring, confirmation, execution, and persistence, while task-specific use cases interpret captured poses and trajectories as robot motions and tool actions.
+The system was implemented on a Kassow Robots collaborative robot using stereo-vision workspace sensing, a tracked 6DoF pen, and a web-based interface.
+Two representative use cases were demonstrated on the real robot: pick-and-place and seam welding.
+The \DIFdelbegin \DIFdel{result is a qualitative proof-of-concept }\DIFdelend \DIFaddbegin \DIFadd{system demonstrates }\DIFaddend that this approach can support \DIFdelbegin \DIFdel{selected }\DIFdelend task-oriented workflows, with seam welding showing the clearest practical fit because authored trajectory input is used to identify and parameterize the weld seam, while pick-and-place \DIFdelbegin \DIFdel{mainly }\DIFdelend shows that authored intent can be combined with refreshed scene information at execution time\DIFdelbegin \DIFdel{.
+The contribution remains bounded by prototype scope, limited physical validation, and current limitations in scene detection, sensing robustness, and the absence of tool integration}\DIFdelend .
+
+\section*{Czech Abstract}
+%
+Tato práce zkoumá, zda lze úlohy pro~kolaborativní roboty, které se často obměňují, zadávat přímo v~reálném pracovním prostoru namísto úprav nízkoúrovňových programů robota pomocí teach pendantu nebo postupů offline programování.
+Představuje modulární \DIFdelbegin \DIFdel{prototyp systému }\DIFdelend \DIFaddbegin \DIFadd{systém }\DIFaddend pro~úlohově orientované prostorové zadávání: sdílená běhová vrstva zajišťuje snímání scény, zadávání poloh a~trajektorií, potvrzení výsledku, spuštění i~ukládání, zatímco jednotlivé aplikační moduly převádějí zadané polohy a~trajektorie na~pohyby robota a~akce nástroje.
+Systém byl implementován na~kolaborativním robotu Kassow Robots s~využitím stereo snímání pracovního prostoru, sledovaného pera se 6~stupni volnosti a~webového rozhraní.
+Na~reálném robotu byly demonstrovány dvě reprezentativní úlohy: pick-and-place a~svařování.
+\DIFdelbegin \DIFdel{Výsledkem je kvalitativní ověření}\DIFdelend \DIFaddbegin \DIFadd{Výsledky ukazují}\DIFaddend , že tento přístup může \DIFdelbegin \DIFdel{podpořit vybrané }\DIFdelend \DIFaddbegin \DIFadd{podporovat }\DIFaddend úlohově orientované pracovní postupy.
+Nejpřesvědčivěji se osvědčil u~svařování, kde zadaná trajektorie slouží k~určení průběhu a~parametrů svarového švu; u~úlohy pick-and-place se naopak ukazuje především to, že zadaný záměr lze při vykonání kombinovat s~aktuálními informacemi o~scéně\DIFdelbegin \DIFdel{.
+Přínos práce však stále vymezují hranice prototypu, jen omezené ověření na~reálném robotu a~také dosavadní limity detekce scény, robustnosti snímání a~chybějící integrace nástrojů}\DIFdelend .
+
