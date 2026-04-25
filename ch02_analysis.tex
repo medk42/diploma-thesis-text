@@ -377,11 +377,12 @@ Point clouds therefore provide the most generic scene input, but they affect dow
 \caption{Comparison of candidate scene representation directions.}
 \label{tab:scene_representation_comparison}
 
-\small
+\footnotesize
+\setlength{\tabcolsep}{3pt}
 
-\begin{tabular}{l c c c c c}
+\begin{tabular}{@{}l c c c c c@{}}
 \toprule
-Representation & Expressiv. & Obj. Struct. & Welding Proc. & PP Suitab. & Impl. Effort \\
+Representation & Expressiv. & Obj. Struct. & Weld Proc. & P\&P Suitab. & Impl. Effort \\
 \midrule
 Simple primitives & Medium & High & Low & High & Low--Med \\
 Mesh & High & Medium & Medium--High & Medium & Medium \\
@@ -395,8 +396,8 @@ Point cloud & Very High & Low & Medium--High & Low & High \\
 \emph{Abbreviations:}
 Expressiv. -- expressive power;
 Obj. Struct. -- preservation of explicit object-level structure;
-Welding Proc. -- expected complexity of downstream welding processing;
-PP Suitab. -- suitability for pick-and-place style downstream logic.
+Weld Proc. -- expected complexity of downstream welding processing;
+P\&P Suitab. -- suitability for pick-and-place style downstream logic.
 \end{table}
 
 \paragraph{Summary}
