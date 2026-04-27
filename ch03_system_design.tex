@@ -1123,7 +1123,7 @@ Instead of embedding module-specific rendering rules in the UI (e.g., special-ca
 All files mentioned in this section are located in \path{backend/module_helpers/visualization_3d_interface/}.
 
 
-\minihead{Scene model.}
+\minihead{Visualization scene model.}
 The contract represents the 3D scene as:
 \begin{itemize}
     \item a static \textbf{resource registry} (shape descriptions), and
@@ -1301,11 +1301,11 @@ A module that \emph{implements} robot control is expected to:
 \subsection{Scene detection interface} \label{sec:ch3_scene_detection_interface}
 
 \minihead{Purpose.}
-\reqref{req:scene_detection_logic} (see also \autoref{subsec:ch2_analysis_scene_detection}) calls for scene detection that provides object poses for downstream use cases (e.g., seam detection and trajectory alignment). The scene detection interface standardizes this output as a small request/response contract: a client can query which objects the detector knows about and request a fresh detection result on demand.
+\reqref{req:scene_detection_logic} (see also \autoref{subsec:ch2_analysis_scene_detection} and \autoref{subsec:ch2_analysis_scene_representation}) calls for scene detection that provides object poses for downstream use cases (e.g., seam detection and trajectory alignment). The scene detection interface standardizes this output as a small request/response contract: a client can query which objects the detector knows about and request a fresh detection result on demand.
 
 All files mentioned in this section are located in \path{backend/module_helpers/scene_detection_helper/}.
 
-\minihead{Scene model.}
+\minihead{Detection scene model.}
 The contract assumes a \emph{static registry} of detectable object types and a \emph{dynamic scene} of detected instances:
 \begin{itemize}
     \item \textbf{Registry objects:} a list of \type{RegisteredBox} items (stable object \type{id} + box dimensions).

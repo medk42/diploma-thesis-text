@@ -81,9 +81,9 @@ The exact CAD, firmware, and assembly notes (including wiring and screw lengths)
 \subsection{Workspace scene objects (fiducial boxes)}
 \label{subsec:ch4_hw_scene}
 
-To support the scene detection requirements in \autoref{subsec:ch2_analysis_scene_detection}, the scene model consists of simple fiducial-tagged box objects.
-Each object carries a single ArUco marker and is described by a registry entry (marker ID and size, box dimensions, and marker-to-box transform).
-The registry and an example box CAD model are shipped with the attachment (\autoref{appendix:scene_registry}, \autoref{appendix:scene_cad}).
+The implementation realizes the simple box-shaped scene representation selected in \autoref{subsec:ch2_analysis_scene_representation} as physical fiducial-tagged boxes.
+For the demonstrated setup, each workspace object is a box carrying one ArUco marker.
+The corresponding registry and an example box CAD model are shipped with the attachment (\autoref{appendix:scene_registry}, \autoref{appendix:scene_cad}); the registry fields and runtime detection behavior are described with the scene detection module in \autoref{subsec:ch4_mod_scene_detection}.
 
 \begin{figure}[t]
     \centering
