@@ -229,7 +229,7 @@ For \type{SINGLE} and \type{RANGE} request consumers, the requester typically do
 Discovery is primarily needed for \type{AUTO\_ALL} request consumers, where the target set is not known at instantiation time (and therefore is not enumerated in \type{InputChannelMapInfo}).
 
 \minihead{Mapping state change indicator.}
-Because the running set and its wiring may change over time (modules created/removed), the core exposes \type{getModulesMappingStateId()}. The returned value is a monotonically increasing identifier that changes whenever the mapping topology changes (modules are added or removed). UI modules can use it as a cheap change detector to refresh cached views.
+The running set and its wiring may change over time (modules created/removed): therefore the core exposes \type{getModulesMappingStateId()}. The returned value is a monotonically increasing identifier that changes whenever the mapping topology changes (modules are added or removed). UI modules can use it as a cheap change detector to refresh cached views.
 
 \minihead{Orchestration entry points (create/remove/dependencies).}
 The contract allows a controller to create and remove modules dynamically. A new instance is created using \type{addModule(loaded\_module\_id, channel\_map\_info)}. The core validates the provided mapping against the declared channel contract (channel type identifiers and the consumer count policy such as single/range/auto-all) and rejects invalid wiring. Existing modules may be removed via \type{removeModuleById(running\_module\_id, recursive)}; when recursive removal is requested, the core may also remove dependent modules (as defined by the connection types), and \type{collectDependencies(running\_module\_id)} can be used to inspect this dependency set in advance.
@@ -268,10 +268,7 @@ A compliant core follows these steps when creating and running a module instance
 \begin{itemize}
     \item \textbf{Restricted core usage during construction and teardown.}
     In the core implementation used here, module graph mutations (create/remove/load) are serialized under an exclusive \type{core\_mutex\_} lock.
-    Because message sending and \type{ICoreControl} queries acquire the same mutex (shared), calling
-    \type{ICore::sendMessage}, \type{ICore::sendRequest}, \type{ICore::sendResponse} or any \type{ICoreControl} method
-    from the core thread during module creation/removal (\type{ctor}, \type{threadStart}, \type{threadStop}, \type{dtor})
-    can deadlock and is therefore forbidden.
+    Message sending and \type{ICoreControl} queries acquire the same mutex (shared). Calling \type{ICore::sendMessage}, \type{ICore::sendRequest}, \type{ICore::sendResponse} or any \type{ICoreControl} method from the core thread during module creation/removal (\type{ctor}, \type{threadStart}, \type{threadStop}, \type{dtor}) can therefore deadlock and is forbidden.
 
     The only core interaction explicitly allowed in these phases is allocator management
     (\type{createDynamicAllocator}, \type{createBufferAllocator}, \type{deleteAllocator}) and logging via the provided \type{logging::ILogger},
@@ -554,7 +551,7 @@ The core uses the same mapping tables for both publish/subscribe and request/res
 Requests are still \emph{directed}: \type{sendRequest} names one concrete target response channel, so \type{AUTO\_ALL} does not turn requests into a broadcast.
 What \type{AUTO\_ALL} buys you is that the instance can be created without a pre-filled mapping; if it needs to send a request, it can first query the core for existing response channels of a given type and then choose a target.
 
-Because the input mapping is fixed at instance creation time, removing a module can invalidate other modules that are explicitly wired to it.
+The input mapping is fixed at instance creation time; removing a module can invalidate other modules that are explicitly wired to it.
 The core therefore treats explicit edges as \emph{hard dependencies} and uses \type{mapping\_publish\_}/\type{mapping\_response\_} to find dependents for cascade removal (\type{collectDependentModules}).
 \type{AUTO\_ALL} edges are treated as \emph{non-binding} and ignored there: they are runtime-expanded wiring that can shrink/grow as modules appear and disappear, so they do not create a ``must-remove'' dependency.
 (In valid configurations we expect the explicit dependency graph to be acyclic; \type{AUTO\_ALL} can add extra runtime edges without making removals unpredictable.)
@@ -709,7 +706,7 @@ Removal takes \type{add\_remove\_mutex\_} and then a \emph{unique} lock on \type
 This prevents concurrent graph edits (add/remove/load) and prevents concurrent sends/reflection from observing partially updated mapping tables while edges are being removed.
 
 \minihead{Which modules must be removed (dependencies).}
-Because each module's input mapping is fixed at creation time, removing a producer can invalidate modules that explicitly depend on it.
+Each module's input mapping is fixed at creation time; removing a producer can invalidate modules that explicitly depend on it.
 The core therefore computes a cascade set via \type{collectDependentModulesImpl(id)}:
 it performs a graph walk starting from \type{id} using producer-side tables \type{mapping\_publish\_} (publish$\rightarrow$subscribe edges) and \type{mapping\_response\_} (response$\rightarrow$request edges).
 For each reached consumer endpoint, the core checks the consumer declaration in the destination module's \type{ModuleInfo} and:
@@ -741,7 +738,7 @@ Once the instance is stopped, the core removes all edges involving it, in both d
 \begin{itemize}
     \item \textbf{Remove outgoing edges (\type{removeMappingProducers}).}
     The core iterates this module's \type{mapping\_publish\_}/\type{mapping\_response\_} and, for each connected consumer endpoint, removes ``our channel'' from the destination module's consumer-side table (\type{mapping\_subscribe\_}/\type{mapping\_request\_}).
-    Because removal proceeds in reverse dependency order, any remaining outgoing edges at this point are expected to be \type{AUTO\_ALL} edges; the implementation enforces this invariant (terminates if a non-\type{AUTO\_ALL} consumer is found).
+    Removal proceeds in reverse dependency order; therefore, any remaining outgoing edges at this point are expected to be \type{AUTO\_ALL} edges. The implementation enforces this invariant (terminates if a non-\type{AUTO\_ALL} consumer is found).
     \item \textbf{Remove incoming edges (\type{removeMappingSubscribers}).}
     The core iterates this module's \type{mapping\_subscribe\_}/\type{mapping\_request\_} and removes ``our channel'' from the producer modules' producer-side tables (\type{mapping\_publish\_}/\type{mapping\_response\_}).
 \end{itemize}
