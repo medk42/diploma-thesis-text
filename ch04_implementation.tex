@@ -64,7 +64,7 @@ Camera acquisition in the submitted implementation is currently Windows-only (\a
 \label{subsec:ch4_hw_pen}
 
 As motivated in \autoref{subsec:ch2_analysis_6DoF_input_interface}, spatial authoring in the implemented system is driven by a hand-held 6DoF input device.
-The system uses a custom tracked pen inspired by D-Point, extended for the needs of robot-mounted stereo viewing: a larger marker cube with five marker faces (four sides and a top marker) and two physical buttons for discrete intent events.
+The system uses a custom tracked pen designed and built for this prototype, inspired by D-Point~\cite{dpoint_github} but adapted for robot-mounted stereo viewing: a larger marker cube with five marker faces (four sides and a top marker), a different mechanical assembly, and two physical buttons for discrete intent events.
 
 \begin{figure}[t]
     \centering
@@ -74,9 +74,10 @@ The system uses a custom tracked pen inspired by D-Point, extended for the needs
 \end{figure}
 
 The pen design is shown in \autoref{fig:ch4_pen_full}.
-Electronics are based on a \type{Seeed Studio XIAO nRF52840 Sense} with a single-cell Li-ion battery (\type{INR10440}), providing BLE connectivity and button reporting.
-Although the pen firmware transmits IMU samples, the current tracking module does not fuse IMU data; pose estimation is performed purely from camera observations.
-The exact CAD, firmware, and assembly notes (including wiring and screw lengths) are provided in \autoref{appendix:pen_artifacts}, including the license attribution boundary to the upstream D-Point firmware.
+Electronics are based on a \type{Seeed Studio XIAO nRF52840 Sense} with a single-cell Li-ion battery (\type{INR10440}), providing BLE connectivity, button reporting, and access to onboard IMU measurements.
+Although the board provides IMU data and the firmware can transmit IMU samples, the current tracking module does not fuse them into the pose estimate. The present prototype instead relies on vision-based pose estimation with lightweight output smoothing, which was sufficient for the demonstrated workflow (see \autoref{subsec:ch4_mod_pen_tracking} for details).
+
+The exact CAD, adapted firmware, and assembly notes (including wiring and screw lengths) are provided in \autoref{appendix:pen_artifacts}, including the license attribution boundary to the upstream D-Point firmware.
 
 \subsection{Workspace scene objects (fiducial boxes)}
 \label{subsec:ch4_hw_scene}
@@ -306,7 +307,11 @@ During interaction, the module visualizes the inferred intent either as
 Both visualizations are shown only temporarily and are automatically removed after a fixed timeout.
 
 \minihead{Pen communication.}
-Button state is received over BLE using SimpleBLE. The pen firmware transmits IMU samples as well, but the tracking implementation uses only the button flags (vision-only pose estimation).
+Button state is received over BLE using SimpleBLE.
+The pen firmware can also transmit IMU samples from the onboard sensor, but these samples are not consumed by the current tracking module.
+The implementation uses a vision-only pose estimate followed by the pose-specific one-euro filter described above.
+Integrating the IMU would require reliable timing, robust BLE transport on the target platforms, and an explicit filtering or sensor-fusion layer.
+
 On Linux, the BLE discovery/connection sequence would need minor adaptation, as the current implementation relies on Windows-style service exposure during scanning.
 
 \minihead{Visualization outputs.}

@@ -52,7 +52,8 @@ I would also like to thank my family for their continued support and encourageme
 \def\Abstract{%
 This work investigates whether collaborative-robot tasks that change frequently can be authored more directly by specifying spatial intent in the real workspace instead of editing low-level robot programs through a teach pendant or offline workflow.
 It presents a modular system for task-oriented in-workspace spatial authoring: a shared runtime provides common services for sensing, authoring, confirmation, execution, and persistence, while task-specific use cases interpret captured poses and trajectories as robot motions and tool actions.
-The system was implemented on a Kassow Robots collaborative robot using stereo-vision workspace sensing, a tracked 6DoF pen, and a web-based interface.
+The system was implemented on a Kassow Robots collaborative robot using stereo-vision workspace sensing and a web-based interface.
+As part of the prototype, this work also designed and built a custom tracked 6DoF pen that provides spatial input and button-based intent events.
 Two representative use cases were demonstrated on the real robot: pick-and-place and seam welding.
 The system demonstrates that this approach can support task-oriented workflows, with seam welding showing the clearest practical fit because authored trajectory input is used to identify and parameterize the weld seam, while pick-and-place shows that authored intent can be combined with refreshed scene information at execution time.
 }
@@ -100,7 +101,8 @@ modulární softwarová architektura%
 \def\AbstractCS{%
 Tato práce zkoumá, zda lze úlohy pro~kolaborativní roboty, které se často obměňují, zadávat přímo v~reálném pracovním prostoru namísto úprav nízkoúrovňových programů robota pomocí teach pendantu nebo postupů offline programování.
 Představuje modulární systém pro~úlohově orientované prostorové zadávání: sdílená běhová vrstva zajišťuje snímání scény, zadávání poloh a~trajektorií, potvrzení výsledku, spuštění i~ukládání, zatímco jednotlivé aplikační moduly převádějí zadané polohy a~trajektorie na~pohyby robota a~akce nástroje.
-Systém byl implementován na~kolaborativním robotu Kassow Robots s~využitím stereo snímání pracovního prostoru, sledovaného pera se 6~stupni volnosti a~webového rozhraní.
+Systém byl implementován na~kolaborativním robotu Kassow Robots s~využitím stereo snímání pracovního prostoru a~webového rozhraní.
+Součástí prototypu je také vlastní prostorově sledované pero se 6~stupni volnosti, navržené a vytvořené v rámci této práce, které poskytuje prostorový vstup a události záměru vyvolané tlačítky.
 Na~reálném robotu byly demonstrovány dvě reprezentativní úlohy: pick-and-place a~svařování.
 Výsledky ukazují, že tento přístup může podporovat úlohově orientované pracovní postupy.
 Nejpřesvědčivěji se osvědčil u~svařování, kde zadaná trajektorie slouží k~určení průběhu a~parametrů svarového švu; u~úlohy pick-and-place se naopak ukazuje především to, že zadaný záměr lze při vykonání kombinovat s~aktuálními informacemi o~scéně.
