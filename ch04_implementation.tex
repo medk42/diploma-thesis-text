@@ -68,12 +68,15 @@ The system uses a custom tracked pen designed and built for this prototype, insp
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.8\linewidth]{img/ch4_implementation/pen_full_bg.png}
-    \caption[Tracked pen]{Tracked pen used for spatial authoring (CAD render). The cube carries multiple fiducial markers; buttons on the handle provide discrete intent events.}
+    \includegraphics[width=0.82\linewidth]{img/ch4_implementation/pen_real_photo.jpg}
+    \caption[Tracked pen]{
+        Physical tracked pen prototype used for spatial authoring.
+        The cube carries multiple fiducial markers; buttons on the handle provide discrete intent events.
+    }
     \label{fig:ch4_pen_full}
 \end{figure}
 
-The pen design is shown in \autoref{fig:ch4_pen_full}.
+The physical pen prototype is shown in \autoref{fig:ch4_pen_full}.
 Electronics are based on a \type{Seeed Studio XIAO nRF52840 Sense} with a single-cell Li-ion battery (\type{INR10440}), providing BLE connectivity, button reporting, and access to onboard IMU measurements.
 Although the board provides IMU data and the firmware can transmit IMU samples, the current tracking module does not fuse them into the pose estimate. The present prototype instead relies on vision-based pose estimation with lightweight output smoothing, which was sufficient for the demonstrated workflow (see \autoref{subsec:ch4_mod_pen_tracking} for details).
 
