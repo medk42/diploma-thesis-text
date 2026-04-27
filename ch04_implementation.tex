@@ -1,11 +1,11 @@
 \chapter{Hardware Setup and Module Implementations}
 \label{chapter:ch4_implementation}
 
-This chapter describes the concrete prototype used in this thesis: the physical setup and the internal implementation of the modules that instantiate the end-to-end configuration introduced in \autoref{fig:runtime_full}.
+This chapter describes the concrete system used in this work: the physical setup and the internal implementation of the modules that instantiate the end-to-end configuration introduced in \autoref{fig:runtime_full}.
 Unlike \autoref{chapter:ch3_system_design}, which focused on contracts and interface semantics, this chapter focuses on the concrete implementation decisions inside the modules.
 
 \minihead{Accompanying electronic attachment.}
-The submitted electronic attachment contains (i) a pruned snapshot of the C++ source tree (\path{diploma-thesis-code/}) and (ii) the hardware and calibration artifacts required to reproduce the prototype setup (CAD, firmware, PDFs, configuration JSON).
+The submitted electronic attachment contains (i) a pruned snapshot of the C++ source tree (\path{diploma-thesis-code/}) and (ii) the hardware and calibration artifacts required to reproduce the demonstrated setup (CAD, firmware, PDFs, configuration JSON).
 A complete overview of the attachment structure, build notes, and artifact file locations is provided in \autoref{appendix:source_code} and \autoref{appendix:artifacts}.
 
 \minihead{Implementation note.}
@@ -27,44 +27,44 @@ We first summarize the physical setup and calibration artifacts, then describe t
 \label{sec:ch4_physical_setup}
 
 This section summarizes the physical components required to run the system and the calibration artifacts that the operator must provide.
-The operational steps for setup and execution are deferred to \autoref{chapter:ch5_user_workflow}; the concrete artifact files shipped with the thesis attachment are listed in \autoref{appendix:artifacts}.
+The operational steps for setup and execution are deferred to \autoref{chapter:ch5_user_workflow}; the concrete artifact files shipped with the electronic attachment are listed in \autoref{appendix:artifacts}.
 
 \subsection{Robot platform and execution backend}
 \label{subsec:ch4_hw_robot}
 
 The target robot platform is a Kassow collaborative robot.
-During development, the prototype was tested primarily in the REMII offline environment \cite{kassow_remii} and later validated on a physical robot of model KR1205.
-As motivated in \autoref{subsec:ch2_analysis_robot_interface}, robot execution is abstracted behind the shared \type{robot\_interface} contract, implemented by the thesis-side module \type{robot\_module\_kassow}.
+During development, the system was tested primarily in the REMII offline environment \cite{kassow_remii} and later validated on a physical robot of model KR1205.
+As motivated in \autoref{subsec:ch2_analysis_robot_interface}, robot execution is abstracted behind the shared \type{robot\_interface} contract, implemented by the runtime-side module \type{robot\_module\_kassow}.
 
-The prototype assumes a robot-mounted stereo camera rig: the camera is mechanically attached to the robot flange such that its pose is rigid with respect to the flange.
+The system assumes a robot-mounted stereo camera rig: the camera is mechanically attached to the robot flange such that its pose is rigid with respect to the flange.
 This enables the calibration module to combine robot kinematics (flange pose) with camera observations to place both cameras in a common workspace frame, as discussed in the camera trade-offs in \autoref{subsec:ch2_analysis_camera_tradeoffs}.
-The mechanical mount used in the prototype is provided as a CAD artifact in \autoref{appendix:camera_mount_cad} and shown in \autoref{fig:ch4_camera_mount}.
+The mechanical mount used in the demonstrated setup is provided as a CAD artifact in \autoref{appendix:camera_mount_cad} and shown in \autoref{fig:ch4_camera_mount}.
 
 Robot communication is realized through a small robot-side component (CBun) installed on the Kassow controller.
-The CBun exposes the robot capabilities to the thesis runtime; the thesis-side \type{robot\_module\_kassow} consumes this endpoint and provides the \type{robot\_interface} protocol to the rest of the runtime.
-CBun sources and build notes are provided in \autoref{appendix:cbun}; installation and configuration on the robot controller are assumed to be handled by the operator and are outside the scope of this thesis.
+The CBun exposes the robot capabilities to the runtime; \type{robot\_module\_kassow} consumes this endpoint and provides the \type{robot\_interface} protocol to the rest of the system.
+CBun sources and build notes are provided in \autoref{appendix:cbun}; installation and configuration on the robot controller are assumed to be handled by the operator and are outside the scope of the implemented system.
 
 \subsection{Stereo camera hardware}
 \label{subsec:ch4_hw_camera}
 
-The prototype uses a compact stereo camera module with two synchronized global-shutter sensors (OmniVision OV9281), providing $1280 \times 800$ grayscale images per sensor.
-In the prototype configuration, the camera was operated as a single side-by-side stream ($2560 \times 800$) with MJPEG compression at 60\,FPS.
+The system uses a compact stereo camera module with two synchronized global-shutter sensors (OmniVision OV9281), providing $1280 \times 800$ grayscale images per sensor.
+In the demonstrated configuration, the camera was operated as a single side-by-side stream ($2560 \times 800$) with MJPEG compression at 60\,FPS.
 
 \begin{figure}[t]
     \centering
     \includegraphics[width=0.8\linewidth]{img/ch4_implementation/camera_mount_bg.png}
-    \caption[Robot-mounted camera mount]{Robot-mounted stereo camera flange mount used in the prototype (CAD render).}
+    \caption[Robot-mounted camera mount]{Robot-mounted stereo camera flange mount used in the demonstrated setup (CAD render).}
     \label{fig:ch4_camera_mount}
 \end{figure}
 
-The mechanical camera mount used in the prototype is shown in \autoref{fig:ch4_camera_mount}.
+The mechanical camera mount used in the demonstrated setup is shown in \autoref{fig:ch4_camera_mount}.
 Camera acquisition in the submitted implementation is currently Windows-only (\autoref{subsec:ch4_mod_stereo_camera}); downstream processing remains OS-agnostic because it consumes only the shared camera message formats defined in \autoref{sec:ch3_supporting_messages}.
 
 \subsection{Pen input device}
 \label{subsec:ch4_hw_pen}
 
-As motivated in \autoref{subsec:ch2_analysis_6DoF_input_interface}, spatial authoring in the prototype is driven by a hand-held 6DoF input device.
-The prototype uses a custom tracked pen inspired by D-Point, extended for the needs of robot-mounted stereo viewing: a larger marker cube with five marker faces (four sides and a top marker) and two physical buttons for discrete intent events.
+As motivated in \autoref{subsec:ch2_analysis_6DoF_input_interface}, spatial authoring in the implemented system is driven by a hand-held 6DoF input device.
+The system uses a custom tracked pen inspired by D-Point, extended for the needs of robot-mounted stereo viewing: a larger marker cube with five marker faces (four sides and a top marker) and two physical buttons for discrete intent events.
 
 \begin{figure}[t]
     \centering
@@ -73,7 +73,7 @@ The prototype uses a custom tracked pen inspired by D-Point, extended for the ne
     \label{fig:ch4_pen_full}
 \end{figure}
 
-The prototype pen design is shown in \autoref{fig:ch4_pen_full}.
+The pen design is shown in \autoref{fig:ch4_pen_full}.
 Electronics are based on a \type{Seeed Studio XIAO nRF52840 Sense} with a single-cell Li-ion battery (\type{INR10440}), providing BLE connectivity and button reporting.
 Although the pen firmware transmits IMU samples, the current tracking module does not fuse IMU data; pose estimation is performed purely from camera observations.
 The exact CAD, firmware, and assembly notes (including wiring and screw lengths) are provided in \autoref{appendix:pen_artifacts}, including the license attribution boundary to the upstream D-Point firmware.
@@ -81,18 +81,18 @@ The exact CAD, firmware, and assembly notes (including wiring and screw lengths)
 \subsection{Workspace scene objects (fiducial boxes)}
 \label{subsec:ch4_hw_scene}
 
-To support the scene detection requirements in \autoref{subsec:ch2_analysis_scene_detection}, the prototype scene model consists of simple fiducial-tagged box objects.
+To support the scene detection requirements in \autoref{subsec:ch2_analysis_scene_detection}, the scene model consists of simple fiducial-tagged box objects.
 Each object carries a single ArUco marker and is described by a registry entry (marker ID and size, box dimensions, and marker-to-box transform).
 The registry and an example box CAD model are shipped with the attachment (\autoref{appendix:scene_registry}, \autoref{appendix:scene_cad}).
 
 \begin{figure}[t]
     \centering
     \includegraphics[width=0.8\linewidth]{img/ch4_implementation/scene_box_bg.png}
-    \caption[Example scene box]{Example fiducial-tagged box model used as a scene object in the prototype (illustration).}
+    \caption[Example scene box]{Example fiducial-tagged box model used as a scene object in the demonstrated setup (illustration).}
     \label{fig:ch4_scene_box}
 \end{figure}
 
-An example box object used in the prototype is illustrated in \autoref{fig:ch4_scene_box}.
+An example box object used in the demonstrated setup is illustrated in \autoref{fig:ch4_scene_box}.
 
 \subsection{Calibration artifacts}
 \label{subsec:ch4_hw_calibration_artifacts}
@@ -103,7 +103,7 @@ The exact calibration PDF and the compile-time board dimensions used by the cali
 \subsection{Compute platform}
 \label{subsec:ch4_hw_compute}
 
-The prototype runs on a standard PC with a modern C++ toolchain.
+The implementation runs on a standard PC with a modern C++ toolchain.
 In development, the system was built and tested on both a laptop-class machine (Ryzen~9~5980HS, 32\,GB RAM) and a desktop-class machine (Ryzen~9800X3D, 64\,GB RAM).
 These are representative development machines rather than hard requirements; the system does not rely on specialized compute hardware.
 
@@ -194,7 +194,7 @@ If robot status is missing or does not carry the required robot-control payload,
 Time association is implemented as ``latest sample'': each incoming camera frame is augmented with the most recently received flange pose from the robot status stream (no buffering, timestamp alignment, or interpolation).
 
 As a consequence, the camera frames and poses are not synchronized in the general case.
-This is sufficient for the workflow used in this thesis, where frames are collected only while the robot is stationary, so the flange pose is effectively constant over the capture window.
+This is sufficient for the workflow used here, where frames are collected only while the robot is stationary, so the flange pose is effectively constant over the capture window.
 
 \minihead{Code pointers.}
 \path{diploma-thesis-code/default_modules/camera_pose_injector_module/}.
@@ -317,7 +317,7 @@ Tracking quality depends on marker visibility and stable corner detection (light
 When no valid pose can be estimated, the pen visualization is hidden until tracking resumes.
 No IMU fusion is implemented in this module.
 
-No per-device geometric calibration is performed; instead, the module assumes the CAD-defined marker-to-pen geometry. In the prototype, the marker plates are mechanically constrained (screw-mounted), which reduces assembly variability compared to adhesive mounting.
+No per-device geometric calibration is performed; instead, the module assumes the CAD-defined marker-to-pen geometry. In the current pen design, the marker plates are mechanically constrained (screw-mounted), which reduces assembly variability compared to adhesive mounting.
 
 \minihead{Code pointers.}
 \path{diploma-thesis-code/default_modules/pen_tracking_multicam_module/}.
@@ -338,7 +338,7 @@ The module provides the scene detection request/response endpoint (\autoref{sec:
 \minihead{Configuration and registry file.}
 The module has no activation step; it loads its registry once during construction.
 At runtime, the registry is read from \path{binaries/data/scene_detection_stereocam_module/registered_objects.json}.
-This file is deployed by installing the module's packaged data from \path{scene_detection_stereocam_module/module_data/registered_objects.json}; the thesis attachment includes this source copy, see \autoref{appendix:scene_registry}.
+This file is deployed by installing the module's packaged data from \path{scene_detection_stereocam_module/module_data/registered_objects.json}; the electronic attachment includes this source copy, see \autoref{appendix:scene_registry}.
 If the registry file is missing or malformed, the module refuses to start.
 
 \minihead{Scene model and registry.}
@@ -383,7 +383,7 @@ The response contains only poses and IDs; it does not report confidence values o
 \section{Execution backend module}
 \label{sec:ch4_execution_backend}
 
-This section describes the execution stage of the pipeline (\autoref{fig:intro__img_2__usecase_stages}): a robot-side endpoint is exposed by a robot plugin (CBun), and the thesis runtime connects to it through a module that implements the shared \type{robot\_interface}.
+This section describes the execution stage of the pipeline (\autoref{fig:intro__img_2__usecase_stages}): a robot-side endpoint is exposed by a robot plugin (CBun), and the runtime connects to it through a module that implements the shared \type{robot\_interface}.
 This instantiates the robot communication requirement from \reqref{req:robot_communication_interface} while keeping use case logic robot-agnostic.
 
 % ----------------------------
@@ -431,7 +431,7 @@ If the module is not connected to the CBun (wrong host/port, CBun not running, o
 If the CBun is connected but does not return a response within the configured \type{Request Timeout (ms)}, the request fails in the same way.
 While disconnected, status and finished updates are not forwarded to the runtime.
 
-Tool/gripper control is intentionally not standardized in this thesis (\autoref{subsec:ch2_analysis_robot_interface}); the current use case implementations simulate tool actions (e.g., ``open/close gripper'') by fixed delays rather than a dedicated tool-control interface.
+Tool/gripper control is intentionally not standardized in the current system (\autoref{subsec:ch2_analysis_robot_interface}); the current use case implementations simulate tool actions (e.g., ``open/close gripper'') by fixed delays rather than a dedicated tool-control interface.
 
 \minihead{Code pointers.}
 \path{diploma-thesis-code/default_modules/robot_module_kassow/}.
@@ -444,9 +444,9 @@ These modules implement the \emph{interpretation} stage of \autoref{fig:intro__i
 they combine authored spatial intent (poses/trajectories) with a sensed scene snapshot to construct an executable task-specific procedure.
 Each use case is implemented as a plugin module wrapped by the shared use case wrapper contract (\autoref{sec:ch3_usecase_wrapper}), which standardizes command creation (command JSON + optional preview payload) and execution control (start/stop and status).
 
-The two primary use cases evaluated in this thesis are \emph{pick-and-place} and \emph{seam welding}. Both reuse the same sensing/authoring infrastructure (pen intents, scene detection) and execute through the common \type{robot\_interface} (\autoref{sec:ch3_robot_interface}), instantiating the extensibility goal of \goalref{goal:2} and the demonstration goal of \goalref{goal:3}.
+The two primary use cases evaluated here are \emph{pick-and-place} and \emph{seam welding}. Both reuse the same sensing/authoring infrastructure (pen intents, scene detection) and execute through the common \type{robot\_interface} (\autoref{sec:ch3_robot_interface}), instantiating the extensibility goal of \goalref{goal:2} and the demonstration goal of \goalref{goal:3}.
 
-The prototype was used only with a robot-interface backend; starting a program in simulated mode is rejected.
+The implemented system was used only with a robot-interface backend; starting a program in simulated mode is rejected.
 
 % ----------------------------
 \subsection{Pick-and-place use case}
@@ -569,7 +569,7 @@ The scene model is the fiducial-tagged box registry from \autoref{subsec:ch4_hw_
 
 \minihead{Seam detection.}
 From the scene snapshot, the module constructs a set of \emph{seam candidates}. Each seam candidate is a line segment in the world frame (defined by its endpoints), together with a unit \emph{torch direction} vector.
-In this thesis prototype, the \emph{torch direction} points from the seam outwards away from the contacted box faces (conceptually, it is the outward bisector of the adjacent box-face normals for the detected seam).
+In this implementation, the \emph{torch direction} points from the seam outwards away from the contacted box faces (conceptually, it is the outward bisector of the adjacent box-face normals for the detected seam).
 In the concrete implementation, seams are generated by geometric tests between pairs of detected boxes using their poses and registry dimensions (edge--edge and edge--face cases).
 
 \minihead{Trajectory-to-seam matching and projection.}
@@ -592,7 +592,7 @@ and three motion parameters:
 The advanced parameters \type{Weld Offset} and \type{Approach Distance} are applied during command creation by shifting the approach/weld/depart \emph{positions} away from the seam along the \emph{torch direction} by the requested distances.
 
 Unlike the pick-and-place use case (\autoref{subsec:ch4_usecase_pick_place}), this use case resolves the seam during command creation and stores a fixed set of world-frame poses to execute (approach, weld start/end, depart).
-The seam representation depends on the current relative poses of the detected boxes, and this prototype does not implement a stable seam identifier that could be matched again if the scene changes.
+The seam representation depends on the current relative poses of the detected boxes, and the current implementation does not provide a stable seam identifier that could be matched again if the scene changes.
 
 If no seam candidates are detected from the scene snapshot, or if the user trajectory cannot be matched to any candidate seam, command creation fails.
 
@@ -622,7 +622,7 @@ On pause, the module enters the \type{BaseUsecase} pause handling (wait for resu
 
 \minihead{Failure modes and known limitations.}
 The command assumes that the workpiece and fixture remain in the same configuration as during command creation.
-Seam detection and trajectory matching are implemented as geometric heuristics with tunable thresholds, validated on the prototype scene objects.
+Seam detection and trajectory matching are implemented as geometric heuristics with tunable thresholds, validated on the demonstrated scene objects.
 Tool control is not implemented; welding on/off is simulated by fixed delays.
 No collision checking is performed; the commanded approach/weld/depart path assumes a clear workspace.
 Running the command in simulation mode is not supported.
@@ -635,9 +635,9 @@ Running the command in simulation mode is not supported.
 \label{sec:ch4_usecases_primitives}
 
 Besides the two task-oriented use cases (\autoref{sec:ch4_usecases}), the system includes four motion-primitive use cases that mirror the robot execution interface (\autoref{sec:ch3_robot_interface}).
-They are not central to the thesis evaluation, but they are useful for initial setup and debugging (e.g., moving the robot to a known start configuration before running a task-oriented command), and they also serve as minimal examples of adding new use case modules on top of the shared wrapper and robot interface.
+They are not central to the evaluation, but they are useful for initial setup and debugging (e.g., moving the robot to a known start configuration before running a task-oriented command), and they also serve as minimal examples of adding new use case modules on top of the shared wrapper and robot interface.
 
-The prototype was used only with a robot-interface backend; starting a program in simulated mode is rejected.
+The implemented system was used only with a robot-interface backend; starting a program in simulated mode is rejected.
 
 \subsection{Overview}
 \label{subsec:ch4_usecases_primitives_overview}

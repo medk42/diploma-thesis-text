@@ -3,9 +3,9 @@
 
 Collaborative robots are attractive for automating tasks that are repetitive but frequently changing, such as small batch production or tasks requiring frequent changeovers. In such cases, the bottleneck is often not the execution time itself, but the time and effort required to re-create robot programs for each new task.
 
-Robot programming is both time-consuming \cite{IFR2023TraditionalVsNew} and skill-intensive. This creates friction whenever tasks need to be re-taught. This thesis explores whether this friction can be reduced by specifying spatial intent directly in the real workspace, rather than by editing motion commands and tool actions in a teach pendant or offline programming workflow.
+Robot programming is both time-consuming \cite{IFR2023TraditionalVsNew} and skill-intensive. This creates friction whenever tasks need to be re-taught. This work explores whether this friction can be reduced by specifying spatial intent directly in the real workspace, rather than by editing motion commands and tool actions in a teach pendant or offline programming workflow.
 
-To investigate this question, this thesis presents a modular, end-to-end software system for in-workspace spatial authoring of tasks for an articulated 6- or 7-axis collaborative robot. By combining a 6DoF tracked pen with stereo-vision-based sensing and a shared module runtime with explicit interfaces, the system allows human operators to specify robot intent directly in the physical workspace. Users interact with a web-based interface to capture spatial intents (poses and trajectories) and turn them into executable task-specific commands within prepared use cases --- such as pick-and-place and seam welding --- without writing pendant-style robot programs.
+To investigate this question, the work presents a modular, end-to-end software system for in-workspace spatial authoring of tasks for an articulated 6- or 7-axis collaborative robot. By combining a 6DoF tracked pen with stereo-vision-based sensing and a shared module runtime with explicit interfaces, the system allows human operators to specify robot intent directly in the physical workspace. Users interact with a web-based interface to capture spatial intents (poses and trajectories) and turn them into executable task-specific commands within prepared use cases --- such as pick-and-place and seam welding --- without writing pendant-style robot programs.
 
 % xxx{SIMPLE, fig: A collaborative robot photo on a table would be nice here if time allows}
 
@@ -26,13 +26,13 @@ Both of these methods are widely used and capable of producing effective robot p
 
 Collaborative robots often partially mitigate the pose definition friction with \emph{hand-guiding} \footnote{Terminology varies. Here, \emph{hand-guiding} means compliant back-driving to teach poses; \emph{lead-through} refers to recording a continuous path for playback.}, where the user can physically back-drive the robot to teach poses \cite{KassowRobotsManuals}. However, hand-guiding may not be suitable for all tasks and it does not solve the expertise and setup overhead.
 
-These limitations motivate the research question of this thesis: can robot programs for frequently changing tasks be authored more efficiently by specifying spatial intent directly in the real workspace, rather than by editing motion commands and tool actions on a pendant or in a simulated environment? We call this approach \emph{in-workspace spatial authoring}, and the next section introduces it at a high level.
+These limitations motivate the central research question: can robot programs for frequently changing tasks be authored more efficiently by specifying spatial intent directly in the real workspace, rather than by editing motion commands and tool actions on a pendant or in a simulated environment? We call this approach \emph{in-workspace spatial authoring}, and the next section introduces it at a high level.
 
 
 \section*{High-level approach}
 \addcontentsline{toc}{section}{High-level approach}
 
-We propose \emph{spatial authoring} of collaborative robot motions and tool actions directly in the real workspace using AR-inspired inputs, supported by external sensing. While general-purpose robot programming is expressive, it also exposes many low-level details (motion primitives, tool coordination, error handling) that dominate effort in small programs for frequently changing tasks. Therefore, this thesis focuses on task-oriented \emph{use cases} for common task families. In this context, a use case denotes a self-contained task-specific application that defines how spatial user input and sensed workspace context are interpreted and expanded into robot motion and tool commands.
+We propose \emph{spatial authoring} of collaborative robot motions and tool actions directly in the real workspace using AR-inspired inputs, supported by external sensing. While general-purpose robot programming is expressive, it also exposes many low-level details (motion primitives, tool coordination, error handling) that dominate effort in small programs for frequently changing tasks. Therefore, this work focuses on task-oriented \emph{use cases} for common task families. In this context, a use case denotes a self-contained task-specific application that defines how spatial user input and sensed workspace context are interpreted and expanded into robot motion and tool commands.
 
 This approach has four conceptual stages, illustrated in \autoref{fig:intro__img_2__usecase_stages}:
 \begin{enumerate*}[label=(\roman*)]
@@ -51,7 +51,7 @@ This approach has four conceptual stages, illustrated in \autoref{fig:intro__img
   \label{fig:intro__img_2__usecase_stages}
 \end{figure}
 
-We target task-oriented use cases rather than a full robot programming language. This keeps the thesis focused on workflows where prepared task logic can turn spatial intent into executable robot behavior and allows us to study whether direct spatial input can reduce friction for frequently changing tasks and simplify the programming process for non-expert users.
+We target task-oriented use cases rather than a full robot programming language. This keeps the work focused on workflows where prepared task logic can turn spatial intent into executable robot behavior and allows us to study whether direct spatial input can reduce friction for frequently changing tasks and simplify the programming process for non-expert users.
 
 To support this, we develop a system that provides workspace sensing and authoring capabilities, together with a shared robot execution layer. Task-specific use cases can then be developed that use these capabilities to implement the interpretation logic for specific tasks. This allows us to evaluate the approach on representative task families while keeping the core system reusable and extensible for other tasks in the future.
 
@@ -74,21 +74,21 @@ Based on the high-level approach described above, we define three goals:
 \end{goals}
 
 
-\section*{Thesis structure}
-\addcontentsline{toc}{section}{Thesis structure}
+\section*{Text structure}
+\addcontentsline{toc}{section}{Text structure}
 
-This thesis is organized as follows.
+The text is organized as follows.
 
-\autoref{chapter:ch1_related_work} surveys related work on reducing friction in robot programming and positions the thesis within in-workspace spatial authoring approaches.
+\autoref{chapter:ch1_related_work} surveys related work on reducing friction in robot programming and positions this work within in-workspace spatial authoring approaches.
 
 \autoref{chapter:ch2_analysis} derives the system requirements from the target tasks, compares alternative design directions, and motivates the selected architecture.
 
 \autoref{chapter:ch3_system_design} presents the modular system design, including the runtime core, the module contract, and the main interface contracts.
 
-\autoref{chapter:ch4_implementation} describes the hardware setup and the concrete implementation of the modules used in the thesis.
+\autoref{chapter:ch4_implementation} describes the hardware setup and the concrete implementation of the modules used in the system.
 
 \autoref{chapter:ch5_user_workflow} documents the operator workflow in the web frontend, from startup and calibration to authoring and executing the welding and pick-and-place use cases.
 
-\autoref{chapter:ch6_discussion} interprets the thesis result, clarifies the scope of the demonstrated use cases, and discusses the main limitations of the current system.
+\autoref{chapter:ch6_discussion} interprets the main system result, clarifies the scope of the demonstrated use cases, and discusses the main limitations of the current system.
 
-Finally, \autoref{chapter:ch7_conclusion} summarizes the thesis and outlines near-term and longer-term future work.
+Finally, \autoref{chapter:ch7_conclusion} summarizes the work and outlines near-term and longer-term future work.

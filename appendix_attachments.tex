@@ -1,14 +1,14 @@
 \chapter{Attachments}
 \label{appendix:attachments}
 
-This appendix summarizes the submitted electronic attachment package: the pruned source code snapshot used to build the prototype, the external build/dependency boundaries, and the hardware/calibration artifacts required to reproduce the physical setup.
+This appendix summarizes the submitted electronic attachment package: the pruned source code snapshot used to build the implemented system, the external build/dependency boundaries, and the hardware/calibration artifacts required to reproduce the physical setup.
 
 \section{Submission package, source code, and third-party software}
 \label{appendix:source_code}
 
 \minihead{Development repository.}
 The development history of the project is available at \url{https://github.com/medk42/diploma-thesis-code}.
-The electronic attachment submitted with this thesis contains a pruned snapshot intended for building and inspection; it may not correspond to a single stable tagged revision of the development repository.
+The electronic attachment submitted with this work contains a pruned snapshot intended for building and inspection; it may not correspond to a single stable tagged revision of the development repository.
 % xxx{Update this link if the maintained repository is moved/split. Optionally add a tag/commit hash if a stable release is created. --> keep this one}
 
 \minihead{Top-level structure of the submitted attachment.}
@@ -83,7 +83,7 @@ The default port is configured by the frontend module via \path{diploma-thesis-c
 (and after installation via the corresponding runtime copy under \path{binaries/data/frontend_module/config.txt}).
 
 \minihead{Third-party dependencies and licensing boundary.}
-This thesis distributes the implementation as source code only (no third-party binaries).
+This work distributes the implementation as source code only (no third-party binaries).
 Third-party software falls into two categories:
 
 \begin{itemize}
@@ -140,8 +140,8 @@ The custom pen CAD model is provided as:
 The pen firmware is provided as:
 \path{pen/pen_firmware.ino}.
 
-The firmware is derived from the upstream D-Point project (Jcparkyn/dpoint) and modified for this thesis prototype; the upstream license text is included under \path{third_party_licenses/}.
-The mechanical design is original work for this thesis prototype, with high-level inspiration taken from D-Point.
+The firmware is derived from the upstream D-Point project (Jcparkyn/dpoint) and modified for this system; the upstream license text is included under \path{third_party_licenses/}.
+The mechanical design is original work, with high-level inspiration taken from D-Point.
 
 For reference, the internal layout is shown in \autoref{fig:app_pen_internals}.
 
@@ -190,7 +190,7 @@ The pen components were manufactured using consumer FDM 3D printing. The print p
 \label{appendix:scene_registry}
 
 The scene detection pipeline relies on a JSON registry describing fiducial-tagged box objects (marker ID, marker size, box dimensions, and the marker-to-object transform).
-An example registry instance used in this thesis is:
+An example registry instance used in this work is:
 
 \begin{verbatim}
 [
@@ -223,8 +223,8 @@ Render of this example box is shown in \autoref{fig:ch4_scene_box}.
 \subsection{Robot-side component (CBun) and reproducibility boundary}
 \label{appendix:cbun}
 
-The prototype uses a robot-side component (CBun) that runs on the Kassow controller and exposes the robot capabilities over a network endpoint.
-On the thesis side, \type{robot\_module\_kassow} consumes this endpoint and implements the \type{robot\_interface} protocol towards the rest of the runtime.
+The system uses a robot-side component (CBun) that runs on the Kassow controller and exposes the robot capabilities over a network endpoint.
+On the runtime side, \type{robot\_module\_kassow} consumes this endpoint and implements the \type{robot\_interface} protocol towards the rest of the system.
 
 The CBun source tree is included in the attachment under:
 \path{robot/aergo_interface_cbun/}.

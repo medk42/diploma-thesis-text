@@ -46,7 +46,7 @@ Given the extensive technical scope of this chapter, readers may choose differen
     \item \textbf{Comprehensive path:} Read the chapter sequentially for a complete, in-depth understanding of the system's runtime mechanics, contracts, and domain logic.
     \item \textbf{Architecture path:} Skip \autoref{sec:ch3_core} (Core implementation). This bypasses the low-level C++ threading, memory, and locking details, focusing instead on the conceptual module abstractions and domain interfaces.
     \item \textbf{Workflow path:} Skip directly to \autoref{sec:ch3_putting_it_together} (Putting it together) to understand how the UI orchestrates the system from a user's perspective, bypassing the underlying contract and protocol definitions.
-    \item \textbf{High-level summary:} Read only \autoref{sec:ch3_demo_configuration} (End-to-end system instantiation). This provides a fast, direct mapping of the final runtime graph to the thesis requirements established in \autoref{chapter:ch2_analysis}.
+    \item \textbf{High-level summary:} Read only \autoref{sec:ch3_demo_configuration} (End-to-end system instantiation). This provides a fast, direct mapping of the final runtime graph to the requirements established in \autoref{chapter:ch2_analysis}.
 \end{itemize}
 
 
@@ -86,7 +86,7 @@ Channel declarations specify what the module can produce and what it requires as
 
 As noted in \autoref{subsec:ch3_roles}, message processing is executed by core-managed worker threads. Each module specifies how many worker threads it requires, allowing it to process multiple messages, requests or responses concurrently. Worker threads are created per module and are divided into two classes: \emph{prioritized} and \emph{regular}. Prioritized workers handle channels marked as prioritized; regular workers handle the remaining channels. This mechanism is crucial for UI responsiveness, because it allows latency-sensitive UI traffic to be processed in parallel with heavy computation (e.g., camera processing for pen tracking).
 
-Finally, the auto-create flag marks modules that are instantiated automatically when the system starts (e.g., the UI module). Auto-created modules cannot depend on a manually provided channel mapping. In this thesis, we therefore restrict auto-created modules to \type{AUTO\_ALL} consumer channels: they may declare inputs, but only in a form that can be wired automatically to all currently available producers of the given type (see \autoref{subsec:ch3_channel_contract}).
+Finally, the auto-create flag marks modules that are instantiated automatically when the system starts (e.g., the UI module). Auto-created modules cannot depend on a manually provided channel mapping. In this system, we therefore restrict auto-created modules to \type{AUTO\_ALL} consumer channels: they may declare inputs, but only in a form that can be wired automatically to all currently available producers of the given type (see \autoref{subsec:ch3_channel_contract}).
 
 \subsection{Channel contract} \label{subsec:ch3_channel_contract}
 
@@ -159,7 +159,7 @@ Blobs are allocated through core-provided allocators (\type{IAllocator}). A modu
     \item \textbf{Buffer allocator:} preallocates a fixed number of equally-sized slots (suitable for streaming payloads with known bounds, such as camera frames), requiring a known maximum size in advance and offering only a limited number of slots. Buffer allocator returns invalid blobs when it is out of free slots.
 \end{itemize}
 
-Allocator and blob lifetime are owned by the core to ensure consistent memory management across modules and to allow safe sharing between independently developed components. Modules are expected to delete allocators they no longer need using \type{ICore::deleteAllocator}. In this thesis, allocator cleanup is handled by the common \type{BaseModule} helper (\autoref{subsec:ch3_basemodule}) so that module implementations do not need to manage allocator lifetimes manually.
+Allocator and blob lifetime are owned by the core to ensure consistent memory management across modules and to allow safe sharing between independently developed components. Modules are expected to delete allocators they no longer need using \type{ICore::deleteAllocator}. In this implementation, allocator cleanup is handled by the common \type{BaseModule} helper (\autoref{subsec:ch3_basemodule}) so that module implementations do not need to manage allocator lifetimes manually.
 
 
 \subsection{Communication primitives} \label{subsec:ch3_comm_primitives}
@@ -252,7 +252,7 @@ A module instance is created through the core's hosting mechanism (e.g., a facto
     \item \textbf{Logger (\type{logging::ILogger* logger}).} Core-provided logging sink for diagnostics.
     \item \textbf{Module identifier (\type{uint64\_t module\_id}).} Runtime ID assigned by the core. It is required to form \type{ChannelIdentifier} values (module + channel) when sending via \type{ICore}. Helper layers (e.g., \type{BaseModule}) may encapsulate this, but the ID is still part of the API.
 \end{itemize}
-Each module must expose its static description via \type{IModule::getModuleInfo()}, which must not return \type{nullptr}. In the typical implementation used in this thesis, the description is defined as a static \type{ModuleInfo} in the module package and a \type{const ModuleInfo*} is passed to the module instance during construction so that \type{getModuleInfo()} can return it. A common helper (\type{BaseModule}, \autoref{subsec:ch3_basemodule}) implements this boilerplate for module authors.
+Each module must expose its static description via \type{IModule::getModuleInfo()}, which must not return \type{nullptr}. In the typical implementation used here, the description is defined as a static \type{ModuleInfo} in the module package and a \type{const ModuleInfo*} is passed to the module instance during construction so that \type{getModuleInfo()} can return it. A common helper (\type{BaseModule}, \autoref{subsec:ch3_basemodule}) implements this boilerplate for module authors.
 
 \minihead{Lifecycle.}
 A compliant core follows these steps when creating and running a module instance:
@@ -267,7 +267,7 @@ A compliant core follows these steps when creating and running a module instance
 \minihead{Rules for module implementers.}
 \begin{itemize}
     \item \textbf{Restricted core usage during construction and teardown.}
-    In the core implementation used in this thesis, module graph mutations (create/remove/load) are serialized under an exclusive \type{core\_mutex\_} lock.
+    In the core implementation used here, module graph mutations (create/remove/load) are serialized under an exclusive \type{core\_mutex\_} lock.
     Because message sending and \type{ICoreControl} queries acquire the same mutex (shared), calling
     \type{ICore::sendMessage}, \type{ICore::sendRequest}, \type{ICore::sendResponse} or any \type{ICoreControl} method
     from the core thread during module creation/removal (\type{ctor}, \type{threadStart}, \type{threadStop}, \type{dtor})
@@ -293,7 +293,7 @@ A compliant core follows these steps when creating and running a module instance
     \item \textbf{Do not keep raw message pointers.} The copied payload (\type{MessageHeader.data\_}) and blob pointer array are only valid for the duration of the callback. If a module needs to retain either, it must copy the payload or retain the corresponding \type{SharedDataBlob} handles rather than storing raw pointers.
     \item \textbf{Be robust to transport-level failures.} Message delivery is best-effort; modules must tolerate drops/rejections and request failures reported via \type{MessageHeader.success\_ = false} (e.g., invalid routing or module removal).
     \item \textbf{Do not assume stable IDs.} Loaded module identifiers and running module identifiers (including \type{module\_id}) are runtime artifacts. They may change across program sessions and after \type{load()}, and removed modules may leave gaps. Persistent state must not rely on ID stability.
-    \item \textbf{Allocator discipline.} Shared payloads must be allocated only through core-provided \type{IAllocator} instances, and allocator lifetimes must be managed to avoid leaks. In this thesis, common helper utilities (e.g., \type{BaseModule}, \autoref{subsec:ch3_basemodule}) encapsulate allocator creation/deletion and message metadata setup.
+    \item \textbf{Allocator discipline.} Shared payloads must be allocated only through core-provided \type{IAllocator} instances, and allocator lifetimes must be managed to avoid leaks. In the current implementation, common helper utilities (e.g., \type{BaseModule}, \autoref{subsec:ch3_basemodule}) encapsulate allocator creation/deletion and message metadata setup.
     \item \textbf{No exceptions across the boundary.} All contract callbacks are \type{noexcept}; module code must not let exceptions escape these entry points.
 \end{itemize}
 
@@ -302,7 +302,7 @@ Some functionality is defined as an additional C++ interface on top of the base 
 
 \subsection{BaseModule} \label{subsec:ch3_basemodule}
 
-In this thesis, all concrete modules inherit from \type{BaseModule}, a small convenience layer on top of \type{IModule}. It is \emph{not} a part of the minimal module contract, but it standardizes the boilerplate that nearly every module needs (message sending, allocator lifetime, access to construction inputs) and keeps module implementations focused on domain logic.
+In the implemented system, all concrete modules inherit from \type{BaseModule}, a small convenience layer on top of \type{IModule}. It is \emph{not} a part of the minimal module contract, but it standardizes the boilerplate that nearly every module needs (message sending, allocator lifetime, access to construction inputs) and keeps module implementations focused on domain logic.
 
 \minihead{Construction inputs and persistence.}
 \type{BaseModule} mirrors the core-provided construction inputs described in \autoref{subsec:ch3_module_rules}. It stores references to \type{ICore} and \type{logging::ILogger}, stores the runtime \type{module\_id}, stores a pointer to the module's static description \type{ModuleInfo}, and copies the optional \type{data\_path} into an internal \type{std::string}. Importantly, it also \emph{copies} the provided \type{InputChannelMapInfo} into internal vectors, because the input mapping passed at creation time is not guaranteed to outlive the constructor. The copied mapping can be queried later via \type{getSubscribeChannelInfo()} and \type{getRequestChannelInfo()}.
@@ -336,11 +336,11 @@ Finally, \type{BaseModule} implements \type{IModule::getModuleInfo()} by returni
 
 
 
-\section{Core implementation used in this thesis} \label{sec:ch3_core}
+\section{Core implementation} \label{sec:ch3_core}
 
 % xxx{Core routing and request/response “exactly one response” is explained in several places (communication primitives, message delivery flow, routing section, wrapper section). It's fine for now, but later you can replace one of the later repeats with “as described in §X”.}
 
-The previous section defined the module contract in an implementation-independent way: what a module is, how it declares channels, how messages are represented, and what services the runtime must provide through \type{ICore}. In this section, we describe the concrete runtime core used in this thesis, which implements that contract in a single process using threads and in-memory routing.
+The previous section defined the module contract in an implementation-independent way: what a module is, how it declares channels, how messages are represented, and what services the runtime must provide through \type{ICore}. In this section, we describe the concrete runtime core used here, which implements that contract in a single process using threads and in-memory routing.
 
 \minihead{Reading note.}
 This section is intentionally more implementation-oriented than the preceding contract: it documents one concrete in-process core that hosts modules and routes messages.
@@ -848,7 +848,7 @@ This procedure guarantees that the \emph{mapping topology and per-module configu
 
 \section{Interface contracts} \label{sec:ch3_interface_contracts}
 
-The module contract from \autoref{sec:ch3_module_contract} defines how modules exchange messages through the core, but it intentionally stays application-agnostic: it does not define what a particular message means. As the concrete modules for this thesis were implemented, we therefore introduced a set of \emph{interface contracts}: small, shared definitions that assign structure and semantics to selected message channels (camera frames, pen poses, robot commands, activation control, \dots). Their role is pragmatic: to ensure that modules remain interchangeable and independent, as long as they implement the same externally defined communication protocol.
+The module contract from \autoref{sec:ch3_module_contract} defines how modules exchange messages through the core, but it intentionally stays application-agnostic: it does not define what a particular message means. As the concrete modules for this system were implemented, we therefore introduced a set of \emph{interface contracts}: small, shared definitions that assign structure and semantics to selected message channels (camera frames, pen poses, robot commands, activation control, \dots). Their role is pragmatic: to ensure that modules remain interchangeable and independent, as long as they implement the same externally defined communication protocol.
 
 \subsection{Overview: protocols on top of core messaging} \label{subsec:ch3_interface_contracts_overview}
 
@@ -858,7 +858,7 @@ it specifies (i) which channel types exist and who publishes/subscribes or reque
 This makes the communication boundary explicit and keeps modules replaceable as long as they implement the same contract.
 
 \minihead{Header-only schemas and channel identifiers.}
-Concretely, contracts are implemented as C++ header-only definitions shared by the participating modules. Each contract provides matching \type{communication\_channel::Producer} and \type{communication\_channel::Consumer} descriptors with a \type{channel\_type\_identifier\_} string. The identifier acts as a compatibility key for binding channels in the core and also includes a compact schema hint and a version tag (e.g., \type{/v1}). In this thesis, these definitions are located under \path{backend/module_helpers/} (e.g., camera and pen message headers, activation wrapper messages, robot interface messages). For details of the exact binary layouts, the corresponding header files are the source of truth.
+Concretely, contracts are implemented as C++ header-only definitions shared by the participating modules. Each contract provides matching \type{communication\_channel::Producer} and \type{communication\_channel::Consumer} descriptors with a \type{channel\_type\_identifier\_} string. The identifier acts as a compatibility key for binding channels in the core and also includes a compact schema hint and a version tag (e.g., \type{/v1}). In this implementation, these definitions are located under \path{backend/module_helpers/} (e.g., camera and pen message headers, activation wrapper messages, robot interface messages). For details of the exact binary layouts, the corresponding header files are the source of truth.
 
 \minihead{Wrappers for higher-level protocols.}
 Some interface protocols involve a larger state machine than a single message exchange, typically because they need many related operations and well-defined ordering (e.g., parameter enumeration, value edits, list operations, progress reporting, cancellation, and only then activation). To keep such logic consistent and to reduce burden on individual modules, the system uses \emph{wrappers}: \type{IModule} implementations that encapsulate another module instance and implement the protocol on its behalf. For example, the activation wrapper owns the parameter-management protocol (including request/response handling and serialization of parameter values), collects and validates the effective parameter set, and only then invokes a small capability interface on the wrapped module (e.g., \type{IActivableModule::activate}/\type{deactivate}). Traffic outside the wrapper's scope is forwarded when normal ingress is allowed, while protocol-specific ingress is intercepted and handled by the wrapper.
@@ -1203,7 +1203,7 @@ To make a module contribute to the shared 3D scene:
 \subsection{Robot execution interface} \label{sec:ch3_robot_interface}
 
 \minihead{Purpose.}
-\reqref{req:robot_communication_interface} (see also \autoref{subsec:ch2_analysis_robot_interface}) motivates a robot-agnostic execution interface: use cases should be able to trigger motion primitives and observe execution state without hard-coding a vendor API. In this thesis, the interface is used primarily for robot motion and basic state feedback; tool control was considered in the interface design, but it is not implemented and is not required by the demonstration scenarios.
+\reqref{req:robot_communication_interface} (see also \autoref{subsec:ch2_analysis_robot_interface}) motivates a robot-agnostic execution interface: use cases should be able to trigger motion primitives and observe execution state without hard-coding a vendor API. In this system, the interface is used primarily for robot motion and basic state feedback; tool control was considered in the interface design, but it is not implemented and is not required by the demonstration scenarios.
 
 All files mentioned in this section are located in \path{backend/module_helpers/robot_interface/} (contract + feature messages) and \path{backend/module_helpers/robot_wrapper/} (client-side helper).
 
@@ -1233,7 +1233,7 @@ The response envelope standardizes common outcomes across all features (with any
     \item \type{FAILURE}: the request failed (optionally with feature-specific error detail).
 \end{itemize}
 
-\minihead{Motion primitives used in this thesis.}
+\minihead{Motion primitives.}
 Within \type{RobotFeature::ROBOT\_CONTROL}, the implemented messages cover:
 \begin{itemize}
     \item \textbf{Start requests:} joint, linear, arc, and trajectory motions (long-running tasks), plus a \emph{robot specs} query (limits, joint count and ranges; immediate response).
@@ -1290,8 +1290,8 @@ A module that \emph{implements} robot control is expected to:
 \begin{itemize}
     \item \textbf{Feature gating:} unsupported capabilities are reported explicitly via \type{FEATURE\_NOT\_SUPPORTED}, allowing clients to degrade gracefully.
     \item \textbf{Asynchronous completion:} long-running operations are identified by \type{action\_id} and terminate via \type{FINISHED}; request/response does not stream progress.
-    \item \textbf{Best-effort feedback streams:} \type{STATUS} and \type{FINISHED} are asynchronous subscribe streams; if messages are dropped, a client may miss intermediate status samples, and missing \type{FINISHED} requires recovery logic (in this thesis, \type{RobotWrapper} includes practical heuristics for stale actions (actions for which no \type{FINISHED} arrived within a timeout), but robust gap detection would require explicit sequence IDs as a future extension).
-    \item \textbf{Tool control is out of scope:} the feature list reserves identifiers for tool-oriented capabilities, but this thesis implements and uses only \type{RobotFeature::ROBOT\_CONTROL}.
+    \item \textbf{Best-effort feedback streams:} \type{STATUS} and \type{FINISHED} are asynchronous subscribe streams; if messages are dropped, a client may miss intermediate status samples, and missing \type{FINISHED} requires recovery logic (\type{RobotWrapper} includes practical heuristics for stale actions (actions for which no \type{FINISHED} arrived within a timeout), but robust gap detection would require explicit sequence IDs as a future extension).
+    \item \textbf{Tool control is out of scope:} the feature list reserves identifiers for tool-oriented capabilities, but the current implementation uses only \type{RobotFeature::ROBOT\_CONTROL}.
 \end{itemize}
 
 
@@ -1311,7 +1311,7 @@ The contract assumes a \emph{static registry} of detectable object types and a \
     \item \textbf{Registry objects:} a list of \type{RegisteredBox} items (stable object \type{id} + box dimensions).
     \item \textbf{Detected objects:} a list of \type{DetectedBox} items (object \type{id} + current 6DoF \type{Pose}).
 \end{itemize}
-In this thesis, objects are intentionally represented only as simple boxes (width/height/depth), and detection returns their full 6DoF pose (position + orientation).
+In the current system, objects are intentionally represented only as simple boxes (width/height/depth), and detection returns their full 6DoF pose (position + orientation).
 
 \minihead{Communication modes and channels.}
 The interface is a simple request/response pair (definitions in \path{message_types.h}):
@@ -1371,7 +1371,7 @@ All files mentioned in this section are located in \path{backend/module_helpers/
 \path{camera_messages/}, \path{camera_pose_helper/}, \path{calibrated_camera_world_messages/}, and \path{pen_messages/}.
 
 \minihead{Camera images.}
-\type{camera\_messages} defines a \type{CameraMessage} header plus one or more blobs that can pack \emph{multiple images per blob} (header + per-image descriptors + raw pixel data). In this thesis, it is used to send a stereo pair in a single blob, produced by \type{stereo\_camera\_module\_windows} and consumed by \type{web\_frontend\_module} (preview) and \type{camera\_pose\_injector\_module} (pose augmentation).
+\type{camera\_messages} defines a \type{CameraMessage} header plus one or more blobs that can pack \emph{multiple images per blob} (header + per-image descriptors + raw pixel data). Here, it is used to send a stereo pair in a single blob, produced by \type{stereo\_camera\_module\_windows} and consumed by \type{web\_frontend\_module} (preview) and \type{camera\_pose\_injector\_module} (pose augmentation).
 
 \minihead{Camera images with robot pose.}
 \type{camera\_pose\_helper} extends the camera header with the latest robot flange pose (\type{CameraWithFlangePose}). This format is produced by \type{camera\_pose\_injector\_module} and consumed by \type{robot\_stereo\_camera\_calibration\_module}. The injector exists to attach robot pose at the message level (dropping camera frames until a pose is available), keeping calibration inputs self-contained.
@@ -1385,7 +1385,7 @@ All files mentioned in this section are located in \path{backend/module_helpers/
     \item \type{PenMessageRaw}: a low-level stream (timestamp, tip pose, button states) published while the pen is being tracked.
     \item \type{PenMessageIntent}: discrete, higher-level intents emitted when the user completes a pen interaction: \type{POSE} (a single user-defined target pose), \type{TRAJECTORY} (a user-defined path; pose sequence stored in a blob), and \type{SPECIAL\_ACTION} (a generic auxiliary trigger interpreted by the consumer module).
 \end{itemize}
-In this thesis, \type{pen\_tracking\_multicam\_module} publishes both; \type{PenMessageIntent} is consumed by \type{web\_frontend\_module} (special action handling) and by use case modules that capture poses/trajectories as \type{CUSTOM} inputs.
+In the implemented system, \type{pen\_tracking\_multicam\_module} publishes both; \type{PenMessageIntent} is consumed by \type{web\_frontend\_module} (special action handling) and by use case modules that capture poses/trajectories as \type{CUSTOM} inputs.
 
 
 \subsection{Implementation helper utilities} \label{sec:ch3_shared_helper_utilities}
@@ -1407,13 +1407,13 @@ Besides message schemas, the implementation relies on a few small reusable utili
 
 This chapter has so far introduced the system in terms of \emph{contracts}: the module contract (routing and lifecycle) and several interface contracts (activation, use cases, visualization, robot execution, scene detection, \dots). These contracts define \emph{what is compatible with what}, but they do not yet explain how a user actually \emph{operates} the system as a coherent tool: how modules are wired, configured, used to author commands, executed as tasks, and stored as reusable artifacts.
 
-This section therefore describes one concrete \emph{control-plane integration} used in this thesis. The \type{web\_frontend\_module} provides the user-facing orchestration: it edits the module graph through core reflection/orchestration, drives activation and use case protocols, aggregates visualization streams, and exposes a persistence workflow. Additionally, it relies on a reusable helper, \type{UsecaseTree}, that turns the \emph{single use case} interface contract into the concrete programming model presented to the user: a linear list of commands that can be previewed, executed, and saved/loaded.
+This section therefore describes one concrete \emph{control-plane integration} used in the implemented system. The \type{web\_frontend\_module} provides the user-facing orchestration: it edits the module graph through core reflection/orchestration, drives activation and use case protocols, aggregates visualization streams, and exposes a persistence workflow. Additionally, it relies on a reusable helper, \type{UsecaseTree}, that turns the \emph{single use case} interface contract into the concrete programming model presented to the user: a linear list of commands that can be previewed, executed, and saved/loaded.
 
 \subsection[UsecaseTree: from use cases to programs]{UsecaseTree: from use case modules to executable programs}
 \label{sec:ch3_usecase_tree}
 
 \minihead{Purpose.}
-The use case interface contract (\autoref{sec:ch3_usecase_wrapper}) intentionally defines \emph{one} use case module as a black box that can (i) expose a parameter schema, (ii) construct a command (JSON) from concrete parameter values, and (iii) execute that command as a task with a status lifecycle. The contract itself does not prescribe a programming UI: a use case may be executed standalone (schema $\rightarrow$ values $\rightarrow$ execute), or embedded into richer authoring environments (e.g., as reusable blocks in a teach pendant). In this thesis, the \type{web\_frontend\_module} adopts \type{UsecaseTree} as a pragmatic integration that organizes use cases into a linear command list with explicit parameter editing, a per-command \emph{confirmation} step (command JSON generation), sequential execution, and program persistence.
+The use case interface contract (\autoref{sec:ch3_usecase_wrapper}) intentionally defines \emph{one} use case module as a black box that can (i) expose a parameter schema, (ii) construct a command (JSON) from concrete parameter values, and (iii) execute that command as a task with a status lifecycle. The contract itself does not prescribe a programming UI: a use case may be executed standalone (schema $\rightarrow$ values $\rightarrow$ execute), or embedded into richer authoring environments (e.g., as reusable blocks in a teach pendant). In the implemented system, the \type{web\_frontend\_module} adopts \type{UsecaseTree} as a pragmatic integration that organizes use cases into a linear command list with explicit parameter editing, a per-command \emph{confirmation} step (command JSON generation), sequential execution, and program persistence.
 
 All files mentioned in this section are located in \path{backend/module_helpers/usecase_tree/}. The helper interacts with use case modules exclusively via the use case wrapper protocol in \path{backend/module_helpers/usecase_wrapper/} (notably \path{message_types.h} and \path{usecase_module_interface.h}).
 
@@ -1470,7 +1470,7 @@ This yields a robust orchestration model without requiring every use case module
 Internal identifiers used for bookkeeping are implementation details and are regenerated when loading; the stable anchor is the use case identifier and the parameter/value content. This persistence is separate from core-level persistence of the module graph and per-module state (discussed later in \autoref{sec:ch3_persistence_semantics}).
 
 \minihead{Scope and limitations.}
-\type{UsecaseTree} does not interpret the semantics of command JSON, nor does it define how use case modules implement their internals; it only standardizes the \emph{user-facing} composition and execution structure on top of the existing use case protocol. In this thesis, the chosen model is intentionally linear (sequential commands); parallel composition or branching program logic are out of scope.
+\type{UsecaseTree} does not interpret the semantics of command JSON, nor does it define how use case modules implement their internals; it only standardizes the \emph{user-facing} composition and execution structure on top of the existing use case protocol. The chosen model is intentionally linear (sequential commands); parallel composition or branching program logic are out of scope.
 
 
 
@@ -1479,7 +1479,7 @@ Internal identifiers used for bookkeeping are implementation details and are reg
 \subsection{UI orchestration module} \label{sec:ch3_ui_orchestration}
 
 \minihead{Purpose.}
-While the contracts in this chapter define \emph{compatibility} (which channels can talk to which), the system still requires a control-plane component that \emph{drives} these interactions into an end-user workflow. In this thesis, this role is implemented by the web-based \type{web\_frontend\_module}: it is a normal module from the module contract's perspective, but it orchestrates the module graph, activation, use case programming/execution (via \type{UsecaseTree}), visualization aggregation, and persistence.
+While the contracts in this chapter define \emph{compatibility} (which channels can talk to which), the system still requires a control-plane component that \emph{drives} these interactions into an end-user workflow. In the current system, this role is implemented by the web-based \type{web\_frontend\_module}: it is a normal module from the module contract's perspective, but it orchestrates the module graph, activation, use case programming/execution (via \type{UsecaseTree}), visualization aggregation, and persistence.
 
 \minihead{UI decomposition (three screens).}
 The frontend exposes three user-facing views that mirror its orchestration responsibilities:
@@ -1559,7 +1559,7 @@ Besides the generic contracts, the main view exposes a small set of practical op
 \end{itemize}
 
 \minihead{Note.}
-The UI module is described only through its externally observable behavior: how it exposes and drives the system interfaces to the user. Internal UI structure is intentionally omitted, unlike the core and selected modules, because it is not required to understand the system design. The UI implementation is a prototype intended to support the evaluation workflow rather than to serve as a reference implementation of a frontend architecture. Consequently, the UI module is not decomposed further in \autoref{chapter:ch4_implementation}.
+The UI module is described only through its externally observable behavior: how it exposes and drives the system interfaces to the user. Internal UI structure is intentionally omitted, unlike the core and selected modules, because it is not required to understand the system design. The UI implementation is intended to support the evaluation workflow rather than to serve as a reference implementation of a frontend architecture. Consequently, the UI module is not decomposed further in \autoref{chapter:ch4_implementation}.
 
 % =========================================================================================
 
@@ -1660,14 +1660,14 @@ The persistence split is summarized in \autoref{tab:ch3_persistence_split}: \typ
 \label{sec:ch3_demo_configuration}
 
 \minihead{Purpose.}
-The preceding sections described how the system is operated through a control-plane integration (UI orchestration, use case programming, and persistence). We now close the system design chapter by putting these pieces together into a concrete end-to-end instantiation of the system used throughout this thesis.
+The preceding sections described how the system is operated through a control-plane integration (UI orchestration, use case programming, and persistence). We now close the system design chapter by putting these pieces together into a concrete end-to-end instantiation of the system used throughout this work.
 
 This section summarizes how the design choices derived in \autoref{chapter:ch2_analysis} map to the concrete modules and interfaces specified in this chapter. By relating the developed modules back to the spatial authoring stages (\autoref{fig:intro__img_2__usecase_stages}), the five base components (\autoref{fig:ch2_analysis__base_components}), and their corresponding requirements, it provides a high-level end-to-end view of the system's structure and intended data/control flow without revisiting the detailed contract definitions.
 
 Module labels in this section use display names; the corresponding module type identifiers (e.g., \type{pen\_tracking\_multicam\_module}, \type{scene\_detection\_stereocam\_module}, \type{web\_frontend\_module}) are used elsewhere for traceability.
 
 \minihead{Instantiated module graph.}
-\autoref{fig:runtime_full} shows the intended runtime configuration used throughout the thesis.
+\autoref{fig:runtime_full} shows the intended runtime configuration used throughout this work.
 It captures (i) the sensing pipeline (stereo camera, calibration, pen tracking, scene detection),
 (ii) the robot execution backend, (iii) the task-oriented use case modules, and (iv) the UI/frontend module that orchestrates setup, program authoring, and execution (\autoref{sec:ch3_ui_orchestration}).
 
@@ -1677,7 +1677,7 @@ It captures (i) the sensing pipeline (stereo camera, calibration, pen tracking, 
     \centering
     \includegraphics{img/ch3_system_design/full_system.pdf}
     \caption[Fully instantiated runtime configuration of the system]{%
-    Fully instantiated runtime configuration of the system, shown as the intended module graph used in the thesis.
+    Fully instantiated runtime configuration of the system, shown as the intended module graph used in this work.
     Blocks are running module instances (consumers left, producers right); edges are typed according to the legend.
     Wrapper boxes indicate modules exposing the activation or use case wrapper protocol.
     For readability, robot status and finished notifications are grouped into a single edge.
@@ -1713,7 +1713,7 @@ The UI module acts as the system orchestrator that makes this workflow operable 
 
 
 \minihead{Next steps.}
-\autoref{fig:runtime_full} is a compact ``system mental model'' for the rest of the thesis.
+\autoref{fig:runtime_full} is a compact ``system mental model'' for the rest of the text.
 \autoref{chapter:ch4_implementation} describes the hardware setup and the internal implementation of the sensing and execution modules shown in the graph (the UI module is not revisited beyond \autoref{sec:ch3_ui_orchestration}).
 \autoref{chapter:ch5_user_workflow} then documents the concrete user workflows (system setup and the two evaluated use cases) on top of the same configuration.
 
@@ -1747,9 +1747,9 @@ The UI module acts as the system orchestrator that makes this workflow operable 
 %         Pub/sub is conceptually pub/sub, but wiring is explicit (directed), not "global topic soup".
 %     Auto-create modules
 %         Motivation: the UI (or a bootstrap module) must exist early to orchestrate runtime creation/mapping.
-%         Why you restricted it: "In this thesis, auto-created modules are constrained to auto-all wiring because there is no separate static configuration step before UI becomes available."
+%         Why you restricted it: "In this system, auto-created modules are constrained to auto-all wiring because there is no separate static configuration step before UI becomes available."
 %         Also add one sentence to acknowledge the alternative (so reviewers don't think you missed it):
-%             "A file-driven bootstrap that instantiates modules and wiring is compatible with the design; in our prototype, UI-driven configuration is the primary path."
+%             "A file-driven bootstrap that instantiates modules and wiring is compatible with the design; in the current system, UI-driven configuration is the primary path."
 %     Constructor must not call core; oningress vs processed
 %     async req/resp
 %     describe:
@@ -1804,7 +1804,7 @@ The UI module acts as the system orchestrator that makes this workflow operable 
 %     how to create a new module - what does each part represent, limitations, what to implement and how
 %     exact message schemas for all interfaces (channel_type_identifiers, message fields, etc) and wrapper user stories (how to use the wrapper, what does it do, what does it not do, etc) - what methods to implement and how to implement them, etc.
 
-% chapter 4: implementation details for important modules (calibration, pen tracking, scene detection, use case, robot) - how they work, what do they do, how do they use the interfaces, etc. Yes on "concrete choices + calibration + algorithms + engineering", but for important modules. Essentially this could / should be part of ch3, since it covers the conceptual part n.4. However it is also the most implementation-specific part less (ch.3 covers the system design and architecture, while ch.4 covers the actual implementation of the modules, which is more specific to the prototype and less generalizable). 
+% chapter 4: implementation details for important modules (calibration, pen tracking, scene detection, use case, robot) - how they work, what do they do, how do they use the interfaces, etc. Yes on "concrete choices + calibration + algorithms + engineering", but for important modules. Essentially this could / should be part of ch3, since it covers the conceptual part n.4. However it is also the most implementation-specific part less (ch.3 covers the system design and architecture, while ch.4 covers the actual implementation of the modules, which is more specific to the current system and less generalizable).
 %     In Ch3, end each big subsystem with 1 line: "Implementation details in Ch4.X". - no, ch.4 will cover modules, not usecase wrappers etc. Those should be covered in ch.3 or appendix. Ch.4 will cover the actual conceptual part 4 (modules).
 
 %     c++/vcpkg/cmake/libraries (Wt, libzippp, OpenCV, Three.js)
