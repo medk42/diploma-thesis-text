@@ -476,7 +476,7 @@ The module has no activation step. All operator-facing settings are provided thr
 three \emph{auto} parameters (scene detection, pick and place positions) and four \emph{advanced} numeric parameters (speed, acceleration, pick detection distance, lift distance).
 
 \minihead{Authoring inputs and parameters.}
-\type{Pick Position} and \type{Place Position} are authored as pen \type{POSE} intents (a 6D pose in the world frame).
+\type{Pick Position} and \type{Place Position} are authored as pen \type{POSE} intents (a 6DoF pose in the world frame).
 \type{Scene Request} triggers one \type{READ\_SCENE} call and supplies the detected boxes to command creation.
 Advanced parameters are:
 \begin{itemize}[nosep]
@@ -503,7 +503,7 @@ The command is therefore tied to an object ID and a relative pick transform, not
 
 \minihead{Preview visualization.}
 Along with the command, the module returns a preview payload consisting of:
-(i) two 6D poses (the authored pick and place poses),
+(i) two 6DoF poses (the authored pick and place poses),
 (ii) one 3D point (the computed first intersection point on the selected box), and
 (iii) one 3D polyline with four vertices representing the nominal lift and transfer path:
 pick $\rightarrow$ above-pick $\rightarrow$ above-place $\rightarrow$ place.
@@ -564,7 +564,7 @@ It produces use case wrapper responses, including a command JSON payload and a p
 The module has no activation step. All operator-facing settings are provided through wrapper parameters when creating a command: two \emph{auto} parameters (scene detection and welding trajectory) and five \emph{advanced} numeric parameters (movement speed, welding speed, acceleration, weld offset, approach distance).
 
 \minihead{Authoring inputs and parameters.}
-\type{Welding Trajectory} is authored as a pen \type{TRAJECTORY} intent (a sequence of 6D poses in the world frame). \type{Scene Scan} triggers one \type{READ\_SCENE} call and supplies the detected boxes for seam detection.
+\type{Welding Trajectory} is authored as a pen \type{TRAJECTORY} intent (a sequence of 6DoF poses in the world frame). \type{Scene Scan} triggers one \type{READ\_SCENE} call and supplies the detected boxes for seam detection.
 Advanced parameters are:
 \begin{itemize}[nosep]
     \item \type{Movement Speed [mm/s]} (default 100): speed for non-welding moves (approach, positioning, depart),
@@ -606,7 +606,7 @@ If no seam candidates are detected from the scene snapshot, or if the user traje
 
 \minihead{Preview visualization.}
 Along with the command, the module returns a preview payload consisting of:
-(i) one 6D pose (the computed weld start pose) and
+(i) one 6DoF pose (the computed weld start pose) and
 (ii) one 3D polyline with four vertices representing the nominal path:
 approach $\rightarrow$ weld start $\rightarrow$ weld end $\rightarrow$ depart.
 The preview visualizes the stored command poses and therefore corresponds directly to the motion that will be executed.
@@ -679,21 +679,21 @@ No preview visualization is returned.
 The custom input \type{Target Pose} is captured from the pen as a \type{POSE} intent (world-frame pose).
 The created command stores \type{target\_pose} (quaternion+translation) and \type{speed\_mm\_s}, \type{acceleration\_mm\_s2}.
 Execution issues one linear move request. Pause is implemented by cancelling the active robot action, waiting for resume via the \type{BaseUsecase}, and then re-issuing the same move request (i.e., pause behaves as ``stop now and restart on resume''). 
-The preview visualization contains one 6D pose showing the target pose.
+The preview visualization contains one 6DoF pose showing the target pose.
 
 \minihead{Usecase Move Arc.}
 The custom inputs \type{Arc Start}, \type{Arc Through Point}, and \type{Arc End} are captured as three pen \type{POSE} intents.
 The created command stores the three poses and the arc settings:
 \type{speed\_mm\_s}, \type{acceleration\_mm\_s2}, \type{as\_circle}, \type{circle\_degrees\_deg}, and \type{orientation\_type}.
 Execution first moves linearly to \type{Arc Start} and then issues one arc move request. 
-The preview visualization shows the arc start as a 6D pose, the through/end positions as 3D points, and a sampled 3D polyline of the arc path computed from the three poses and arc settings.
+The preview visualization shows the arc start as a 6DoF pose, the through/end positions as 3D points, and a sampled 3D polyline of the arc path computed from the three poses and arc settings.
 
 \minihead{Usecase Move Trajectory.}
 The custom input \type{Trajectory} is captured from the pen as a \type{TRAJECTORY} intent (sequence of world-frame poses).
 The created command stores:
 \type{trajectory} (array of poses), \type{speed\_mm\_s}, \type{acceleration\_mm\_s2}, \type{orientation\_type}, and \type{linear\_move\_to\_first\_pose}.
 If \type{linear\_move\_to\_first\_pose} is enabled, the trajectory move request is preceded by a linear move to the first trajectory pose; the trajectory move request is always executed.
-The preview visualization shows the first trajectory pose as a 6D pose and the full captured trajectory as a 3D polyline (positions only).
+The preview visualization shows the first trajectory pose as a 6DoF pose and the full captured trajectory as a 3D polyline (positions only).
 
 \minihead{Code pointers.}
 
