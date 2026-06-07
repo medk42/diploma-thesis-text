@@ -579,45 +579,6 @@ style: |
 Dobrý den, jmenuji se Jakub Medek. Ve své diplomové práci jsem se zabýval zadáváním trajektorií robota pomocí prostorového vstupu inspirovaného rozšířenou realitou. 
 -->
 
-<!--
-Layout toolbox / simple organizing logic:
-
-1) Side-by-side content:
-<div class="split-even">
-<div>Text or bullets</div>
-<div><img class="contain-img" src="assets/image.png"></div>
-</div>
-
-2) Text left, image right with more image space:
-<div class="text-image-right">...</div>
-
-3) Text above, image below:
-<div class="image-below">
-<div>Short text</div>
-<img class="wide-img" src="assets/image.svg">
-</div>
-
-4) Two-picture collage:
-<div class="image-grid-2">
-  <div class="frame"><img src="assets/a.png"><div class="caption">A</div></div>
-  <div class="frame"><img src="assets/b.png"><div class="caption">B</div></div>
-</div>
-
-5) Four-picture collage:
-<div class="image-grid-4"> ... four .frame blocks ... </div>
-
-6) Full-width technical figure:
-<img class="large-img" src="assets/full_system.svg">
-
-7) Placeholder for missing image/video:
-<div class="placeholder">PLACEHOLDER: image or video goes here</div>
-
-Image convention used here:
-- vector/diagram assets are referenced as assets/*.svg
-- screenshots/photos/renders are referenced as assets/*.png
-- the provided package also includes PNG fallbacks; replace SVG wrappers with your real vector exports if available
--->
-
 <!-- _class: lead -->
 
 # Defining Robot Trajectories Using Augmented Reality
@@ -664,7 +625,7 @@ Tím se dostáváme k hlavní otázce práce - úloha programování robota je s
 ## From Spatial Intent to Robot Task
 
 - The user does not define the whole program. 
-- The user defines <strong>spatial intent</strong> and requried <strong>task specific parameters</strong>.
+- The user defines <strong>spatial intent</strong> and required <strong>task-specific parameters</strong>.
 
 <img class="large-img" src="assets/pipeline.svg" alt="Spatial authoring pipeline">
 
@@ -686,16 +647,16 @@ Například čára nakreslená perem ve svařovacím use casu se změní na appr
 
 ### Pick-and-place
 
-**Define**:
+**User defines**:
   - pick pose (above object)
   - place pose
 
-**Infer**:
-  - pick object type
-  - pick offset
-  - place pose
+**Use case derives**:
+  - selected object relation
+  - object-relative pick offset
+  - executable pick/place command
 
-**Runtime (dynamic)**: 
+**At execution**: 
   - *detect* objects 
   - *move* to defined object and *pick*
   - *move* to place pose and *place*
@@ -705,13 +666,13 @@ Například čára nakreslená perem ve svařovacím use casu se změní na appr
 
 ### Seam welding
 
-**Define**:
+**User defines**:
   - rough seam trajectory
 
-**Infer**:
-  - object positions
-  - possible seam placements
+**Use case derives**:
   - intended seam placement
+  - approach / depart motion
+  - weld trajectory command
 
 **Runtime (predefined/fixed)**:
   - *move* to approach
@@ -727,23 +688,6 @@ Například čára nakreslená perem ve svařovacím use casu se změní na appr
 Tato práce se soustředí na předem připravené, úlohově orientované "use-casy". Každý use case určuje, jaké vstupy potřebuje a jak se tyto vstupy interpretují. Uživatel pak zvolí existující use-case a zadá prostorový vstup a případně další parametry.
 
 Použil jsem dvě reprezentativní skupiny úloh. Pick-and-place reprezentuje manipulační úlohu, kde se pozice objektů ve scéně typicky mění mezi vytvořením a během programu. Svařování naopak reprezentuje statickou úlohu, zaměřenou na přesnou trajektorii robota. Svařování je zároveň typická úloha pro často se měnící zadání, např. v malovýrobě. 
-
--->
-
----
-
-## Design Goals
-
-- robot programming using spatial input
-- extensible system where new use-cases can re-use existing infrastructure
-- demonstrate approach on two representative usecases (Pick-and-place, Seam Welding)
-
-<!--
-
-Vytvořený systém by měl podporovat
-- Využití primárně prostorového vstupu pro definici parametrů.
-- Jednoduché rozšíření o další use-case moduly.
-- Ukázat řešení na dvou reprezentativních use-case modulech.
 
 -->
 
@@ -823,11 +767,12 @@ Pro implementovaný prototyp jsem nakonec zvolil vlastní sledované pero. Pero 
   - Model-based pose estimation
   - Scanning & reconstruction
   - Commercial systems
-- Chosen: *fiducial tagged boxes*
+- Chosen: *fiducial-tagged boxes*
 
 ### Camera setup
-- Single/multi; robot-mounted/fixed...
-- *Single stereo robot-mounted camera*
+- single vs. stereo · fixed vs. robot-mounted
+- Chosen: *single stereo robot-mounted camera*
+- shared input for pen tracking and scene detection
 
 </div>
 
@@ -1007,7 +952,7 @@ Pick-and-place ukazuje jiný aspekt systému: prostorový vstup nemusí být int
 
 V rámci práce jsem se soustředil hlavně na ověření celého authoring workflow. Proto je evaluace kvalitativní, detekce a reprezentace scény využívá zjednodušenou reprezentaci pomocí značených objektů a akce nástrojů nejsou v prototypu skutečně ovládány — jsou reprezentované pouze čekáním na jejich dokončení.
 
-Přesto práce ukazuje, že prostorové zadávání, snímání scény, use-case interpretaci a robotické spuštění lze spojit do jednoho funkčního workflow.
+Práce tedy ukazuje, že u připravených robotických úloh lze část programování přesunout z ručního zadávání jednotlivých kroků k přímému zadání prostorového záměru.
 -->
 
 ---
