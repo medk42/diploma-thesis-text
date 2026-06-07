@@ -220,6 +220,14 @@ style: |
     object-fit: contain;
   }
 
+  .mega-large-img img,
+  img.mega-large-img {
+    width: 100%;
+    height: 100%;
+    max-height: 550px;
+    object-fit: contain;
+  }
+
   .center {
     text-align: center;
   }
@@ -510,6 +518,17 @@ style: |
     max-height: 190px !important;
     object-fit: contain !important;
   }
+
+  .top-split {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 34px !important;
+    align-items: start !important;
+  }
+
+  .top-split > div {
+    align-self: start !important;
+  }
   
 ---
 
@@ -743,7 +762,7 @@ Vstup musí poskytovat 6DoF pozice a trajektorie v prostoru. Zároveň musí def
 
 Zvažoval jsem sledování ruky, VR ovladače a marker tracking.
 
-Pro implementovaný prototyp jsem nakonec zvolil vlastní sledované pero. Pero má ARuCO markery a fyzická tlačítka - tedy sledování je s pomocí existujících knihoven poměrně jednoduché a tlačítka umožňují jasně definovaný vstup.
+Pro implementovaný prototyp jsem nakonec zvolil vlastní sledované pero. Pero má ARuCO markery a fyzická tlačítka - tedy sledování je s pomocí existujících knihoven poměrně jednoduché a tlačítka umožňují jasně definovaný vstup. Komunikuje s počítačem přes BLE pomocí integrovaného mikrokontroleru a baterie. 
 -->
 
 ---
@@ -787,183 +806,126 @@ Pro implementovaný prototyp jsem nakonec zvolil vlastní sledované pero. Pero 
 </div>
 
 <!--
+Pro zjednodušení detekce scény jsem použil reprezentaci pomocí objektů s ARuCo markery.
+OR
 Detekce scény je sama o sobě komplikovaný problém, proto jsem záměrně použil omezenou reprezentaci: objekty s ARuCo markery. Tím se práce soustředí na prostorové zadávání a modulární systém a ne na obecnou detekci objektů.
 
-Pro detekci vstupu i scény využíváme kameru - pro kameru existuje několik možností: uvažoval jsem primárně jedna či více, upevněná na robotu nebo v prostoru a mono nebo stereo.
+Pro detekci vstupu i scény využíváme kameru - pro kameru existuje několik možností: uvažoval jsem primárně mezi jednou či více kamerami, upevněnou na robotu nebo v prostoru a mono nebo stereo.
 
-Pro práci jsem zvolil jednu stereo kameru připevňenou na robotu. To umožňuje lepší detekci hloubky než mono kamera, stabilní hand-eye kalibraci vůči robotu a značně jednoduší systém než podpora více kamer. Přesnost hloubky je důležitá pro prostorový vstup i lokalizaci scény.
+Pro práci jsem zvolil jednu stereo kameru připevňenou na robotu. To umožňuje lepší detekci hloubky než mono kamera, stabilnější hand-eye kalibraci vůči robotu než umístění v prostoru a značně jednoduší systém než podpora více kamer. 
+
+Přesnost hloubky je totiž důležitá pro prostorový vstup i lokalizaci scény.
 -->
 
 ---
 
-## Modular Architecture: Why It Matters
+## Modular Architecture
 
-<div class="text-image-left">
-<div class="frame">
-<img src="assets/four_parts.svg" alt="Four conceptual parts of modular system">
-<div class="caption">not a hardcoded demo: contracts, core, interfaces, modules</div>
-</div>
 
+<div class="split-even">
 <div>
 
 - the core contains no task-specific logic
 - modules communicate through explicit interfaces
+
+</div>
+<div>
+
 - input, scene, UI, robot, and use cases can be replaced
 - the same infrastructure supports multiple tasks
 
 </div>
 </div>
 
+<img class="large-img" src="assets/four_parts.svg" alt="Four conceptual parts of modular system">
+
 <!--
-[Speaker notes | CZ]
-Architektura je podstatná část práce. Implementovaný systém není jedna natvrdo napsaná demo aplikace. Je to modulární runtime.
 
-Core pouze načítá moduly, propojuje je, routuje zprávy, spravuje lifecycle a sdílenou infrastrukturu. Neví nic o svařování ani o pick-and-place. Konkrétní chování je v modulech a use casech.
+Jeden z požadavků byl podpora pro nové usecase moduly, což implikuje určitou abstrakci části systému.
 
-To je důležité proto, že součástí práce bylo experimentování. A také proto, že budoucí use casy mají znovu použít stejné snímání, UI, robotické rozhraní a execution infrastrukturu, místo aby se celý systém psal znovu.
+Zároveň ale speciálně na začátku vývoje systému nebyl jasný směr (hand tracking nebo pero; jedna nebo více kamer).
 
-[Original plan note | EN]
-Use four_parts.png. Optionally place a small “not a hardcoded demo” caption. The architecture is a major part of the work.
+Implementovaný systém tedy není jedna natvrdo napsaná demo aplikace, ale modulární runtime. Tato architektura tvoří podstatnou část práce.
+
+Jádro pouze načítá moduly, propojuje je, přeposílá zprávy, spravuje lifecycle modulů a sdílenou infrastrukturu. Tedy, neví nic o svařování, pick-and-place ani o kamerách, UI apod. Sémantika komunikace je následně popsána v explicitních rozhraních vystavěných nad jádrem. Tím dochází ke kompletní abstrakci modulů - ty pak pouze definují požadované vstupy a výstupy a implementují chování.
+
+Existující systém je tedy možné rozumně jednoduše rozšířit o hand-tracking, podporu více kamer, změnit vstup a visualizaci na VR apod. 
 -->
 
 ---
 
 ## Instantiated Prototype System
 
-<img class="large-img" src="assets/full_system.svg" alt="Full instantiated system graph">
-
-<div class="muted-callout">
-Stereo camera → calibration → pen + scene detection → use case → robot interface → Kassow robot
-</div>
+<img src="assets/full_system.svg" alt="Full instantiated system graph">
 
 <!--
-[Speaker notes | CZ]
-Toto je plný runtime graf použitý v prototypu. Cílem tohoto slidu není vysvětlit každou hranu, ale ukázat rozsah systému.
+Toto je úplný graf modulů použitý ve finálním prototypu. 
 
-Camera stream a stav robota se používají pro kalibraci. Kalibrovaný camera stream jde do sledování pera i detekce scény. Use case moduly používají pen intent, data scény a robotické rozhraní. UI orchestruje setup, vizualizaci, potvrzení, spuštění a persistenci.
-
-Hlavní pointa je, že high-level pipeline ze začátku je zde instanciována jako konkrétní moduly.
-
-[Original plan note | EN]
-Use full_system.png as the main visual. Do not explain every edge. The purpose of the slide is to show scope, not to explain every connection.
+Na vstupu máme kameru a robota, ze kterých získáme pozici pera a příp. objektů ve scéně. Data z kamery prochází kalibračním modulem, který přidá intrinsic parametry kamer a pozice kamer na základě pozice ramene, hand-eye kalibrace a stereo kalibrace. Use-case moduly pak používají výstup pen tracking a scene detection modulů a ovládají robota. 
+UI orchestruje setup grafu, vizualizaci scény, parametry, potvrzení a spuštění use-casů a persistenci.
 -->
 
 ---
 
-## Workflow: From Setup to Authoring
+## Graph creation: add module
 
-<div class="split">
-<div>
+<img class="mega-large-img" src="assets/01_initial_screen.svg" alt="Full instantiated system graph">
 
-1. build the module graph
-2. activate robot and camera
-3. calibrate the camera setup
-4. choose a use case
-5. author and confirm a program
-6. execute or save
-
-</div>
-
-<div class="frame">
-<img src="assets/setup_steps.png" alt="Setup workflow screenshots">
-<div class="caption">module-by-module setup mirrors the architecture</div>
-</div>
-</div>
-
-<!--
-[Speaker notes | CZ]
-Tento slide je hlavně kvůli férovosti vůči workflow. Systém neodstraňuje veškerý setup. Na začátku je pořád potřeba sestavit graf modulů, aktivovat hardware a provést kalibraci.
-
-Výhoda přichází až potom, když je připravená pipeline. Pak lze nové instance úloh zadávat uvnitř use casu místo toho, aby se pokaždé znovu stavěly jako low-level robotické procedury.
-
-Zde je také důležitá persistence: graf modulů i vytvořené programy lze uložit a znovu načíst, takže opakované použití nemusí začínat prázdným systémem.
-
-[Original plan note | EN]
-Use setup_steps.png as collage. If the image is too dense, use it as a background/collage and place the six steps as large labels.
+<!-- 
+Tento graf vytváří uživatel při prvním spuštění systému - jedná se znovu o zvýšení flexibility systému. UI modul nezávisí na konkrétní instanciaci systému, tedy umožňuje flexbilitu nejen pro budoucí use-case moduly.
 -->
 
 ---
 
-## Demonstration Preview
+## Graph creation: pick module
 
-<div class="split">
-<div>
+<img class="mega-large-img" src="assets/02_add_robot.svg" alt="Full instantiated system graph">
 
-1. The system captures the scene
-2. The user provides spatial input with the pen
-3. The use case creates a robot command
-4. The command can be confirmed, executed, and saved
 
-</div>
-
-<div class="video-frame">
-  <img src="assets/video_screenshot.png" alt="Demo video screenshot">
-  <div class="play-button">▶</div>
-</div>
-</div>
-
-<!--
-[Speaker notes | CZ]
-Tady bych chtěl brzy ukázat výsledný workflow, protože potom bude zbytek systému srozumitelnější. Video nemá vysvětlovat každý detail UI. Hlavní myšlenka je, že prostorová akce v pracovním prostoru se změní na strukturovanou robotickou úlohu.
-
-Během videa bych to aktivně komentoval: tady se načte scéna, tady se zachytí vstup perem, tady use case vytvoří příkaz a tady ho lze zkontrolovat nebo spustit.
-
-[Original plan note | EN]
-This is where the video belongs. Use a clean video placeholder on the slide: one large frame/screenshot from the video, with a play icon or “Demo video” label. Video: ideally 60–75 seconds. Narrated total: about 90 seconds.
+<!-- 
+Uživatel postupně přidá moduly, které potřebuje.
 -->
 
 ---
 
-## Use Case Results
+## Graph creation: activate module
 
-<div class="result-grid">
-<div>
+<img class="mega-large-img" src="assets/04_activate_robot.svg" alt="Full instantiated system graph">
 
-### Seam welding
+<!-- 
+A následně aktivuje moduly, které vyžadují aktivaci. Primárně moduly, které komunikují s hardware (tedy robot a kamera) a kalibrační modul, kde se aktivace používá jako kalibrace.
+-->
 
-- the user sketches the intended seam
-- the use case creates an approach–weld–depart procedure
+---
+## Video Preview
 
-</div>
-<div>
-
-### Pick-and-place
-
-- the user defines pick and place poses
-- the command stores relation to the object
-- the scene is refreshed at execution time
-
-</div>
-</div>
-
-<div class="frame">
-<img src="assets/usecase_usage.png" alt="Use case usage screenshots">
-</div>
+<a href="https://www.youtube.com/watch?v=-o-_Q32bI_4" target="_blank">
+    <img class="mega-large-img"
+         src="assets/08_main_view.svg"
+         alt="Full instantiated system graph">
+</a>
 
 <!--
-[Speaker notes | CZ]
-Tyto dva use casy ukazují různé silné stránky.
 
-Svařování je nejčistší fit pro tento přístup: měnící se část úlohy je geometrie švu. Uživatel tuto geometrii zadá přímo v prostoru a use case ji rozšíří na okolní robotickou proceduru.
+- app běží na pc, simulátor robota běží na pc, v produkci by byl připojený přes ethernet k pc, kamera je připojená k pc
+- systém ovládám přes web app na tabletu který je dole vlevo (a vpravo vidět taky)
+- koukat primárně dolů vlevo, nad tím je jen vidět že Kassow simulátor pohyb sedí s pohybem co ukazujeme
+- příp. při definici trajektorie apod koukat klidně doprava, že pohyby sedí se zaáznamem.
 
-Pick-and-place ukazuje objektově relativní interpretaci. Příkaz nemusí ukládat pouze fixní world-frame pick pose. Může uložit vybraný objekt a transformaci pick pose relativně k tomuto objektu, a potom při spuštění znovu načíst scénu.
-
-[Original plan note | EN]
-Use usecase_usage.png or two screenshots from the video/UI. Split slide into two clear halves. Welding is the clearest fit; pick-and-place demonstrates object-relative interpretation.
+"teď zadávám vpravo trajektorii"
 -->
 
 ---
 
 ## Conclusion and Boundaries
 
-<div class="split-even compact">
-<div>
-
 ### Result
-
 An end-to-end prototype for **spatial authoring of prepared robot tasks**.
 
-Demonstrated:
+<div class="top-split compact">
+<div>
+
+### Demonstrated
 
 - custom tracked 6DoF pen
 - stereo sensing and calibration
@@ -1053,26 +1015,6 @@ Třetí důvod byl praktický. Rozhodnutí padalo poměrně brzy v životě prá
 Zpětně bych ROS zvažoval vážněji, hlavně kvůli standardizaci, nástrojům a tomu, že by projekt byl srozumitelnější pro širší robotickou komunitu. Zároveň si ale myslím, že vlastní runtime je v kontextu této práce obhajitelný, protože není jen pomocná infrastruktura. Explicitní modulové kontrakty, mapování kanálů, vlastnictví dat a skládání aplikace z modulů jsou součástí výsledku práce.
 
 
--->
-
----
-
-<!-- _class: backup -->
-
-## Official Assignment Mapping
-
-- **Survey:** AR/VR and robot-programming workflows
-- **Design:** spatial authoring + task-oriented use cases
-- **Implementation:** modular C++ runtime + modules
-- **Pilot application:** Kassow robot, tracked pen, tagged scene boxes
-- **Evaluation:** qualitative evaluation on pick-and-place and seam welding
-
-<!--
-[Speaker notes | CZ]
-Tento slide bych použil jen pokud bude potřeba explicitně napojit prezentaci na zadání. Ukazuje, že všechny části zadání jsou pokryté: rešerše, návrh, implementace, pilotní aplikace a vyhodnocení.
-
-[Original plan note | EN]
-Use only if needed. Official assignment mapping.
 -->
 
 ---
