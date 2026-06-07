@@ -529,6 +529,49 @@ style: |
   .top-split > div {
     align-self: start !important;
   }
+
+  .goals-note h3 {
+    font-size: 22px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .goals-note ul {
+    margin-top: 4px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .goals-note li {
+    font-size: 19px !important;
+    line-height: 1.18 !important;
+    margin: 4px 0 !important;
+  }
+
+  .goals-note {
+    margin-top: 18px !important;
+    padding: 10px 14px !important;
+    background: var(--panel) !important;
+    border-left: 4px solid var(--line) !important;
+    border-radius: 6px !important;
+  }
+
+  .goals-note-title {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--muted) !important;
+    margin-bottom: 4px !important;
+  }
+
+  .goals-note ul {
+    margin: 0 !important;
+    padding-left: 22px !important;
+  }
+
+  .goals-note li {
+    font-size: 15px !important;
+    line-height: 1.18 !important;
+    margin: 2px 0 !important;
+    color: #334155 !important;
+  }
   
 ---
 
@@ -916,8 +959,7 @@ A následně aktivuje moduly, které vyžadují aktivaci. Primárně moduly, kte
 -->
 
 ---
-
-## Conclusion and Boundaries
+## Conclusion
 
 ### Result
 An end-to-end prototype for **spatial authoring of prepared robot tasks**.
@@ -925,38 +967,47 @@ An end-to-end prototype for **spatial authoring of prepared robot tasks**.
 <div class="top-split compact">
 <div>
 
-### Demonstrated
+### Takeaway
 
-- custom tracked 6DoF pen
-- stereo sensing and calibration
-- modular runtime
-- pick-and-place and seam welding
-- execution on a collaborative robot
+- prepared tasks can be authored through **spatial input**
+- welding is a strong practical fit
+- pick-and-place shows **object-relative interpretation**
+- both use cases reuse the same infrastructure
+- sensing, interpretation, and execution form one workflow
 
 </div>
 <div>
 
+### Demonstrated
+
+- custom tracked **6DoF pen**
+- modular runtime
+- pick-and-place use case
+- seam welding use case
+- execution on a collaborative robot
+
 ### Boundaries
 
 - qualitative evaluation
-- simplified tagged-object scene detection
-- no collision planning
-- tool actions approximated by fixed delays
-- not a general robot-programming language
+- simplified tagged-object scene representation
+- tool actions represented only by wait steps
 
 </div>
 </div>
 
 <!--
-[Speaker notes | CZ]
-Odpověď na výzkumnou otázku je v rámci připravených use casů pozitivní. Systém ukazuje, že prostorový vstup, snímání scény, úlohově specifická interpretace a robotické spuštění mohou být spojeny do jednoho end-to-end workflow.
 
-Zároveň to není tvrzení o production-ready systému. Vyhodnocení je kvalitativní, vnímání scény je záměrně zjednodušené a širší nasazení by vyžadovalo lepší sensing, abstrakci nástrojových akcí, plánování pohybu, collision checking a systematičtější evaluaci.
+Hlavní otázka práce byla, jestli lze často se měnící úlohy kolaborativního robota zadávat přímo v pracovním prostoru — tedy pomocí prostorového vstupu — místo vytváření nízkoúrovňového robotického programu. Pro připravené use casy je odpověď podle výsledků práce pozitivní.
 
-Na závěr bych řekl, že hlavním přínosem je konkrétní implementovaný základ pro in-workspace spatial authoring kolaborativních robotických úloh.
+Po jednorázovém setupu a kalibraci může uživatel vytvářet nové instance úloh pprostorovým vstupem a potvrzením, místo ručního programování robota.
 
-[Original plan note | EN]
-Use a clean “result collage”: robot arm + pen + full system small + video screenshot. The answer to the research question is positive within the prepared-use-case scope. At the same time, this is not a claim of production readiness.
+Nejsilnější praktický příklad je svařování. U něj se často nemění celá struktura úlohy, ale konkrétní geometrie sváru. Use case už zná postup approach–weld–depart, zatímco uživatel pouze zadá trajektorii sváru přímo v prostoru. To velmi dobře odpovídá motivaci práce.
+
+Pick-and-place ukazuje jiný aspekt systému: prostorový vstup nemusí být interpretován pouze jako absolutní pozice nebo trajektorie. Může být navázán na detekované objekty ve scéně. Příkaz tedy může uložit vztah k objektu a při spuštění scénu znovu načíst, místo aby jen slepě přehrál zapamatované pozice.
+
+V rámci práce jsem se soustředil hlavně na ověření celého authoring workflow. Proto je evaluace kvalitativní, detekce a reprezentace scény využívá zjednodušenou reprezentaci pomocí značených objektů a akce nástrojů nejsou v prototypu skutečně ovládány — jsou reprezentované pouze čekáním na jejich dokončení.
+
+Přesto práce ukazuje, že prostorové zadávání, snímání scény, use-case interpretaci a robotické spuštění lze spojit do jednoho funkčního workflow.
 -->
 
 ---
