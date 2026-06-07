@@ -999,6 +999,64 @@ Use a clean “result collage”: robot arm + pen + full system small + video sc
 
 ---
 
+## Why not ROS?
+
+<div class="split-even">
+
+<div>
+
+### Reasons for a custom runtime
+
+- **Explicit module graph control**
+   - UI-driven graph construction
+   - possible programmatic graph construction
+
+- **Data ownership and performance**
+   - large camera frames
+   - shared payloads instead of repeated deep copies
+
+- **Lower initial integration risk**
+   - known C++ stack
+   - thesis-specific interfaces
+
+</div>
+
+<div>
+
+### Retrospective assessment
+
+- **ROS would improve reusability**
+   - more standard ecosystem
+   - easier for others to understand
+
+- **Some assumptions were conservative**
+   - flexibility likely achievable in ROS
+   - performance may also be solvable
+
+- **Still justified for this thesis**
+   - the custom runtime is part of the contribution
+   - it made the contracts and workflow explicit
+
+</div>
+
+</div>
+
+<!--
+Krátká odpověď je, že ROS by určitě byla rozumná alternativa. Je to standardní ekosystém, ostatní robotici ho znají, existuje spousta hotových nástrojů a z hlediska budoucí rozšiřitelnosti by to pravděpodobně zjednodušilo převzetí projektu někým dalším.
+
+V době návrhu jsem ale řešil hlavně to, že jsem chtěl mít velmi explicitní kontrolu nad tím, jak se systém skládá z modulů. V mém systému není graf modulů jen pevná konfigurace napsaná předem. Může ho vytvářet uživatel přes UI, a stejný mechanismus by šel použít i pro to, aby graf vytvořil jiný řídicí modul při startu systému. Chtěl jsem tedy mít pod kontrolou lifecycle modulů, jejich rozhraní, směrování zpráv a mapování kanálů.
+
+Druhý důvod byla práce s velkými daty, hlavně s kamerovými snímky. Chtěl jsem se vyhnout tomu, aby se obrazová data zbytečně hluboce kopírovala mezi částmi systému. Proto jsem navrhl sdílené payloady s shallow copy / reference counting pro velká data. ROS podobné problémy samozřejmě umí nějak řešit také, ale pro rozsah práce mi vlastní runtime dával jasnou kontrolu nad tím, co se přesně děje.
+
+Třetí důvod byl praktický. Rozhodnutí padalo poměrně brzy v životě práce, kdy ještě nebyly úplně zřejmé všechny důsledky návrhu. Měl jsem jistější C++ stack a vlastní runtime se tehdy zdál jako menší integrační riziko než stavět celý systém na ROSu, který jsem neznal dostatečně do hloubky.
+
+Zpětně bych ROS zvažoval vážněji, hlavně kvůli standardizaci, nástrojům a tomu, že by projekt byl srozumitelnější pro širší robotickou komunitu. Zároveň si ale myslím, že vlastní runtime je v kontextu této práce obhajitelný, protože není jen pomocná infrastruktura. Explicitní modulové kontrakty, mapování kanálů, vlastnictví dat a skládání aplikace z modulů jsou součástí výsledku práce.
+
+
+-->
+
+---
+
 <!-- _class: backup -->
 
 ## Official Assignment Mapping
